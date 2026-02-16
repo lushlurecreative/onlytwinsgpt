@@ -1,0 +1,421 @@
+"use client";
+
+/* eslint-disable react-hooks/set-state-in-effect */
+/* eslint-disable @next/next/no-img-element */
+
+import { Fragment, useEffect, useState } from "react";
+
+type LeadRow = {
+  id: string;
+  source: string;
+  handle: string;
+  platform: string;
+  follower_count: number;
+  engagement_rate: number;
+  luxury_tag_hits: number;
+  score: number;
+  status: string;
+  profile_url: string | null;
+  notes: string | null;
+  sample_preview_path: string | null;
+  sample_paths: string[];
+  generated_sample_paths: string[];
+  created_at: string;
+};
+
+type SignedAsset = { path: string; signedUrl: string | null; error?: string };
+type LeadAssets = { samples: SignedAsset[]; generated: SignedAsset[]; preview: SignedAsset | null };
+
+export default function AdminLeadsClient() {
+  const [rows, setRows] = useState<LeadRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [query, setQuery] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [assetsById, setAssetsById] = useState<Record<string, LeadAssets>>({});
+  const [triggeringScrape, setTriggeringScrape] = useState(false);
+
+  async function load() {
+    const res = await fetch("/api/admin/leads");
+    const json = (await res.json().catch(() => ({}))) as { leads?: LeadRow[]; error?: string };
+    if (!res.ok) {
+      setMessage(json.error ?? "Failed to load leads");
+      setLoading(false);
+      return;
+    }
+    setRows(json.leads ?? []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  useEffect(() => {
+    if (!message) return;
+    const t = window.setTimeout(() => setMessage(""), 4000);
+    return () => window.clearTimeout(t);
+  }, [message]);
+
+  const counts = rows.reduce(
+    (acc, row) => {
+      const key = String(row.status || "unknown");
+      acc.total += 1;
+      acc.byStatus[key] = (acc.byStatus[key] ?? 0) + 1;
+      return acc;
+    },
+    { total: 0, byStatus: {} as Record<string, number> }
+  );
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filtered = rows.filter((row) => {
+    if (statusFilter !== "all" && row.status !== statusFilter) return false;
+    if (!normalizedQuery) return true;
+    const haystack = [row.handle, row.platform].join(" ").toLowerCase();
+    return haystack.includes(normalizedQuery);
+  });
+  const sorted = [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  async function approve(id: string, approved: boolean) {
+    setMessage("Updating...");
+    const res = await fetch(`/api/admin/leads/${id}/approve`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ approved }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      setMessage(json.error ?? "Failed");
+      return;
+    }
+    setMessage(approved ? "Approved." : "Rejected.");
+    await load();
+  }
+
+  async function triggerOutreach(id: string) {
+    setMessage("Sending...");
+    const res = await fetch(`/api/admin/leads/${id}/outreach`, { method: "POST" });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      setMessage(json.error ?? "Outreach failed");
+      return;
+    }
+    setMessage("Outreach sent.");
+    await load();
+  }
+
+  async function generateSample(id: string) {
+    setMessage("Generating AI sample...");
+    const res = await fetch(`/api/admin/leads/${id}/generate-sample`, { method: "POST" });
+    const json = (await res.json().catch(() => ({}))) as { error?: string; generated?: number };
+    if (!res.ok) {
+      setMessage(json.error ?? "Generation failed");
+      return;
+    }
+    setMessage(`Generated ${json.generated ?? 0} AI sample(s).`);
+    await load();
+    if (assetsById[id]) {
+      const assetsRes = await fetch(`/api/admin/leads/${id}/assets`);
+      const assetsJson = (await assetsRes.json().catch(() => ({}))) as { samples?: SignedAsset[]; generated?: SignedAsset[]; preview?: SignedAsset | null };
+      if (assetsRes.ok) {
+        setAssetsById((prev) => ({
+          ...prev,
+          [id]: {
+            samples: assetsJson.samples ?? prev[id]?.samples ?? [],
+            generated: assetsJson.generated ?? [],
+            preview: assetsJson.preview ?? null,
+          },
+        }));
+      }
+    }
+  }
+
+  async function expand(row: LeadRow) {
+    const next = expandedId === row.id ? null : row.id;
+    setExpandedId(next);
+    if (!next || assetsById[next]) return;
+    const res = await fetch(`/api/admin/leads/${next}/assets`);
+    const json = (await res.json().catch(() => ({}))) as { samples?: SignedAsset[]; generated?: SignedAsset[]; preview?: SignedAsset | null; error?: string };
+    if (!res.ok) {
+      setMessage(json.error ?? "Failed to load photos");
+      return;
+    }
+    setAssetsById((prev) => ({
+      ...prev,
+      [next]: {
+        samples: json.samples ?? [],
+        generated: json.generated ?? [],
+        preview: json.preview ?? null,
+      },
+    }));
+  }
+
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+  const ingestUrl = `${baseUrl}/api/admin/leads/ingest`;
+
+  function copyIngestUrl() {
+    navigator.clipboard.writeText(ingestUrl);
+    setMessage("Copied to clipboard");
+  }
+
+  async function triggerScrape() {
+    setTriggeringScrape(true);
+    setMessage("Triggering scrape...");
+    const res = await fetch("/api/admin/leads/trigger-scrape", { method: "POST" });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    setTriggeringScrape(false);
+    if (!res.ok) {
+      setMessage(json.error ?? "Failed to trigger");
+      return;
+    }
+    setMessage("Scrape requested. Antigravity will pick it up on next poll.");
+  }
+
+  return (
+    <div>
+      <div className="card">
+        <h2 style={{ marginTop: 0 }}>Lead Pipeline</h2>
+        <p className="muted">Antigravity scrapes leads and pushes them here. Review, approve, generate AI samples, and send outreach.</p>
+
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginTop: 12 }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => void triggerScrape()}
+            disabled={triggeringScrape}
+            type="button"
+            title="Creates a pending scrape. Antigravity polls and runs when it sees one."
+          >
+            {triggeringScrape ? "Triggering…" : "Run scrape"}
+          </button>
+          <span className="muted" style={{ fontSize: 13 }}>
+            Antigravity polls <code>/api/admin/leads/pending-scrape</code> and runs when a scrape is requested.
+          </span>
+        </div>
+
+        <details className="card" style={{ marginTop: 12, padding: 12 }}>
+          <summary style={{ cursor: "pointer", fontWeight: 800 }}>Ingest webhook (Antigravity)</summary>
+          <p className="muted" style={{ marginTop: 10 }}>
+            Configure the bot to POST to this URL with <code>Authorization: Bearer &lt;ANTIGRAVITY_WEBHOOK_SECRET&gt;</code>
+          </p>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <code
+              style={{
+                flex: 1,
+                minWidth: 200,
+                padding: 8,
+                background: "var(--surface-soft)",
+                borderRadius: 8,
+                wordBreak: "break-all",
+                fontSize: 13,
+              }}
+            >
+              {ingestUrl}
+            </code>
+            <button className="btn btn-ghost" type="button" onClick={copyIngestUrl}>
+              Copy
+            </button>
+          </div>
+          <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+            Body: <code>{`{ "leads": [{ "handle": "@user", "platform": "instagram", "profileUrl": "...", "followerCount": 50000, "sampleUrls": ["https://..."] }] }`}</code>
+          </p>
+        </details>
+
+        <div className="tabs" style={{ marginTop: 14 }}>
+          {(
+            [
+              ["all", "All"],
+              ["imported", "Imported"],
+              ["approved", "Approved"],
+              ["rejected", "Rejected"],
+              ["messaged", "Messaged"],
+            ] as const
+          ).map(([key, label]) => {
+            const n = key === "all" ? counts.total : counts.byStatus[key] ?? 0;
+            const active = statusFilter === key;
+            return (
+              <button
+                key={key}
+                className={`tab ${active ? "tab-active" : ""}`}
+                onClick={() => setStatusFilter(key)}
+                type="button"
+              >
+                {label} <span className="badge badge-muted">{n}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
+          <input
+            className="input"
+            placeholder="Search by handle or platform..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            style={{ maxWidth: 280 }}
+          />
+          <button className="btn btn-ghost" onClick={() => void load()} type="button">
+            Refresh
+          </button>
+          <span className="muted" style={{ fontSize: 12 }}>
+            {sorted.length} / {rows.length}
+          </span>
+        </div>
+
+        {message ? <p style={{ marginTop: 10 }}>{message}</p> : null}
+        {loading ? <p>Loading...</p> : null}
+        {!loading && rows.length === 0 ? <p className="muted">No leads yet. Configure Antigravity to push to the ingest URL.</p> : null}
+      </div>
+
+      {!loading && sorted.length > 0 ? (
+        <div className="card" style={{ marginTop: 12, overflowX: "auto" }}>
+          <table className="table" style={{ width: "100%", minWidth: 900 }}>
+            <thead>
+              <tr>
+                <th>Handle</th>
+                <th>Platform</th>
+                <th>Followers</th>
+                <th>Engagement</th>
+                <th>Score</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((row) => {
+                const isExpanded = expandedId === row.id;
+                const assets = assetsById[row.id];
+                return (
+                  <Fragment key={row.id}>
+                    <tr>
+                      <td>
+                        <strong>{row.handle}</strong>
+                        {row.profile_url ? (
+                          <a href={row.profile_url} target="_blank" rel="noreferrer" style={{ display: "block", fontSize: 12, color: "var(--accent)" }}>
+                            profile
+                          </a>
+                        ) : null}
+                      </td>
+                      <td>{row.platform}</td>
+                      <td>{row.follower_count}</td>
+                      <td>{row.engagement_rate}%</td>
+                      <td>
+                        <strong>{row.score}</strong>
+                      </td>
+                      <td>
+                        <span className="badge">{row.status}</span>
+                      </td>
+                      <td className="muted" style={{ fontSize: 13 }}>
+                        {new Date(row.created_at).toLocaleDateString()}
+                      </td>
+                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                        <button className="btn btn-ghost" onClick={() => void expand(row)} type="button">
+                          {isExpanded ? "Hide" : "Review"}
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded ? (
+                      <tr>
+                        <td colSpan={10}>
+                          <div className="card" style={{ margin: "10px 0", padding: 14 }}>
+                            <div className="split" style={{ gap: 20, alignItems: "start" }}>
+                              <div>
+                                <h3 style={{ marginTop: 0, marginBottom: 8 }}>Scraped photos (3–5)</h3>
+                                {!assets ? (
+                                  <p className="muted">Loading...</p>
+                                ) : assets.samples.length === 0 ? (
+                                  <p className="muted">No scraped photos. Antigravity should include sampleUrls.</p>
+                                ) : (
+                                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                    {assets.samples.map((a) => (
+                                      <div key={a.path} className="card" style={{ padding: 6, width: 100, height: 100 }}>
+                                        {a.signedUrl ? (
+                                          <img
+                                            src={a.signedUrl}
+                                            alt="Sample"
+                                            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
+                                          />
+                                        ) : (
+                                          <div className="muted" style={{ fontSize: 11 }}>No preview</div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {assets?.generated && assets.generated.length > 0 ? (
+                                  <div style={{ marginTop: 14 }}>
+                                    <h3 style={{ marginTop: 0, marginBottom: 8 }}>AI samples</h3>
+                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                      {assets.generated.map((a) => (
+                                        <div key={a.path} className="card" style={{ padding: 6, width: 100, height: 100 }}>
+                                          {a.signedUrl ? (
+                                            <img
+                                              src={a.signedUrl}
+                                              alt="Generated"
+                                              style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
+                                            />
+                                          ) : null}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+                              <div>
+                                {row.notes ? (
+                                  <div className="callout" style={{ marginBottom: 12 }}>
+                                    <div className="callout-title">Notes</div>
+                                    <pre style={{ margin: 0, fontSize: 12, whiteSpace: "pre-wrap", fontFamily: "inherit" }}>{row.notes}</pre>
+                                  </div>
+                                ) : null}
+                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                  <button
+                                    className="btn btn-primary"
+                                    onClick={() => void approve(row.id, true)}
+                                    disabled={row.status !== "imported"}
+                                    type="button"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    className="btn btn-ghost"
+                                    onClick={() => void approve(row.id, false)}
+                                    disabled={row.status !== "imported"}
+                                    type="button"
+                                  >
+                                    Reject
+                                  </button>
+                                  <button
+                                    className="btn btn-primary"
+                                    onClick={() => void generateSample(row.id)}
+                                    disabled={(row.sample_paths?.length ?? 0) === 0}
+                                    type="button"
+                                  >
+                                    Generate AI sample
+                                  </button>
+                                  <button
+                                    className="btn btn-primary"
+                                    onClick={() => void triggerOutreach(row.id)}
+                                    disabled={row.status !== "approved"}
+                                    type="button"
+                                  >
+                                    Send outreach
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+    </div>
+  );
+}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500" viewBox="0 0 1200 1500">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d8e3ef"/>
+      <stop offset="100%" stop-color="#8aa1b5"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="1500" fill="url(#bg)"/>
+  <rect x="80" y="180" width="1040" height="980" rx="18" fill="#1f2937" opacity="0.45"/>
+  <rect x="160" y="250" width="880" height="10" fill="#9fb7cd"/>
+  <rect x="160" y="300" width="880" height="10" fill="#9fb7cd"/>
+  <circle cx="600" cy="560" r="190" fill="#f2d0be"/>
+  <path d="M410 570c0-120 84-235 190-235s190 115 190 235c0 12-1 24-4 36H414c-3-12-4-24-4-36Z" fill="#3d2b27"/>
+  <path d="M455 760h290l30 260H425l30-260Z" fill="#1a202c"/>
+  <text x="600" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#0f172a">AI generation</text>
+  <text x="600" y="1300" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" fill="#334155">Same user in gym setting</text>
+</svg>
+

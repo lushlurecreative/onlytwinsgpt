@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500" viewBox="0 0 1200 1500">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b8d7ff"/>
+      <stop offset="100%" stop-color="#6d9dd8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="1500" fill="url(#sky)"/>
+  <rect x="100" y="460" width="160" height="700" fill="#334155"/>
+  <rect x="280" y="380" width="190" height="780" fill="#1e293b"/>
+  <rect x="500" y="420" width="220" height="740" fill="#334155"/>
+  <rect x="750" y="340" width="160" height="820" fill="#1e293b"/>
+  <rect x="930" y="410" width="170" height="750" fill="#334155"/>
+  <circle cx="600" cy="560" r="190" fill="#f2d0be"/>
+  <path d="M410 570c0-120 84-235 190-235s190 115 190 235c0 12-1 24-4 36H414c-3-12-4-24-4-36Z" fill="#3d2b27"/>
+  <path d="M470 760h260l36 250H434l36-250Z" fill="#0f172a"/>
+  <text x="600" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#0f172a">AI generation</text>
+  <text x="600" y="1300" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" fill="#1e293b">Same user in city scene</text>
+</svg>
+

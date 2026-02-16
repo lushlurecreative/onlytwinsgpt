@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500" viewBox="0 0 1200 1500">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f4f9ff"/>
+      <stop offset="100%" stop-color="#e8f2ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="1500" fill="url(#bg)"/>
+  <rect x="120" y="120" width="960" height="1260" rx="36" fill="#ffffff" stroke="#d7e7f5" stroke-width="6"/>
+  <circle cx="600" cy="560" r="190" fill="#f2d0be"/>
+  <path d="M410 570c0-120 84-235 190-235s190 115 190 235c0 12-1 24-4 36H414c-3-12-4-24-4-36Z" fill="#3d2b27"/>
+  <rect x="460" y="760" width="280" height="430" rx="120" fill="#1f6ea0"/>
+  <rect x="380" y="1040" width="440" height="180" rx="90" fill="#185a84"/>
+  <text x="600" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" font-weight="700" fill="#22324a">User upload</text>
+  <text x="600" y="1300" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" fill="#4b5563">Standard waist-up headshot</text>
+</svg>
+
