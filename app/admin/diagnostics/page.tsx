@@ -42,6 +42,7 @@ export default async function AdminDiagnosticsPage() {
     { key: "FAL_KEY", ok: Boolean(process.env.FAL_KEY) },
     { key: "COINBASE_COMMERCE_API_KEY", ok: Boolean(process.env.COINBASE_COMMERCE_API_KEY) },
     { key: "ANTIGRAVITY_WEBHOOK_SECRET", ok: Boolean(process.env.ANTIGRAVITY_WEBHOOK_SECRET) },
+    { key: "DATABASE_URL", ok: Boolean(process.env.DATABASE_URL) },
   ];
 
   let tableChecks:
@@ -132,7 +133,7 @@ export default async function AdminDiagnosticsPage() {
       <section className="card">
         <h3 style={{ marginTop: 0 }}>Database tables</h3>
         <p className="muted">
-          If a table is missing, apply the corresponding migration in Supabase SQL editor.
+          Add DATABASE_URL (Supabase → Project Settings → Database → Connection string) to Vercel to run migrations automatically when you load admin/leads. Otherwise apply migrations manually in Supabase SQL editor.
         </p>
         <div style={{ overflowX: "auto" }}>
           <table className="table" style={{ width: "100%", minWidth: 720 }}>

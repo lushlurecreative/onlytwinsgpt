@@ -73,6 +73,10 @@ export default function AdminLeadsClient() {
   }, []);
 
   useEffect(() => {
+    fetch("/api/admin/run-migrations", { method: "POST" }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (!message) return;
     const t = window.setTimeout(() => setMessage(""), 4000);
     return () => window.clearTimeout(t);
