@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const admin = getSupabaseAdmin();
   const { data: row, error } = await admin
     .from("scrape_triggers")
-    .select("id")
+    .select("id, criteria")
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -30,7 +30,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ hasPending: false }, { status: 200 });
   }
 
+  const criteria = (row as { id: string; criteria?: unknown }).criteria ?? {};
+
   await admin.from("scrape_triggers").delete().eq("id", row.id);
 
-  return NextResponse.json({ hasPending: true }, { status: 200 });
+  return NextResponse.json({ hasPending: true, criteria }, { status: 200 });
 }

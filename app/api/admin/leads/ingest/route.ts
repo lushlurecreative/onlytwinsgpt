@@ -14,23 +14,30 @@ type IngestLead = {
   handle: string;
   platform: string;
   profileUrl?: string;
+  profileUrls?: Record<string, string>;
+  platformsFound?: string[];
   followerCount?: number;
   engagementRate?: number;
   luxuryTagHits?: number;
   notes?: string;
   sampleUrls?: string[];
   samplePaths?: string[];
+  contentVerticals?: string[];
 };
 
 function scoreLead(input: {
   followerCount: number;
   engagementRate: number;
   luxuryTagHits: number;
+  platformsFoundCount?: number;
+  contentVerticalsCount?: number;
 }) {
   const followerScore = Math.min(50, Math.floor(input.followerCount / 5000));
   const engagementScore = Math.min(30, Math.floor(input.engagementRate * 4));
   const luxuryScore = Math.min(20, input.luxuryTagHits * 2);
-  return followerScore + engagementScore + luxuryScore;
+  const platformsBonus = Math.min(10, (input.platformsFoundCount ?? 0) * 2);
+  const verticalsBonus = Math.min(5, input.contentVerticalsCount ?? 0);
+  return followerScore + engagementScore + luxuryScore + platformsBonus + verticalsBonus;
 }
 
 async function fetchAndUploadSamples(
@@ -109,6 +116,27 @@ export async function POST(request: Request) {
     } else if (Array.isArray(lead.sampleUrls) && lead.sampleUrls.length > 0) {
       samplePaths = await fetchAndUploadSamples(admin, lead.sampleUrls);
     }
+    const profileUrl =
+      typeof lead.profileUrl === "string" && lead.profileUrl.trim()
+        ? lead.profileUrl.trim()
+        : null;
+    const profileUrls =
+      lead.profileUrls && typeof lead.profileUrls === "object"
+        ? (lead.profileUrls as Record<string, string>)
+        : {};
+    const platformsFound = Array.isArray(lead.platformsFound)
+      ? lead.platformsFound
+          .filter((p: unknown) => typeof p === "string" && p.trim())
+          .map((p: string) => p.trim())
+          .slice(0, 20)
+      : [];
+    const contentVerticals = Array.isArray(lead.contentVerticals)
+      ? lead.contentVerticals
+          .filter((c: unknown) => typeof c === "string" && c.trim())
+          .map((c: string) => c.trim().toLowerCase())
+          .slice(0, 10)
+      : [];
+
     const row = {
       source: "antigravity",
       handle,
@@ -116,9 +144,17 @@ export async function POST(request: Request) {
       follower_count: followerCount,
       engagement_rate: engagementRate,
       luxury_tag_hits: luxuryTagHits,
-      score: scoreLead({ followerCount, engagementRate, luxuryTagHits }),
-      profile_url:
-        typeof lead.profileUrl === "string" && lead.profileUrl.trim() ? lead.profileUrl.trim() : null,
+      score: scoreLead({
+        followerCount,
+        engagementRate,
+        luxuryTagHits,
+        platformsFoundCount: platformsFound.length,
+        contentVerticalsCount: contentVerticals.length,
+      }),
+      profile_url: profileUrl,
+      profile_urls: profileUrls,
+      platforms_found: platformsFound,
+      content_verticals: contentVerticals,
       notes: typeof lead.notes === "string" && lead.notes.trim() ? lead.notes.trim() : null,
       sample_paths: samplePaths,
     };

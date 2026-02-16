@@ -42,7 +42,7 @@ export async function GET() {
   const { data, error } = await admin
     .from("leads")
     .select(
-      "id, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, notes, sample_preview_path, sample_paths, generated_sample_paths, approved_at, messaged_at, created_at"
+      "id, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, profile_urls, platforms_found, content_verticals, notes, sample_preview_path, sample_paths, generated_sample_paths, approved_at, messaged_at, created_at"
     )
     .order("score", { ascending: false })
     .limit(1000);

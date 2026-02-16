@@ -16,11 +16,23 @@ type LeadRow = {
   score: number;
   status: string;
   profile_url: string | null;
+  profile_urls?: Record<string, string>;
+  platforms_found?: string[];
+  content_verticals?: string[];
   notes: string | null;
   sample_preview_path: string | null;
   sample_paths: string[];
   generated_sample_paths: string[];
   created_at: string;
+};
+
+type ScrapeCriteria = {
+  followerMin?: number;
+  followerMax?: number;
+  platforms?: string[];
+  activityMode?: "active" | "inactive";
+  inactivityWeeks?: number;
+  preset?: string;
 };
 
 type SignedAsset = { path: string; signedUrl: string | null; error?: string };
@@ -35,6 +47,14 @@ export default function AdminLeadsClient() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [assetsById, setAssetsById] = useState<Record<string, LeadAssets>>({});
   const [triggeringScrape, setTriggeringScrape] = useState(false);
+  const [showCriteria, setShowCriteria] = useState(false);
+  const [criteria, setCriteria] = useState<ScrapeCriteria>({
+    preset: "default",
+    followerMin: 50000,
+    followerMax: 250000,
+    platforms: ["instagram", "twitter", "reddit"],
+    activityMode: "active",
+  });
 
   async function load() {
     const res = await fetch("/api/admin/leads");
@@ -72,7 +92,9 @@ export default function AdminLeadsClient() {
   const filtered = rows.filter((row) => {
     if (statusFilter !== "all" && row.status !== statusFilter) return false;
     if (!normalizedQuery) return true;
-    const haystack = [row.handle, row.platform].join(" ").toLowerCase();
+    const platforms = row.platforms_found ?? [];
+    const verticals = row.content_verticals ?? [];
+    const haystack = [row.handle, row.platform, ...platforms, ...verticals].join(" ").toLowerCase();
     return haystack.includes(normalizedQuery);
   });
   const sorted = [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -102,6 +124,18 @@ export default function AdminLeadsClient() {
       return;
     }
     setMessage("Outreach sent.");
+    await load();
+  }
+
+  async function classifyImages(id: string) {
+    setMessage("Classifying images...");
+    const res = await fetch(`/api/admin/leads/${id}/classify-images`, { method: "POST" });
+    const json = (await res.json().catch(() => ({}))) as { error?: string; content_verticals?: string[] };
+    if (!res.ok) {
+      setMessage(json.error ?? "Classification failed");
+      return;
+    }
+    setMessage(`Classified: ${(json.content_verticals ?? []).join(", ") || "none"}`);
     await load();
   }
 
@@ -162,14 +196,34 @@ export default function AdminLeadsClient() {
   async function triggerScrape() {
     setTriggeringScrape(true);
     setMessage("Triggering scrape...");
-    const res = await fetch("/api/admin/leads/trigger-scrape", { method: "POST" });
+    const body: { criteria?: Record<string, unknown> } = showCriteria
+      ? {
+          criteria: {
+            followerRange: (criteria.platforms ?? ["instagram", "twitter"]).reduce(
+              (acc, p) => {
+                acc[p] = { min: criteria.followerMin, max: criteria.followerMax };
+                return acc;
+              },
+              {} as Record<string, { min?: number; max?: number }>
+            ),
+            platforms: criteria.platforms,
+            activityMode: criteria.activityMode,
+            inactivityWeeks: criteria.activityMode === "inactive" ? criteria.inactivityWeeks : undefined,
+          },
+        }
+      : {};
+    const res = await fetch("/api/admin/leads/trigger-scrape", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
     const json = (await res.json().catch(() => ({}))) as { error?: string };
     setTriggeringScrape(false);
     if (!res.ok) {
       setMessage(json.error ?? "Failed to trigger");
       return;
     }
-    setMessage("Scrape requested. Antigravity will pick it up on next poll.");
+    setMessage("Scrape requested. Scraper will pick it up on next poll.");
   }
 
   return (
@@ -184,14 +238,99 @@ export default function AdminLeadsClient() {
             onClick={() => void triggerScrape()}
             disabled={triggeringScrape}
             type="button"
-            title="Creates a pending scrape. Antigravity polls and runs when it sees one."
+            title="Creates a pending scrape. Scraper polls and runs when it sees one."
           >
             {triggeringScrape ? "Triggering…" : "Run scrape"}
           </button>
+          <button
+            className="btn btn-ghost"
+            onClick={() => setShowCriteria(!showCriteria)}
+            type="button"
+          >
+            {showCriteria ? "Hide criteria" : "Set criteria"}
+          </button>
           <span className="muted" style={{ fontSize: 13 }}>
-            Antigravity polls <code>/api/admin/leads/pending-scrape</code> and runs when a scrape is requested.
+            Scraper polls <code>/api/admin/leads/pending-scrape</code> and runs when a scrape is requested.
           </span>
         </div>
+
+        {showCriteria ? (
+          <div className="card" style={{ marginTop: 12, padding: 14 }}>
+            <h4 style={{ marginTop: 0, marginBottom: 10 }}>Discovery criteria</h4>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-end" }}>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span className="muted" style={{ fontSize: 12 }}>Follower min</span>
+                <input
+                  className="input"
+                  type="number"
+                  value={criteria.followerMin ?? ""}
+                  onChange={(e) => setCriteria((c) => ({ ...c, followerMin: Number(e.target.value) || undefined }))}
+                  placeholder="50000"
+                  style={{ width: 100 }}
+                />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span className="muted" style={{ fontSize: 12 }}>Follower max</span>
+                <input
+                  className="input"
+                  type="number"
+                  value={criteria.followerMax ?? ""}
+                  onChange={(e) => setCriteria((c) => ({ ...c, followerMax: Number(e.target.value) || undefined }))}
+                  placeholder="250000"
+                  style={{ width: 100 }}
+                />
+              </label>
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span className="muted" style={{ fontSize: 12 }}>Activity</span>
+                <select
+                  className="input"
+                  value={criteria.activityMode ?? "active"}
+                  onChange={(e) => setCriteria((c) => ({ ...c, activityMode: e.target.value as "active" | "inactive" }))}
+                  style={{ minWidth: 120 }}
+                >
+                  <option value="active">Active (24–48h)</option>
+                  <option value="inactive">Inactive (no posts)</option>
+                </select>
+              </label>
+              {criteria.activityMode === "inactive" ? (
+                <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span className="muted" style={{ fontSize: 12 }}>Inactive weeks</span>
+                  <input
+                    className="input"
+                    type="number"
+                    min={1}
+                    value={criteria.inactivityWeeks ?? 2}
+                    onChange={(e) => setCriteria((c) => ({ ...c, inactivityWeeks: Number(e.target.value) || 2 }))}
+                    style={{ width: 60 }}
+                  />
+                </label>
+              ) : null}
+              <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span className="muted" style={{ fontSize: 12 }}>Preset</span>
+                <select
+                  className="input"
+                  value={criteria.preset ?? "default"}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCriteria((c) => ({
+                      ...c,
+                      preset: v,
+                      ...(v === "established" && { followerMin: 500000, followerMax: undefined }),
+                      ...(v === "mid" && { followerMin: 50000, followerMax: 250000 }),
+                      ...(v === "inactive" && { activityMode: "inactive" as const, inactivityWeeks: 2 }),
+                    }));
+                  }}
+                  style={{ minWidth: 160 }}
+                >
+                  <option value="default">Default</option>
+                  <option value="established">Established (500k+)</option>
+                  <option value="mid">Mid-tier (50k–250k)</option>
+                  <option value="inactive">Inactive (2+ weeks)</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        ) : null}
 
         <details className="card" style={{ marginTop: 12, padding: 12 }}>
           <summary style={{ cursor: "pointer", fontWeight: 800 }}>Ingest webhook (Antigravity)</summary>
@@ -296,6 +435,20 @@ export default function AdminLeadsClient() {
                             profile
                           </a>
                         ) : null}
+                        {(row.platforms_found?.length ?? 0) > 0 ? (
+                          <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                            Found on: {row.platforms_found!.join(", ")}
+                          </div>
+                        ) : null}
+                        {(row.content_verticals?.length ?? 0) > 0 ? (
+                          <div style={{ marginTop: 4 }}>
+                            {row.content_verticals!.map((v) => (
+                              <span key={v} className="badge badge-muted" style={{ marginRight: 4, fontSize: 10 }}>
+                                {v}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
                       </td>
                       <td>{row.platform}</td>
                       <td>{row.follower_count}</td>
@@ -363,6 +516,30 @@ export default function AdminLeadsClient() {
                                 ) : null}
                               </div>
                               <div>
+                                {(row.platforms_found?.length ?? 0) > 0 ? (
+                                  <div className="callout" style={{ marginBottom: 12 }}>
+                                    <div className="callout-title">Found on platforms</div>
+                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                      {(row.profile_urls && Object.keys(row.profile_urls).length > 0
+                                        ? row.platforms_found!.map((p) => ({
+                                            platform: p,
+                                            url: row.profile_urls![p],
+                                          }))
+                                        : row.platforms_found!.map((p) => ({ platform: p, url: null }))
+                                      ).map(({ platform, url }) =>
+                                        url ? (
+                                          <a key={platform} href={url} target="_blank" rel="noreferrer" className="badge" style={{ textDecoration: "none" }}>
+                                            {platform}
+                                          </a>
+                                        ) : (
+                                          <span key={platform} className="badge badge-muted">
+                                            {platform}
+                                          </span>
+                                        )
+                                      )}
+                                    </div>
+                                  </div>
+                                ) : null}
                                 {row.notes ? (
                                   <div className="callout" style={{ marginBottom: 12 }}>
                                     <div className="callout-title">Notes</div>
@@ -385,6 +562,15 @@ export default function AdminLeadsClient() {
                                     type="button"
                                   >
                                     Reject
+                                  </button>
+                                  <button
+                                    className="btn btn-ghost"
+                                    onClick={() => void classifyImages(row.id)}
+                                    disabled={(row.sample_paths?.length ?? 0) === 0}
+                                    type="button"
+                                    title="Use AI to detect content vertical (swimwear, lingerie, etc.)"
+                                  >
+                                    Classify images
                                   </button>
                                   <button
                                     className="btn btn-primary"
