@@ -1,23 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { scrapeReddit, type ScrapeCriteria } from "@/lib/scrape-reddit";
 
-export type ScrapeCriteria = {
-  followerRange?: Record<string, { min?: number; max?: number }>;
-  platforms?: string[];
-  activityMode?: "active" | "inactive";
-  inactivityWeeks?: number;
-  bioKeywords?: string[];
-  usernamePatterns?: string[];
-  contentTags?: string[];
-  engagementMin?: number;
-  visualSignals?: string[];
-  requireVisualMatch?: boolean;
-};
+export type { ScrapeCriteria };
 
 /**
- * Admin creates a scrape trigger with optional criteria. Scraper polls pending-scrape and runs when it sees one.
+ * Admin clicks "Run scrape" - runs the scrape inline and ingests leads. No separate process.
  */
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -32,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  let criteria: ScrapeCriteria | null = null;
+  let criteria: ScrapeCriteria = {};
   try {
     const body = await request.json().catch(() => ({}));
     if (body && typeof body.criteria === "object" && body.criteria !== null) {
@@ -42,14 +31,53 @@ export async function POST(request: Request) {
     // no body or invalid JSON - use defaults
   }
 
-  const admin = getSupabaseAdmin();
-  const { data, error } = await admin
-    .from("scrape_triggers")
-    .insert({ criteria: criteria ?? {} })
-    .select("id")
-    .single();
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  const leads = await scrapeReddit(criteria);
+  if (leads.length === 0) {
+    return NextResponse.json(
+      { ok: true, imported: 0, message: "No leads found this run." },
+      { status: 200 }
+    );
   }
-  return NextResponse.json({ ok: true, triggerId: data.id, criteria: criteria ?? {} }, { status: 201 });
+
+  const secret = process.env.ANTIGRAVITY_WEBHOOK_SECRET?.trim();
+  if (!secret) {
+    return NextResponse.json(
+      { error: "ANTIGRAVITY_WEBHOOK_SECRET not configured" },
+      { status: 503 }
+    );
+  }
+
+  const origin =
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ??
+    (request.headers.get("x-vercel-url") ? `https://${request.headers.get("x-vercel-url")}` : null) ??
+    new URL(request.url).origin;
+  const ingestUrl = `${origin.replace(/\/$/, "")}/api/admin/leads/ingest`;
+
+  const ingestRes = await fetch(ingestUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${secret}`,
+    },
+    body: JSON.stringify({ leads }),
+  });
+
+  if (!ingestRes.ok) {
+    const text = await ingestRes.text();
+    return NextResponse.json(
+      { error: `Ingest failed: ${ingestRes.status} ${text}` },
+      { status: 500 }
+    );
+  }
+
+  const result = (await ingestRes.json()) as { imported?: number };
+  return NextResponse.json(
+    {
+      ok: true,
+      imported: result.imported ?? leads.length,
+      message: `Imported ${result.imported ?? leads.length} leads.`,
+    },
+    { status: 201 }
+  );
 }

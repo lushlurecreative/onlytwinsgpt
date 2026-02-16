@@ -199,7 +199,7 @@ export default function AdminLeadsClient() {
 
   async function triggerScrape() {
     setTriggeringScrape(true);
-    setMessage("Triggering scrape...");
+    setMessage("Running scrape...");
     const body: { criteria?: Record<string, unknown> } = showCriteria
       ? {
           criteria: {
@@ -221,20 +221,21 @@ export default function AdminLeadsClient() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    const json = (await res.json().catch(() => ({}))) as { error?: string; imported?: number; message?: string };
     setTriggeringScrape(false);
     if (!res.ok) {
-      setMessage(json.error ?? "Failed to trigger");
+      setMessage(json.error ?? "Scrape failed");
       return;
     }
-    setMessage("Scrape requested. Scraper will pick it up on next poll.");
+    setMessage(json.message ?? `Imported ${json.imported ?? 0} leads.`);
+    await load();
   }
 
   return (
     <div>
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Lead Pipeline</h2>
-        <p className="muted">Antigravity scrapes leads and pushes them here. Review, approve, generate AI samples, and send outreach.</p>
+        <p className="muted">Click Run scrape to fetch leads from Reddit. Review, approve, generate AI samples, and send outreach.</p>
 
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginTop: 12 }}>
           <button
@@ -242,7 +243,7 @@ export default function AdminLeadsClient() {
             onClick={() => void triggerScrape()}
             disabled={triggeringScrape}
             type="button"
-            title="Creates a pending scrape. Scraper polls and runs when it sees one."
+            title="Runs the scrape now and imports leads"
           >
             {triggeringScrape ? "Triggering…" : "Run scrape"}
           </button>
@@ -254,7 +255,7 @@ export default function AdminLeadsClient() {
             {showCriteria ? "Hide criteria" : "Set criteria"}
           </button>
           <span className="muted" style={{ fontSize: 13 }}>
-            Scraper polls <code>/api/admin/leads/pending-scrape</code> and runs when a scrape is requested.
+            Scrapes Reddit creator subreddits and imports leads.
           </span>
         </div>
 
@@ -407,7 +408,7 @@ export default function AdminLeadsClient() {
 
         {message ? <p style={{ marginTop: 10 }}>{message}</p> : null}
         {loading ? <p>Loading...</p> : null}
-        {!loading && rows.length === 0 ? <p className="muted">No leads yet. Configure Antigravity to push to the ingest URL.</p> : null}
+        {!loading && rows.length === 0 ? <p className="muted">No leads yet. Click Run scrape to fetch leads from Reddit.</p> : null}
       </div>
 
       {!loading && sorted.length > 0 ? (
