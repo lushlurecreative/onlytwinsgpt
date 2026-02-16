@@ -69,11 +69,15 @@ export default function AdminLeadsClient() {
   }
 
   useEffect(() => {
-    void load();
-  }, []);
-
-  useEffect(() => {
-    fetch("/api/admin/run-migrations", { method: "POST" }).catch(() => {});
+    async function init() {
+      const res = await fetch("/api/admin/run-migrations", { method: "POST" });
+      if (!res.ok) {
+        const json = (await res.json().catch(() => ({}))) as { error?: string };
+        setMessage(json.error ?? "Migrations failed - check DATABASE_URL in Vercel");
+      }
+      await load();
+    }
+    void init();
   }, []);
 
   useEffect(() => {
