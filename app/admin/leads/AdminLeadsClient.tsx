@@ -59,25 +59,17 @@ export default function AdminLeadsClient() {
   async function load() {
     const res = await fetch("/api/admin/leads");
     const json = (await res.json().catch(() => ({}))) as { leads?: LeadRow[]; error?: string };
+    setRows(json.leads ?? []);
     if (!res.ok) {
       setMessage(json.error ?? "Failed to load leads");
-      setLoading(false);
-      return;
+    } else if (json.error) {
+      setMessage(json.error);
     }
-    setRows(json.leads ?? []);
     setLoading(false);
   }
 
   useEffect(() => {
-    async function init() {
-      const res = await fetch("/api/admin/run-migrations", { method: "POST" });
-      if (!res.ok) {
-        const json = (await res.json().catch(() => ({}))) as { error?: string };
-        setMessage(json.error ?? "Migrations failed - check DATABASE_URL in Vercel");
-      }
-      await load();
-    }
-    void init();
+    void load();
   }, []);
 
   useEffect(() => {
@@ -204,35 +196,49 @@ export default function AdminLeadsClient() {
   async function triggerScrape() {
     setTriggeringScrape(true);
     setMessage("Running scrape...");
-    const body: { criteria?: Record<string, unknown> } = showCriteria
-      ? {
-          criteria: {
-            followerRange: (criteria.platforms ?? ["instagram", "twitter"]).reduce(
-              (acc, p) => {
-                acc[p] = { min: criteria.followerMin, max: criteria.followerMax };
-                return acc;
-              },
-              {} as Record<string, { min?: number; max?: number }>
-            ),
-            platforms: criteria.platforms,
-            activityMode: criteria.activityMode,
-            inactivityWeeks: criteria.activityMode === "inactive" ? criteria.inactivityWeeks : undefined,
-          },
+    try {
+      const body: { criteria?: Record<string, unknown> } = showCriteria
+        ? {
+            criteria: {
+              followerRange: (criteria.platforms ?? ["instagram", "twitter"]).reduce(
+                (acc, p) => {
+                  acc[p] = { min: criteria.followerMin, max: criteria.followerMax };
+                  return acc;
+                },
+                {} as Record<string, { min?: number; max?: number }>
+              ),
+              platforms: criteria.platforms,
+              activityMode: criteria.activityMode,
+              inactivityWeeks: criteria.activityMode === "inactive" ? criteria.inactivityWeeks : undefined,
+            },
+          }
+        : {};
+      const res = await fetch("/api/admin/leads/trigger-scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(body),
+      });
+      const text = await res.text();
+      const json = (() => {
+        try {
+          return JSON.parse(text) as { error?: string; imported?: number; message?: string };
+        } catch {
+          return {};
         }
-      : {};
-    const res = await fetch("/api/admin/leads/trigger-scrape", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const json = (await res.json().catch(() => ({}))) as { error?: string; imported?: number; message?: string };
-    setTriggeringScrape(false);
-    if (!res.ok) {
-      setMessage(json.error ?? "Scrape failed");
-      return;
+      })();
+      if (!res.ok) {
+        setMessage(json.error ?? `Scrape failed (${res.status})`);
+        return;
+      }
+      setMessage(json.message ?? `Imported ${json.imported ?? 0} leads.`);
+      await load();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setMessage(`Scrape failed: ${msg}`);
+    } finally {
+      setTriggeringScrape(false);
     }
-    setMessage(json.message ?? `Imported ${json.imported ?? 0} leads.`);
-    await load();
   }
 
   return (
@@ -258,6 +264,11 @@ export default function AdminLeadsClient() {
           >
             {showCriteria ? "Hide criteria" : "Set criteria"}
           </button>
+          {(message || triggeringScrape) ? (
+            <span style={{ fontSize: 14, color: triggeringScrape ? "var(--muted)" : "inherit" }}>
+              {triggeringScrape ? "Running scrape..." : message}
+            </span>
+          ) : null}
           <span className="muted" style={{ fontSize: 13 }}>
             Scrapes Reddit creator subreddits and imports leads.
           </span>

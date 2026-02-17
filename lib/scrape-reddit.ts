@@ -20,24 +20,26 @@ export type ScrapedLead = {
 };
 
 const SUBREDDITS = [
-  "ContentCreator",
-  "OnlyFansCreators",
   "Creators",
   "CreatorsAdvice",
   "Instagram",
   "influencermarketing",
+  "NewTubers",
+  "YouTubeCreators",
 ];
 
 export async function scrapeReddit(criteria: ScrapeCriteria = {}): Promise<ScrapedLead[]> {
   const leads: ScrapedLead[] = [];
   const seen = new Set<string>();
 
+  const userAgent =
+    "web:com.onlytwins:v1.0 (by /u/onlytwins)";
   for (const sub of SUBREDDITS) {
     try {
       const url = `https://www.reddit.com/r/${sub}/new.json?limit=25`;
       const res = await fetch(url, {
-        headers: { "User-Agent": "OnlyTwinsScraper/1.0" },
-        signal: AbortSignal.timeout(10000),
+        headers: { "User-Agent": userAgent },
+        signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) continue;
       const data = (await res.json()) as { data?: { children?: Array<{ data?: { author?: string; score?: number; ups?: number } }> } };

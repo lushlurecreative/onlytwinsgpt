@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { isAdminUser } from "@/lib/admin";
+import { runMigrations } from "@/lib/run-migrations";
 
 type LeadInput = {
   source: string;
@@ -39,18 +40,33 @@ export async function GET() {
   }
 
   const admin = getSupabaseAdmin();
-  const { data, error } = await admin
-    .from("leads")
-    .select(
-      "id, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, profile_urls, platforms_found, content_verticals, notes, sample_preview_path, sample_paths, generated_sample_paths, approved_at, messaged_at, created_at"
-    )
-    .order("score", { ascending: false })
-    .limit(1000);
+  const fullSelect =
+    "id, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, profile_urls, platforms_found, content_verticals, notes, sample_preview_path, sample_paths, generated_sample_paths, approved_at, messaged_at, created_at";
+  const baseSelect =
+    "id, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, notes, sample_preview_path, approved_at, messaged_at, created_at";
+  const minSelect = "id, source, handle, platform, follower_count, score, status, profile_url, created_at";
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+  let result = await admin.from("leads").select(fullSelect).order("score", { ascending: false }).limit(1000);
+  const errMsg = result.error?.message ?? "";
+
+  if (result.error) {
+    await runMigrations();
+    result = await admin.from("leads").select(fullSelect).order("score", { ascending: false }).limit(1000);
   }
-  return NextResponse.json({ leads: data ?? [] }, { status: 200 });
+  if (result.error) {
+    result = await admin.from("leads").select(baseSelect).order("score", { ascending: false }).limit(1000);
+  }
+  if (result.error) {
+    result = await admin.from("leads").select(minSelect).order("score", { ascending: false }).limit(1000);
+  }
+
+  if (result.error) {
+    return NextResponse.json(
+      { leads: [] as unknown[], error: result.error.message },
+      { status: 200 }
+    );
+  }
+  return NextResponse.json({ leads: (result.data ?? []) as unknown[] }, { status: 200 });
 }
 
 export async function POST(request: Request) {
