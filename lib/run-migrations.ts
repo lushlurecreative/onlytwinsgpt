@@ -29,6 +29,7 @@ const MIGRATIONS = [
   `alter table public.leads add column if not exists platforms_found text[] not null default '{}';`,
   `alter table public.leads add column if not exists profile_urls jsonb null default '{}';`,
   `alter table public.leads add column if not exists content_verticals text[] not null default '{}';`,
+  `drop policy if exists leads_service_role_all on public.leads; create policy leads_service_role_all on public.leads for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');`,
 ];
 
 export async function runMigrations(): Promise<{ ok: boolean; error?: string }> {
