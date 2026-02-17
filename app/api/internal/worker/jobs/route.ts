@@ -1,0 +1,52 @@
+import { NextResponse } from "next/server";
+import { requireWorkerSecret } from "@/lib/worker-auth";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+
+/**
+ * GET: List pending training_jobs and generation_jobs for the worker.
+ * Protected by WORKER_SECRET (Bearer or X-Worker-Secret).
+ * Worker uses service role only; never anon.
+ */
+export async function GET(request: Request) {
+  if (!requireWorkerSecret(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const admin = getSupabaseAdmin();
+
+  const [trainingRes, generationRes] = await Promise.all([
+    admin
+      .from("training_jobs")
+      .select("id, subject_id, sample_paths, status")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true })
+      .limit(50),
+    admin
+      .from("generation_jobs")
+      .select("id, subject_id, preset_id, reference_image_path, lora_model_reference, controlnet_input_path, status")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true })
+      .limit(50),
+  ]);
+
+  const training = (trainingRes.data ?? []) as Array<{
+    id: string;
+    subject_id: string;
+    sample_paths: string[];
+    status: string;
+  }>;
+  const generation = (generationRes.data ?? []) as Array<{
+    id: string;
+    subject_id: string | null;
+    preset_id: string;
+    reference_image_path: string;
+    lora_model_reference: string | null;
+    controlnet_input_path: string | null;
+    status: string;
+  }>;
+
+  return NextResponse.json({
+    training_jobs: training,
+    generation_jobs: generation,
+  });
+}

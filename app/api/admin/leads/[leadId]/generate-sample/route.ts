@@ -2,11 +2,15 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { generateImages } from "@/lib/ai/generate-images";
+import {
+  getPresetIdBySceneKey,
+  createGenerationJob,
+  pollAllGenerationJobsUntilDone,
+} from "@/lib/generation-jobs";
 
 type Params = { params: Promise<{ leadId: string }> };
 
-export async function POST(_request: Request, { params }: Params) {
+export async function POST(request: Request, { params }: Params) {
   const { leadId } = await params;
   const session = await createClient();
   const {
@@ -34,60 +38,55 @@ export async function POST(_request: Request, { params }: Params) {
   const samplePaths = (lead.sample_paths ?? []) as string[];
   if (samplePaths.length === 0) {
     return NextResponse.json(
-      { error: "Lead has no scraped sample photos. Antigravity must provide sampleUrls or samplePaths." },
+      { error: "Lead has no scraped sample photos." },
       { status: 400 }
     );
   }
 
-  const sourcePath = samplePaths[0];
-  const { data: sourceFile, error: sourceError } = await admin.storage.from("uploads").download(sourcePath);
-  if (sourceError || !sourceFile) {
-    return NextResponse.json({ error: "Failed to load sample image" }, { status: 400 });
-  }
-
-  const sourceExt = sourcePath.split(".").pop()?.toLowerCase() ?? "jpg";
-
-  let generatedCount = 0;
-  const outputPaths: string[] = [];
   const scenePreset = "beach";
+  const presetId = await getPresetIdBySceneKey(scenePreset);
+  if (!presetId) {
+    return NextResponse.json(
+      { error: "Preset not found. Run migrations to seed presets." },
+      { status: 400 }
+    );
+  }
 
-  try {
-    const result = await generateImages({
-      sourceFile,
-      sourceExt,
-      scenePreset,
-      count: 2,
-      contentMode: "sfw",
+  const referencePath = samplePaths[0];
+  const jobIds: string[] = [];
+  for (let i = 0; i < 2; i++) {
+    const id = await createGenerationJob({
+      subject_id: null,
+      preset_id: presetId,
+      reference_image_path: referencePath,
+      lora_model_reference: null,
+      generation_request_id: null,
     });
-    const folder = `leads/${leadId}/generated`;
-    for (let i = 0; i < result.images.length; i += 1) {
-      const bytes = result.images[i];
-      const objectPath = `${folder}/sample-${i + 1}.jpg`;
-      const { error: uploadError } = await admin.storage.from("uploads").upload(objectPath, bytes, {
-        contentType: "image/jpeg",
-        upsert: true,
-      });
-      if (!uploadError) {
-        outputPaths.push(objectPath);
-        generatedCount += 1;
-      }
-    }
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: `Generation failed: ${msg}` }, { status: 500 });
+    if (id) jobIds.push(id);
   }
 
-  if (outputPaths.length === 0) {
-    return NextResponse.json({ error: "No images generated" }, { status: 500 });
+  if (jobIds.length === 0) {
+    return NextResponse.json({ error: "Failed to create generation jobs" }, { status: 500 });
   }
 
-  const samplePreviewPath = outputPaths[0];
+  const { output_paths, allOk, firstError } = await pollAllGenerationJobsUntilDone(jobIds);
+
+  if (!allOk || output_paths.length === 0) {
+    return NextResponse.json(
+      {
+        error: firstError ?? "Generation failed or timed out. Ensure the RunPod worker is running and WORKER_SECRET is set.",
+      },
+      { status: 500 }
+    );
+  }
+
+  const samplePreviewPath = output_paths[0];
 
   const { error: updateError } = await admin
     .from("leads")
     .update({
       sample_preview_path: samplePreviewPath,
-      generated_sample_paths: outputPaths,
+      generated_sample_paths: output_paths,
     })
     .eq("id", leadId);
 
@@ -96,7 +95,12 @@ export async function POST(_request: Request, { params }: Params) {
   }
 
   return NextResponse.json(
-    { ok: true, generated: generatedCount, samplePreviewPath, generatedSamplePaths: outputPaths },
+    {
+      ok: true,
+      generated: output_paths.length,
+      samplePreviewPath,
+      generatedSamplePaths: output_paths,
+    },
     { status: 200 }
   );
 }

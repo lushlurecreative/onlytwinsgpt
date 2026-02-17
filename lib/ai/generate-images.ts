@@ -1,4 +1,7 @@
-import { generateImagesWithOpenAI } from "@/lib/image-generation";
+/**
+ * Image generation is handled by the RunPod worker (FLUX + LoRA + IP-Adapter + ControlNet + Real-ESRGAN).
+ * Do not call OpenAI for image generation. Use generation_jobs: create job, poll until done, use output_path.
+ */
 
 export type ContentMode = "sfw" | "mature";
 
@@ -16,32 +19,12 @@ export type GenerateImagesOutput = {
   provider: string;
 };
 
-function getProviderKey() {
-  return (process.env.AI_IMAGE_PROVIDER ?? "openai").toLowerCase().trim();
+/**
+ * @deprecated Use generation_jobs: createGenerationJob + pollAllGenerationJobsUntilDone.
+ * This stub throws. All routes have been updated to use the job pipeline.
+ */
+export async function generateImages(_input: GenerateImagesInput): Promise<GenerateImagesOutput> {
+  throw new Error(
+    "Image generation uses the RunPod worker pipeline (FLUX + LoRA + IP-Adapter + ControlNet + Real-ESRGAN). Use createGenerationJob and poll from @/lib/generation-jobs."
+  );
 }
-
-export async function generateImages(input: GenerateImagesInput): Promise<GenerateImagesOutput> {
-  const provider = getProviderKey();
-
-  // The current production path. Other providers can be added behind this switch without
-  // changing API routes or database schemas.
-  if (provider === "openai") {
-    const out = await generateImagesWithOpenAI(input);
-    return { ...out, provider: "openai" };
-  }
-
-  // Provider scaffolds (intentionally explicit errors until configured).
-  if (provider === "replicate") {
-    throw new Error(
-      "AI_IMAGE_PROVIDER=replicate is not configured yet. Set AI_IMAGE_PROVIDER=openai or implement Replicate FLUX integration."
-    );
-  }
-  if (provider === "fal") {
-    throw new Error(
-      "AI_IMAGE_PROVIDER=fal is not configured yet. Set AI_IMAGE_PROVIDER=openai or implement Fal PuLID integration."
-    );
-  }
-
-  throw new Error(`Unknown AI_IMAGE_PROVIDER: ${provider}`);
-}
-

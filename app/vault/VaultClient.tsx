@@ -428,6 +428,9 @@ export default function VaultClient({ userId }: VaultClientProps) {
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
+      <p style={{ marginBottom: 8 }}>
+        <Link href="/subjects">Digital twin & consent →</Link>
+      </p>
       <section className="card">
         <div className="stepper">
           <div className={`step ${step === 1 ? "step-active" : step > 1 ? "step-done" : ""}`}>

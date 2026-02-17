@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getScenePresetByKey } from "@/lib/scene-presets";
-import { generateImages } from "@/lib/ai/generate-images";
+import {
+  getApprovedSubjectIdForUser,
+  getLoraReferenceForSubject,
+  getPresetIdBySceneKey,
+  createGenerationJob,
+  pollAllGenerationJobsUntilDone,
+} from "@/lib/generation-jobs";
 
 type GenerateBody = {
   sourcePath?: string;
@@ -10,10 +16,6 @@ type GenerateBody = {
   visibility?: "public" | "subscribers";
   contentMode?: "sfw" | "mature";
 };
-
-function sanitizeFileBase(value: string) {
-  return value.replace(/[^a-z0-9_-]/gi, "-").toLowerCase();
-}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -44,48 +46,49 @@ export async function POST(request: Request) {
 
   const count = Math.max(1, Math.min(10, Number(body.count ?? 1)));
   const visibility = body.visibility === "subscribers" ? "subscribers" : "public";
-  const contentMode = body.contentMode === "mature" ? "mature" : "sfw";
 
-  const { data: sourceFile, error: sourceError } = await supabase.storage
-    .from("uploads")
-    .download(sourcePath);
-  if (sourceError || !sourceFile) {
-    return NextResponse.json({ error: sourceError?.message ?? "Could not download source image" }, { status: 400 });
-  }
-
-  const sourceExt = sourcePath.split(".").pop()?.toLowerCase() ?? "png";
-  let generated;
-  try {
-    generated = await generateImages({
-      sourceFile,
-      sourceExt,
-      scenePreset: scene.key,
-      count,
-      contentMode,
-    });
-  } catch (error) {
+  const subjectId = await getApprovedSubjectIdForUser(user.id);
+  if (!subjectId) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Image generation failed" },
+      { error: "No approved subject. Consent required for generation." },
       { status: 400 }
     );
   }
 
-  const created: Array<{ path: string; signedUrl: string | null; postId: string }> = [];
-  const createdAt = Date.now();
+  const presetId = await getPresetIdBySceneKey(scene.key);
+  if (!presetId) {
+    return NextResponse.json({ error: "Preset not found." }, { status: 400 });
+  }
 
-  for (let i = 0; i < generated.images.length; i += 1) {
-    const bytes = generated.images[i];
-    const objectPath = `${user.id}/generated/${sanitizeFileBase(scene.key)}-${createdAt}-${i + 1}.png`;
-
-    const { error: uploadError } = await supabase.storage.from("uploads").upload(objectPath, bytes, {
-      contentType: "image/png",
-      upsert: false,
+  const loraRef = await getLoraReferenceForSubject(subjectId);
+  const jobIds: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const id = await createGenerationJob({
+      subject_id: subjectId,
+      preset_id: presetId,
+      reference_image_path: sourcePath,
+      lora_model_reference: loraRef,
+      generation_request_id: null,
     });
-    if (uploadError) {
-      return NextResponse.json({ error: uploadError.message }, { status: 400 });
-    }
+    if (id) jobIds.push(id);
+  }
 
-    const caption = generated.caption;
+  if (jobIds.length === 0) {
+    return NextResponse.json({ error: "Failed to create generation jobs" }, { status: 500 });
+  }
+
+  const { output_paths, allOk, firstError } = await pollAllGenerationJobsUntilDone(jobIds);
+  if (!allOk || output_paths.length === 0) {
+    return NextResponse.json(
+      { error: firstError ?? "Generation failed or timed out. Ensure the RunPod worker is running." },
+      { status: 500 }
+    );
+  }
+
+  const caption = `OnlyTwins ${scene.label} set`;
+  const created: Array<{ path: string; signedUrl: string | null; postId: string }> = [];
+
+  for (const objectPath of output_paths) {
     const { data: post, error: postError } = await supabase
       .from("posts")
       .insert({
@@ -98,7 +101,7 @@ export async function POST(request: Request) {
       .single();
 
     if (postError || !post?.id) {
-      return NextResponse.json({ error: postError?.message ?? "Failed to create generated post row" }, { status: 400 });
+      continue;
     }
 
     const { data: signedData } = await supabase.storage
@@ -113,9 +116,8 @@ export async function POST(request: Request) {
   }
 
   if (created.length === 0) {
-    return NextResponse.json({ error: "No images returned from generator" }, { status: 400 });
+    return NextResponse.json({ error: "Failed to create post records" }, { status: 500 });
   }
 
   return NextResponse.json({ generated: created }, { status: 201 });
 }
-

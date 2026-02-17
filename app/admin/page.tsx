@@ -108,6 +108,15 @@ export default async function AdminOverviewPage() {
               </Link>
             </div>
           </article>
+          <article className="card">
+            <div className="muted">Subject consent</div>
+            <div className="muted" style={{ fontSize: 12 }}>Approve consent for digital twin training & generation</div>
+            <div style={{ marginTop: 10 }}>
+              <Link className="btn btn-ghost" href="/admin/subjects">
+                Subjects
+              </Link>
+            </div>
+          </article>
         </div>
       </section>
     </div>

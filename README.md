@@ -38,6 +38,16 @@ The Lead Pipeline scrapes YouTube and Reddit for creator leads. To enable YouTub
 
 Without it, only Reddit is scraped (and demo leads are used when both return empty).
 
+## ONLYTWINS image pipeline (RunPod worker)
+
+Image generation uses a **RunPod worker** (FLUX + LoRA + IP-Adapter + ControlNet + Real-ESRGAN), not OpenAI. The app creates **training_jobs** and **generation_jobs** and polls until the worker completes them.
+
+- **App env:** Set `WORKER_SECRET` (shared secret). The worker calls internal APIs with `Authorization: Bearer {WORKER_SECRET}` or `X-Worker-Secret`.
+- **Worker env:** See [worker/README.md](worker/README.md). Required: `WORKER_SECRET`, `APP_URL`, `SUPABASE_SERVICE_ROLE_KEY`, Supabase URL. Optional: `DATABASE_URL` for direct Postgres.
+- **Supabase:** Ensure the **model_artifacts** bucket exists (private). After deploy, call `POST /api/internal/setup/storage` with `Authorization: Bearer {WORKER_SECRET}`, or run `WORKER_SECRET=... APP_URL=... npx tsx scripts/ensure-model-artifacts-bucket.ts`. See [worker/README.md](worker/README.md) runbook for full steps.
+
+Without the worker running and `WORKER_SECRET` set, lead generate-sample and generation-requests image generation will time out or fail.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { generateImages } from "@/lib/ai/generate-images";
 import { generateVideo } from "@/lib/video-generation";
 import { getScenePresetByKey } from "@/lib/scene-presets";
+import {
+  getApprovedSubjectIdForUser,
+  getLoraReferenceForSubject,
+  getPresetIdBySceneKey,
+  createGenerationJob,
+  pollAllGenerationJobsUntilDone,
+} from "@/lib/generation-jobs";
 
 type Params = {
   params: Promise<{ requestId: string }>;
@@ -66,7 +72,26 @@ export async function POST(_request: Request, { params }: Params) {
   const total = Math.max(1, requestRow.image_count) + Math.max(0, requestRow.video_count);
   let done = 0;
   let retries = requestRow.retry_count ?? 0;
-  const outputPaths = [...(requestRow.output_paths ?? [])];
+  let outputPaths = [...(requestRow.output_paths ?? [])];
+
+  const subjectId = await getApprovedSubjectIdForUser(requestRow.user_id);
+  if (!subjectId) {
+    return NextResponse.json(
+      { error: "No approved subject. Consent required for generation." },
+      { status: 400 }
+    );
+  }
+
+  const presetId = await getPresetIdBySceneKey(requestRow.scene_preset);
+  if (!presetId) {
+    return NextResponse.json(
+      { error: "Preset not found. Run migrations to seed presets." },
+      { status: 400 }
+    );
+  }
+
+  const loraRef = await getLoraReferenceForSubject(subjectId);
+  const samplePaths = requestRow.sample_paths;
 
   await admin
     .from("generation_requests")
@@ -77,68 +102,51 @@ export async function POST(_request: Request, { params }: Params) {
     })
     .eq("id", requestId);
 
+  const jobIds: string[] = [];
   for (let i = 0; i < requestRow.image_count; i += 1) {
-    const sourcePath = requestRow.sample_paths[i % requestRow.sample_paths.length];
-    const { data: sourceFile, error: sourceError } = await admin.storage
-      .from("uploads")
-      .download(sourcePath);
-    if (sourceError || !sourceFile) {
-      retries += 1;
-      continue;
-    }
-    const sourceExt = sourcePath.split(".").pop()?.toLowerCase() ?? "png";
+    const referencePath = samplePaths[i % samplePaths.length];
+    const id = await createGenerationJob({
+      subject_id: subjectId,
+      preset_id: presetId,
+      reference_image_path: referencePath,
+      lora_model_reference: loraRef,
+      generation_request_id: requestId,
+    });
+    if (id) jobIds.push(id);
+  }
 
-    let success = false;
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        const generated = await generateImages({
-          sourceFile,
-          sourceExt,
-          scenePreset: requestRow.scene_preset,
-          count: 1,
-          contentMode,
-        });
-        const bytes = generated.images[0];
-        const objectPath = `${requestRow.user_id}/generated/request-${sanitizeFileBase(requestRow.scene_preset)}-${requestId}-${i + 1}.jpg`;
-        const { error: uploadError } = await admin.storage.from("uploads").upload(objectPath, bytes, {
-          contentType: "image/jpeg",
-          upsert: false,
-        });
-        if (uploadError) {
-          throw new Error(uploadError.message);
-        }
-        const { error: postError } = await admin.from("posts").insert({
-          creator_id: requestRow.user_id,
-          storage_path: objectPath,
-          caption: generated.caption,
-          visibility: "subscribers",
-          is_published: false,
-        });
-        if (postError) {
-          throw new Error(postError.message);
-        }
+  if (jobIds.length > 0) {
+    const { output_paths: jobOutputs, allOk } = await pollAllGenerationJobsUntilDone(jobIds);
+    const scenePreset = getScenePresetByKey(requestRow.scene_preset);
+    const caption = scenePreset
+      ? `OnlyTwins ${scenePreset.label} set (${contentMode.toUpperCase()})`
+      : "OnlyTwins generated";
+    for (const objectPath of jobOutputs) {
+      const { error: postError } = await admin.from("posts").insert({
+        creator_id: requestRow.user_id,
+        storage_path: objectPath,
+        caption,
+        visibility: "subscribers",
+        is_published: false,
+      });
+      if (!postError) {
         outputPaths.push(objectPath);
         done += 1;
-        success = true;
-        break;
-      } catch {
+      } else {
         retries += 1;
       }
     }
-
-    await admin
-      .from("generation_requests")
-      .update({
-        progress_done: done,
-        retry_count: retries,
-        output_paths: outputPaths,
-      })
-      .eq("id", requestId);
-
-    if (!success) {
-      // Continue processing remaining images to maximize successful output.
-    }
+    if (!allOk) retries += jobIds.length - jobOutputs.length;
   }
+
+  await admin
+    .from("generation_requests")
+    .update({
+      progress_done: done,
+      retry_count: retries,
+      output_paths: outputPaths,
+    })
+    .eq("id", requestId);
 
   const videoRequested = requestRow.video_count > 0;
   let videosDone = 0;
