@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
 import { scrapeReddit, type ScrapeCriteria, type ScrapedLead } from "@/lib/scrape-reddit";
 import { scrapeYouTube } from "@/lib/scrape-youtube";
-import { scrapeOnlyFinder } from "@/lib/scrape-aggregators";
+import { scrapeOnlyFinder, scrapeFanFox, scrapeJuicySearch } from "@/lib/scrape-aggregators";
 import { ingestLeads, type IngestLeadInput } from "@/lib/ingest-leads";
 
 export type { ScrapeCriteria };
@@ -35,18 +35,28 @@ export async function POST(request: Request) {
     // no body or invalid JSON - use defaults
   }
 
-  const [ytResult, redditResult, aggResult] = await Promise.all([
+  const [ytResult, redditResult, onlyfinderResult, fanfoxResult, juicyResult] = await Promise.all([
     scrapeYouTube(criteria, { withDiagnostics: true }),
     scrapeReddit(criteria, { withDiagnostics: true }),
     scrapeOnlyFinder(undefined, { withDiagnostics: true }),
+    scrapeFanFox(undefined, { withDiagnostics: true }),
+    scrapeJuicySearch(undefined, { withDiagnostics: true }),
   ]);
 
   const ytLeads = Array.isArray(ytResult) ? ytResult : ytResult.leads;
   const ytDiagnostics = Array.isArray(ytResult) ? [] : ytResult.diagnostics;
   const redditLeads = redditResult.leads;
   const redditDiagnostics = redditResult.diagnostics;
-  const aggLeads = Array.isArray(aggResult) ? aggResult : aggResult.leads;
-  const aggDiagnostics = Array.isArray(aggResult) ? [] : aggResult.diagnostics;
+
+  const onlyfinderLeads = Array.isArray(onlyfinderResult) ? onlyfinderResult : onlyfinderResult.leads;
+  const fanfoxLeads = Array.isArray(fanfoxResult) ? fanfoxResult : fanfoxResult.leads;
+  const juicyLeads = Array.isArray(juicyResult) ? juicyResult : juicyResult.leads;
+
+  const aggDiagnostics = [
+    ...(Array.isArray(onlyfinderResult) ? [] : onlyfinderResult.diagnostics),
+    ...(Array.isArray(fanfoxResult) ? [] : fanfoxResult.diagnostics),
+    ...(Array.isArray(juicyResult) ? [] : juicyResult.diagnostics),
+  ];
 
   const seen = new Set<string>();
   const allLeads: { lead: IngestLeadInput; source: "youtube" | "reddit" | "aggregator" }[] = [];
@@ -65,7 +75,7 @@ export async function POST(request: Request) {
       allLeads.push({ lead: mapToIngest(l), source: "reddit" });
     }
   }
-  for (const l of aggLeads) {
+  for (const l of [...onlyfinderLeads, ...fanfoxLeads, ...juicyLeads]) {
     const key = `${l.platform}:${l.handle.toLowerCase()}`;
     if (!seen.has(key)) {
       seen.add(key);
@@ -154,18 +164,20 @@ export async function POST(request: Request) {
   const isDemo = importedYt === 0 && importedRd > 0 && allLeads.length === 0;
   const failedYt = ytDiagnostics.filter((d) => !d.ok);
   const failedRd = redditDiagnostics.filter((d) => !d.ok);
-  const diagnosticHint = isDemo
-    ? failedRd.length > 0
-      ? ` Reddit: ${failedRd.map((d) => `${d.subreddit} (${d.error})`).join("; ")}.`
-      : failedYt.length > 0
-        ? ` YouTube: ${failedYt.map((d) => `${d.query} (${d.error})`).join("; ")}. Set YOUTUBE_API_KEY in Vercel.`
-        : ""
-    : "";
+  const failedAgg = aggDiagnostics.filter((d) => !d.ok);
+  const diagnosticParts: string[] = [];
+  if (failedRd.length > 0)
+    diagnosticParts.push(`Reddit: ${failedRd.map((d) => `${(d as { subreddit?: string }).subreddit ?? "?"} (${d.error})`).join("; ")}`);
+  if (failedYt.length > 0)
+    diagnosticParts.push(`YouTube: ${failedYt.map((d) => `${(d as { query?: string }).query ?? "?"} (${d.error})`).join("; ")}. Set YOUTUBE_API_KEY in Vercel`);
+  if (failedAgg.length > 0)
+    diagnosticParts.push(`Aggregators: ${failedAgg.map((d) => `${d.url} (${d.error})`).join("; ")}`);
+  const diagnosticHint = isDemo && diagnosticParts.length > 0 ? ` ${diagnosticParts.join(". ")}.` : "";
 
   const parts: string[] = [];
   if (importedYt > 0) parts.push(`${importedYt} from YouTube`);
   if (importedRd > 0) parts.push(`${importedRd} from Reddit`);
-  if (importedAgg > 0) parts.push(`${importedAgg} from OnlyFinder`);
+  if (importedAgg > 0) parts.push(`${importedAgg} from aggregators (OnlyFinder, FanFox, JuicySearch)`);
   const message = isDemo
     ? `All sources returned 0 leads. Inserted ${imported} demo leads to verify pipeline.${diagnosticHint}`
     : `Imported ${parts.join(", ")}.`;

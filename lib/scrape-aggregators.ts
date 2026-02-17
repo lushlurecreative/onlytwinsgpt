@@ -21,9 +21,21 @@ const DEFAULT_ONLYFINDER_URLS = [
   "https://onlyfinder.com/top",
 ];
 
+const DEFAULT_FANFOX_URLS = [
+  "https://fanfox.com/blogs/onlyfans/best-onlyfans-2025",
+  "https://fanfox.com/blogs/onlyfans/free-onlyfans",
+];
+
+const DEFAULT_JUICYSEARCH_QUERIES = ["Curvy milf", "free onlyfans"];
+
 function extractUsernameFromLinkText(text: string): string | null {
   const match = text.match(/onlyfans\.com\s*>\s*([^\s\]|]+)/i);
   return match ? match[1].trim() : null;
+}
+
+function extractUsernameFromHref(href: string): string | null {
+  const match = href.match(/onlyfans\.com\/(@?[a-zA-Z0-9_.-]+)/i);
+  return match ? match[1].replace(/^@/, "") : null;
 }
 
 function extractUsernameFromEncodedUrl(href: string): string | null {
@@ -139,16 +151,164 @@ export async function scrapeOnlyFinder(
   return result;
 }
 
+async function scrapeFanFoxPage(
+  url: string
+): Promise<{ leads: ScrapedLead[]; error?: string }> {
+  const res = await fetch(url, {
+    headers: { "User-Agent": USER_AGENT },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) {
+    return { leads: [], error: `HTTP ${res.status}` };
+  }
+  const html = await res.text();
+  const $ = cheerio.load(html);
+  const leads: ScrapedLead[] = [];
+  const seen = new Set<string>();
+
+  $('a[href*="onlyfans.com"]').each((_i, el) => {
+    const href = $(el).attr("href") ?? "";
+    const username = extractUsernameFromHref(href);
+    if (!username || seen.has(username.toLowerCase())) return;
+    if (username.length < 3 || username.length > 50) return;
+    seen.add(username.toLowerCase());
+
+    const profileUrl = `https://onlyfans.com/${username}`;
+    leads.push({
+      handle: username,
+      platform: "onlyfans",
+      profileUrl,
+      platformsFound: ["onlyfans"],
+      profileUrls: { onlyfans: profileUrl },
+      followerCount: 0,
+      engagementRate: 0,
+      luxuryTagHits: 0,
+    });
+  });
+
+  return { leads };
+}
+
 export async function scrapeFanFox(
-  _urls?: string[],
+  urls: string[] = DEFAULT_FANFOX_URLS,
   opts?: { withDiagnostics?: boolean }
 ): Promise<ScrapedLead[] | { leads: ScrapedLead[]; diagnostics: AggregatorDiagnostic[] }> {
-  return opts?.withDiagnostics ? { leads: [], diagnostics: [] } : [];
+  const allLeads: ScrapedLead[] = [];
+  const seen = new Set<string>();
+  const diagnostics: AggregatorDiagnostic[] = [];
+
+  for (const url of urls.slice(0, 5)) {
+    try {
+      const { leads, error } = await scrapeFanFoxPage(url);
+      if (error) {
+        diagnostics.push({ url, ok: false, error });
+        continue;
+      }
+      diagnostics.push({ url, ok: true, leadCount: leads.length });
+
+      for (const l of leads) {
+        const key = `${l.platform}:${l.handle.toLowerCase()}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          allLeads.push(l);
+        }
+      }
+
+      await new Promise((r) => setTimeout(r, 1500));
+    } catch (err) {
+      diagnostics.push({
+        url,
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  const result = allLeads.slice(0, 30);
+  if (opts?.withDiagnostics) {
+    return { leads: result, diagnostics };
+  }
+  return result;
+}
+
+async function scrapeJuicySearchPage(
+  query: string
+): Promise<{ leads: ScrapedLead[]; error?: string }> {
+  const url = `https://juicysearch.com/results/?q=${encodeURIComponent(query)}`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": USER_AGENT },
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!res.ok) {
+    return { leads: [], error: `HTTP ${res.status}` };
+  }
+  const html = await res.text();
+  const $ = cheerio.load(html);
+  const leads: ScrapedLead[] = [];
+  const seen = new Set<string>();
+
+  $('a[href*="onlyfans.com"]').each((_i, el) => {
+    const href = $(el).attr("href") ?? "";
+    const username = extractUsernameFromHref(href);
+    if (!username || seen.has(username.toLowerCase())) return;
+    if (username.length < 3 || username.length > 50) return;
+    seen.add(username.toLowerCase());
+
+    const profileUrl = `https://onlyfans.com/${username}`;
+    leads.push({
+      handle: username,
+      platform: "onlyfans",
+      profileUrl,
+      platformsFound: ["onlyfans"],
+      profileUrls: { onlyfans: profileUrl },
+      followerCount: 0,
+      engagementRate: 0,
+      luxuryTagHits: 0,
+    });
+  });
+
+  return { leads };
 }
 
 export async function scrapeJuicySearch(
-  _queries?: string[],
+  queries: string[] = DEFAULT_JUICYSEARCH_QUERIES,
   opts?: { withDiagnostics?: boolean }
 ): Promise<ScrapedLead[] | { leads: ScrapedLead[]; diagnostics: AggregatorDiagnostic[] }> {
-  return opts?.withDiagnostics ? { leads: [], diagnostics: [] } : [];
+  const allLeads: ScrapedLead[] = [];
+  const seen = new Set<string>();
+  const diagnostics: AggregatorDiagnostic[] = [];
+
+  for (const q of queries.slice(0, 3)) {
+    const url = `https://juicysearch.com/results/?q=${encodeURIComponent(q)}`;
+    try {
+      const { leads, error } = await scrapeJuicySearchPage(q);
+      if (error) {
+        diagnostics.push({ url, ok: false, error });
+        continue;
+      }
+      diagnostics.push({ url, ok: true, leadCount: leads.length });
+
+      for (const l of leads) {
+        const key = `${l.platform}:${l.handle.toLowerCase()}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          allLeads.push(l);
+        }
+      }
+
+      await new Promise((r) => setTimeout(r, 1500));
+    } catch (err) {
+      diagnostics.push({
+        url,
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  const result = allLeads.slice(0, 30);
+  if (opts?.withDiagnostics) {
+    return { leads: result, diagnostics };
+  }
+  return result;
 }
