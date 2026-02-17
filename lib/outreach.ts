@@ -1,8 +1,38 @@
 /**
- * Outreach: log and update lead when sending DM. Delivery mechanism is TBD (sendAlert placeholder).
+ * Outreach: log and update lead. Delivery: POST to OUTREACH_WEBHOOK_URL if set (Zapier/Make/n8n/your server), else sendAlert.
+ * Set OUTREACH_WEBHOOK_URL in Vercel to receive POST with { lead_id, handle, platform, message, sample_asset_path }.
  */
 
 import { sendAlert } from "@/lib/observability";
+
+const OUTREACH_WEBHOOK_URL = process.env.OUTREACH_WEBHOOK_URL?.trim();
+
+async function deliverOutreach(payload: {
+  lead_id: string;
+  handle: string;
+  platform: string;
+  message: string;
+  sample_asset_path?: string | null;
+}): Promise<void> {
+  if (OUTREACH_WEBHOOK_URL) {
+    try {
+      await fetch(OUTREACH_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, ts: new Date().toISOString() }),
+      });
+    } catch {
+      // Fall through to sendAlert
+    }
+  }
+  await sendAlert("lead_outreach_triggered", {
+    lead_id: payload.lead_id,
+    handle: payload.handle,
+    platform: payload.platform,
+    sample_preview_path: payload.sample_asset_path,
+    outreach_message: payload.message,
+  });
+}
 
 const DEFAULT_MESSAGE =
   "Hi {handle}, we help creators scale with done-for-you AI content. " +
@@ -42,12 +72,12 @@ export async function sendOutreach(
   });
   if (logError) return { ok: false, error: logError.message };
 
-  await sendAlert("lead_outreach_triggered", {
+  await deliverOutreach({
     lead_id: lead.id,
     handle: lead.handle,
     platform: lead.platform,
-    sample_preview_path: lead.sample_preview_path ?? lead.sample_asset_path,
-    outreach_message: message,
+    message,
+    sample_asset_path: lead.sample_preview_path ?? lead.sample_asset_path,
   });
 
   const existingNotes = (lead.notes ?? "").trim();

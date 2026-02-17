@@ -102,7 +102,7 @@ export default function AdminAutomationPage() {
         <div className="card" style={{ padding: 16 }}>
           <h3 style={{ marginTop: 0 }}>Send outreach</h3>
           <p className="muted" style={{ fontSize: 13 }}>
-            Sends DM outreach to sample_done leads (under max_attempts). Delivery mechanism: sendAlert placeholder.
+            Sends outreach to sample_done leads (under max_attempts). Set OUTREACH_WEBHOOK_URL in Vercel to POST to Zapier/Make/n8n; payload: lead_id, handle, platform, message, sample_asset_path.
           </p>
           <button
             className="btn btn-primary"
