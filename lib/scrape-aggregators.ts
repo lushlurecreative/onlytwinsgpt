@@ -72,13 +72,42 @@ function parseFollowerCount(numStr: string): number {
   return Number.isNaN(n) ? 0 : n;
 }
 
+const ALLORIGINS_BASE = "https://api.allorigins.win/raw?url=";
+const ALLORIGINS_RATE_MS = 5000;
+
+let lastAllOriginsCall = 0;
+
+async function fetchViaAllOrigins(url: string): Promise<Response> {
+  const now = Date.now();
+  const wait = ALLORIGINS_RATE_MS - (now - lastAllOriginsCall);
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastAllOriginsCall = Date.now();
+
+  const res = await fetch(ALLORIGINS_BASE + encodeURIComponent(url), {
+    signal: AbortSignal.timeout(25000),
+  });
+  const html = await res.text();
+  return new Response(html, { status: res.ok ? 200 : res.status });
+}
+
 async function fetchPage(url: string): Promise<Response> {
   const key = process.env.SCRAPER_API_KEY?.trim();
   if (key) {
     const proxyUrl = `https://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(url)}`;
     return fetch(proxyUrl, { signal: AbortSignal.timeout(20000) });
   }
-  return fetch(url, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(15000) });
+
+  const res = await fetch(url, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(15000) });
+  if (res.ok) return res;
+
+  if (res.status === 403 || res.status === 503) {
+    try {
+      return await fetchViaAllOrigins(url);
+    } catch {
+      return res;
+    }
+  }
+  return res;
 }
 
 async function scrapeOnlyFinderPage(

@@ -1,14 +1,14 @@
 #!/bin/bash
 # Add scraping-related env vars from .env.local to Vercel.
 # Run from project root: ./scripts/add-scrape-env-to-vercel.sh
-# Prereqs: Add YOUTUBE_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, SCRAPER_API_KEY to .env.local
-#   (Create at: Google Cloud Console, reddit.com/prefs/apps, scraperapi.com)
+# Prereqs: Add YOUTUBE_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET to .env.local (optional: SCRAPER_API_KEY)
+#   Create at: Google Cloud Console, reddit.com/prefs/apps. Aggregators use free AllOrigins fallback when blocked.
 
 set -e
 cd "$(dirname "$0")/.."
 
 if [ ! -f .env.local ]; then
-  echo "No .env.local found. Create it with YOUTUBE_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, SCRAPER_API_KEY"
+  echo "No .env.local found. Create it with YOUTUBE_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET"
   exit 1
 fi
 
