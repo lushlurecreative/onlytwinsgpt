@@ -160,7 +160,10 @@ export default function AdminLeadsClient() {
       return;
     }
     setMessage(approved ? "Approved." : "Rejected.");
-    await load();
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: approved ? "approved" : "rejected" } : r))
+    );
+    void load();
   }
 
   const outreachMessage = (handle: string) =>
@@ -215,21 +218,19 @@ export default function AdminLeadsClient() {
       return;
     }
     setMessage(`Generated ${json.generated ?? 0} AI sample(s).`);
-    await load();
-    if (assetsById[id]) {
-      const assetsRes = await fetch(`/api/admin/leads/${id}/assets`);
-      const assetsJson = (await assetsRes.json().catch(() => ({}))) as { samples?: SignedAsset[]; generated?: SignedAsset[]; preview?: SignedAsset | null };
-      if (assetsRes.ok) {
-        setAssetsById((prev) => ({
-          ...prev,
-          [id]: {
-            samples: assetsJson.samples ?? prev[id]?.samples ?? [],
-            generated: assetsJson.generated ?? [],
-            preview: assetsJson.preview ?? null,
-          },
-        }));
-      }
+    const assetsRes = await fetch(`/api/admin/leads/${id}/assets`);
+    const assetsJson = (await assetsRes.json().catch(() => ({}))) as { samples?: SignedAsset[]; generated?: SignedAsset[]; preview?: SignedAsset | null };
+    if (assetsRes.ok) {
+      setAssetsById((prev) => ({
+        ...prev,
+        [id]: {
+          samples: assetsJson.samples ?? prev[id]?.samples ?? [],
+          generated: assetsJson.generated ?? [],
+          preview: assetsJson.preview ?? null,
+        },
+      }));
     }
+    void load();
   }
 
   async function expand(row: LeadRow) {
@@ -757,7 +758,7 @@ export default function AdminLeadsClient() {
                                   <button
                                     className="btn btn-ghost"
                                     onClick={() => void approve(row.id, false)}
-                                    disabled={row.status !== "imported"}
+                                    disabled={row.status !== "imported" && row.status !== "approved"}
                                     type="button"
                                   >
                                     Reject
@@ -765,7 +766,7 @@ export default function AdminLeadsClient() {
                                   <button
                                     className="btn btn-ghost"
                                     onClick={() => void classifyImages(row.id)}
-                                    disabled={(row.sample_paths?.length ?? 0) === 0}
+                                    disabled={!assets || assets.samples.length === 0}
                                     type="button"
                                     title="Use AI to detect content vertical (swimwear, lingerie, etc.)"
                                   >
@@ -774,7 +775,7 @@ export default function AdminLeadsClient() {
                                   <button
                                     className="btn btn-primary"
                                     onClick={() => void generateSample(row.id)}
-                                    disabled={(row.sample_paths?.length ?? 0) === 0}
+                                    disabled={!assets || assets.samples.length === 0}
                                     type="button"
                                   >
                                     Generate AI sample

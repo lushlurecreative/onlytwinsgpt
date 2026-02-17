@@ -5,6 +5,7 @@
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { runMigrations } from "@/lib/run-migrations";
+import { passesFaceAndWaistUp } from "@/lib/image-quality";
 
 export type IngestLeadInput = {
   handle: string;
@@ -38,14 +39,20 @@ function scoreLead(input: {
   return 0;
 }
 
+const MIN_FACE_PHOTOS = 3;
+const MAX_CANDIDATE_URLS = 12;
+
 async function fetchAndUploadSamples(
   admin: ReturnType<typeof getSupabaseAdmin>,
   urls: string[]
 ): Promise<string[]> {
   const paths: string[] = [];
   const folder = `leads/${crypto.randomUUID()}`;
-  const allowed = urls.slice(0, 5);
+  const filterEnabled = process.env.FACE_FILTER_ENABLED === "true" && !!process.env.REPLICATE_API_TOKEN?.trim();
+  const allowed = urls.slice(0, filterEnabled ? MAX_CANDIDATE_URLS : 5);
+
   for (let i = 0; i < allowed.length; i += 1) {
+    if (filterEnabled && paths.length >= MIN_FACE_PHOTOS) break;
     const url = allowed[i];
     if (typeof url !== "string" || !url.startsWith("http")) continue;
     try {
@@ -66,9 +73,14 @@ async function fetchAndUploadSamples(
         contentType: res.headers.get("content-type") || `image/${safeExt}`,
         upsert: false,
       });
-      if (!error) paths.push(objectPath);
+      if (error) continue;
+      if (filterEnabled) {
+        const { data: signed } = await admin.storage.from("uploads").createSignedUrl(objectPath, 300);
+        if (!signed?.signedUrl || !(await passesFaceAndWaistUp(signed.signedUrl))) continue;
+      }
+      paths.push(objectPath);
     } catch {
-      // Skip failed fetch/upload
+      // Skip failed fetch/upload/check
     }
   }
   return paths;
@@ -142,6 +154,8 @@ export async function ingestLeads(
     } else if (Array.isArray(lead.sampleUrls) && lead.sampleUrls.length > 0) {
       samplePaths = await fetchAndUploadSamples(admin, lead.sampleUrls);
     }
+    const filterEnabled = process.env.FACE_FILTER_ENABLED === "true" && !!process.env.REPLICATE_API_TOKEN?.trim();
+    if (filterEnabled && samplePaths.length < MIN_FACE_PHOTOS) continue;
     const profileUrl =
       typeof lead.profileUrl === "string" && lead.profileUrl.trim()
         ? lead.profileUrl.trim()
