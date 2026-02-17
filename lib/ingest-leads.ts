@@ -114,6 +114,7 @@ export async function ingestLeads(
   source: "reddit" | "antigravity" = "antigravity"
 ): Promise<{ imported: number; firstError?: string }> {
   const admin = getSupabaseAdmin();
+  await runMigrations();
   let imported = 0;
   let firstError: string | undefined;
 
@@ -179,18 +180,13 @@ export async function ingestLeads(
       content_verticals: contentVerticals,
     };
     let { error } = await admin.from("leads").insert(fullRow);
-    if (error?.message?.includes("does not exist")) {
-      await runMigrations();
-      const retry = await admin.from("leads").insert(fullRow);
-      error = retry.error;
+    if (error) {
+      const r2 = await admin.from("leads").insert(withSamples);
+      error = r2.error;
     }
-    if (error?.message?.includes("does not exist")) {
-      const retry = await admin.from("leads").insert(withSamples);
-      error = retry.error;
-    }
-    if (error?.message?.includes("does not exist")) {
-      const retry = await admin.from("leads").insert(minimalRow);
-      error = retry.error;
+    if (error) {
+      const r3 = await admin.from("leads").insert(minimalRow);
+      error = r3.error;
     }
     if (error) {
       if (!firstError) firstError = error.message;

@@ -70,14 +70,14 @@ export async function POST(request: Request) {
     luxuryTagHits: l.luxuryTagHits,
   }));
 
-  const { imported, lastError } = await ingestLeads(inputs, "reddit");
+  const { imported, firstError } = await ingestLeads(inputs, "reddit");
 
   if (imported === 0) {
     return NextResponse.json(
       {
-        error: lastError
-          ? `Could not save leads: ${lastError}`
-          : "Scrape found leads but none could be saved. Check database schema and RLS policies.",
+        error: firstError
+          ? `Scrape found leads but none could be saved: ${firstError}`
+          : "Scrape found leads but none could be saved. Ensure DATABASE_URL is set in Vercel.",
       },
       { status: 500 }
     );
