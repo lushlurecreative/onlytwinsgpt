@@ -33,7 +33,10 @@ export async function POST(request: Request) {
     // no body or invalid JSON - use defaults
   }
 
-  let leads = await scrapeReddit(criteria);
+  const scrapeResult = await scrapeReddit(criteria, { withDiagnostics: true });
+  let leads = scrapeResult.leads;
+  const diagnostics = scrapeResult.diagnostics;
+
   if (leads.length === 0) {
     leads = [
       {
@@ -84,13 +87,21 @@ export async function POST(request: Request) {
   }
 
   const isDemo = leads.every((l) => l.handle.startsWith("demo_"));
+  const failedSubs = diagnostics.filter((d) => !d.ok);
+  const diagnosticHint =
+    isDemo && failedSubs.length > 0
+      ? ` Reddit subreddits: ${failedSubs.map((d) => `${d.subreddit} (${d.error})`).join("; ")}.`
+      : "";
+
   return NextResponse.json(
     {
       ok: true,
       imported,
+      isDemo,
+      diagnostics,
       message: isDemo
-        ? `Reddit returned empty. Inserted ${imported} demo leads to verify pipeline. Delete when done testing.`
-        : `Imported ${imported} leads.`,
+        ? `Reddit returned 0 leads. Inserted ${imported} demo leads to verify pipeline.${diagnosticHint}`
+        : `Imported ${imported} leads from Reddit.`,
     },
     { status: 201 }
   );

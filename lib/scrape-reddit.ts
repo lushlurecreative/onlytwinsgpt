@@ -28,12 +28,26 @@ const SUBREDDITS = [
   "YouTubeCreators",
 ];
 
-export async function scrapeReddit(criteria: ScrapeCriteria = {}): Promise<ScrapedLead[]> {
+export type ScrapeResult = {
+  leads: ScrapedLead[];
+  diagnostics: { subreddit: string; ok: boolean; postCount?: number; error?: string }[];
+};
+
+export async function scrapeReddit(criteria: ScrapeCriteria = {}): Promise<ScrapedLead[]>;
+export async function scrapeReddit(
+  criteria: ScrapeCriteria,
+  opts: { withDiagnostics: true }
+): Promise<ScrapeResult>;
+export async function scrapeReddit(
+  criteria: ScrapeCriteria = {},
+  opts?: { withDiagnostics?: boolean }
+): Promise<ScrapedLead[] | ScrapeResult> {
   const leads: ScrapedLead[] = [];
   const seen = new Set<string>();
+  const diagnostics: { subreddit: string; ok: boolean; postCount?: number; error?: string }[] = [];
 
-  const userAgent =
-    "web:com.onlytwins:v1.0 (by /u/onlytwins)";
+  const userAgent = "web:com.onlytwins:v1.0 (by /u/onlytwins)";
+
   for (const sub of SUBREDDITS) {
     try {
       const url = `https://www.reddit.com/r/${sub}/new.json?limit=25`;
@@ -41,9 +55,16 @@ export async function scrapeReddit(criteria: ScrapeCriteria = {}): Promise<Scrap
         headers: { "User-Agent": userAgent },
         signal: AbortSignal.timeout(15000),
       });
-      if (!res.ok) continue;
-      const data = (await res.json()) as { data?: { children?: Array<{ data?: { author?: string; score?: number; ups?: number } }> } };
+      if (!res.ok) {
+        diagnostics.push({ subreddit: sub, ok: false, error: `HTTP ${res.status}` });
+        continue;
+      }
+      const data = (await res.json()) as {
+        data?: { children?: Array<{ data?: { author?: string; score?: number; ups?: number } }> };
+      };
       const posts = data?.data?.children ?? [];
+      diagnostics.push({ subreddit: sub, ok: true, postCount: posts.length });
+
       for (const p of posts) {
         const author = p?.data?.author;
         if (!author || author === "[deleted]" || seen.has(author.toLowerCase())) continue;
@@ -64,10 +85,18 @@ export async function scrapeReddit(criteria: ScrapeCriteria = {}): Promise<Scrap
           luxuryTagHits: 0,
         });
       }
-    } catch {
-      // Skip failed subreddit
+    } catch (err) {
+      diagnostics.push({
+        subreddit: sub,
+        ok: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
-  return leads.slice(0, 20);
+  const result = leads.slice(0, 20);
+  if (opts?.withDiagnostics) {
+    return { leads: result, diagnostics };
+  }
+  return result;
 }

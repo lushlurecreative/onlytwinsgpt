@@ -48,6 +48,8 @@ export default function AdminLeadsClient() {
   const [assetsById, setAssetsById] = useState<Record<string, LeadAssets>>({});
   const [triggeringScrape, setTriggeringScrape] = useState(false);
   const [showCriteria, setShowCriteria] = useState(false);
+  const [outreachPreview, setOutreachPreview] = useState<{ id: string; handle: string; message: string } | null>(null);
+  const [sendingOutreach, setSendingOutreach] = useState(false);
   const [criteria, setCriteria] = useState<ScrapeCriteria>({
     preset: "default",
     followerMin: 50000,
@@ -115,16 +117,35 @@ export default function AdminLeadsClient() {
     await load();
   }
 
-  async function triggerOutreach(id: string) {
+  const outreachMessage = (handle: string) =>
+    `Hi ${handle}, we help creators scale with done-for-you AI content. ` +
+    `We generated a personalized concept sample and can help you launch quickly. ` +
+    `Even if you do not want our services, the generated sample is yours to keep and use. ` +
+    `Click to learn more.`;
+
+  function openOutreachPreview(row: LeadRow) {
+    setOutreachPreview({
+      id: row.id,
+      handle: row.handle,
+      message: outreachMessage(row.handle),
+    });
+  }
+
+  async function confirmSendOutreach() {
+    if (!outreachPreview) return;
+    setSendingOutreach(true);
     setMessage("Sending...");
+    const id = outreachPreview.id;
+    setOutreachPreview(null);
     const res = await fetch(`/api/admin/leads/${id}/outreach`, { method: "POST" });
     const json = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
       setMessage(json.error ?? "Outreach failed");
-      return;
+    } else {
+      setMessage("Outreach sent. Lead marked as messaged. (No actual DM sent yet—connect a DM provider.)");
     }
-    setMessage("Outreach sent.");
     await load();
+    setSendingOutreach(false);
   }
 
   async function classifyImages(id: string) {
@@ -243,6 +264,72 @@ export default function AdminLeadsClient() {
 
   return (
     <div>
+      {outreachPreview ? (
+        <div
+          role="dialog"
+          aria-labelledby="outreach-preview-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => e.target === e.currentTarget && setOutreachPreview(null)}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: 480,
+              margin: 16,
+              padding: 20,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="outreach-preview-title" style={{ marginTop: 0, marginBottom: 12 }}>
+              Preview outreach message
+            </h3>
+            <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+              To: <strong>{outreachPreview.handle}</strong>
+            </p>
+            <div
+              style={{
+                padding: 12,
+                background: "var(--surface-soft)",
+                borderRadius: 8,
+                fontSize: 14,
+                lineHeight: 1.5,
+                marginBottom: 16,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {outreachPreview.message}
+            </div>
+            <p className="muted" style={{ fontSize: 12, marginBottom: 16 }}>
+              This will mark the lead as &quot;messaged&quot; and save the message in notes. No actual DM/email is sent yet—DM provider not connected.
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                className="btn btn-ghost"
+                onClick={() => setOutreachPreview(null)}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => void confirmSendOutreach()}
+                disabled={sendingOutreach}
+                type="button"
+              >
+                {sendingOutreach ? "Sending…" : "Send (mark as messaged)"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Lead Pipeline</h2>
         <p className="muted">Click Run scrape to fetch leads from Reddit. Review, approve, generate AI samples, and send outreach.</p>
@@ -270,7 +357,7 @@ export default function AdminLeadsClient() {
             </span>
           ) : null}
           <span className="muted" style={{ fontSize: 13 }}>
-            Scrapes Reddit creator subreddits and imports leads.
+            Scraping runs immediately when you click. Fetches recent posts from r/Creators, r/NewTubers, etc. If Reddit returns 0 leads, demo leads are inserted.
           </span>
         </div>
 
@@ -602,7 +689,7 @@ export default function AdminLeadsClient() {
                                   </button>
                                   <button
                                     className="btn btn-primary"
-                                    onClick={() => void triggerOutreach(row.id)}
+                                    onClick={() => openOutreachPreview(row)}
                                     disabled={row.status !== "approved"}
                                     type="button"
                                   >
