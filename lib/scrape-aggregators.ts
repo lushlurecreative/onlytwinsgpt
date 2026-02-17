@@ -5,6 +5,7 @@
 
 import * as cheerio from "cheerio";
 import type { ScrapedLead } from "./scrape-reddit";
+import { filterCreatorImages } from "./validate-lead";
 
 export type AggregatorDiagnostic = {
   url: string;
@@ -277,7 +278,8 @@ async function scrapeOnlyFinderPage(
       if (m?.length) followerCount = parseFollowerCount(m[0]);
     }
 
-    const sampleUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl) : [];
+    const rawUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl) : [];
+    const sampleUrls = filterCreatorImages(rawUrls);
     const instagramUrl = $parent.length ? extractInstagramUrl($, $parent.first(), baseUrl) : null;
     const profileUrls: Record<string, string> = { onlyfans: profileUrl };
     const platformsFound = ["onlyfans"];
@@ -369,7 +371,8 @@ async function scrapeFanFoxPage(
     const $parent = $el.closest("div, article, section, li, [class*='card'], [class*='item'], [class*='creator'], figure");
     const parentText = $parent.length ? $parent.text() : "";
     const followerCount = parseFollowerFromText(parentText);
-    const sampleUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl) : [];
+    const rawUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl) : [];
+    const sampleUrls = filterCreatorImages(rawUrls);
     const instagramUrl = $parent.length ? extractInstagramUrl($, $parent.first(), baseUrl) : null;
     const profileUrls: Record<string, string> = { onlyfans: profileUrl };
     const platformsFound = ["onlyfans"];
@@ -504,7 +507,8 @@ async function scrapeJuicySearchPage(
     const $parent = $el.closest("div, article, section, li, [class*='card'], [class*='item'], [class*='creator']");
     const parentText = $parent.length ? $parent.text() : "";
     const followerCount = parseFollowerFromText(parentText);
-    const sampleUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl + "/") : [];
+    const rawUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl + "/") : [];
+    const sampleUrls = filterCreatorImages(rawUrls);
     const instagramUrl = $parent.length ? extractInstagramUrl($, $parent.first(), baseUrl + "/") : null;
     const profileUrls: Record<string, string> = { onlyfans: profileUrl };
     const platformsFound = ["onlyfans"];

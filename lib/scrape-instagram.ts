@@ -41,6 +41,11 @@ const HASHTAGS = [
 
 const USERNAME_SEARCH_TERMS = ["of", "onlyfans"];
 
+function hasSubscriptionUrl(bio: string | undefined, externalUrl: string | undefined): boolean {
+  const text = [bio ?? "", externalUrl ?? ""].join(" ").toLowerCase();
+  return /onlyfans\.com|fansly\.com|link\s*in\s*bio|linkin\.bio|beacons\.ai|linktr\.ee/i.test(text);
+}
+
 export type InstagramScrapeResult = {
   leads: ScrapedLead[];
   diagnostics: { source: string; ok: boolean; leadCount?: number; error?: string }[];
@@ -167,6 +172,8 @@ export async function scrapeInstagram(opts?: {
           const username = p.username?.toLowerCase();
           if (!username) continue;
           if (!username.includes("of")) continue;
+          if (followerFloor > 0 && (p.followersCount ?? 0) < followerFloor) continue;
+          if (!hasSubscriptionUrl(p.biography, p.externalUrl)) continue;
           const latestUrls: string[] = [];
           for (const post of p.latestPosts ?? []) {
             if (post.displayUrl) latestUrls.push(post.displayUrl);

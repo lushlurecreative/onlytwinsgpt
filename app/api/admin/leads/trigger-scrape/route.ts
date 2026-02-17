@@ -6,6 +6,7 @@ import { scrapeYouTube } from "@/lib/scrape-youtube";
 import { scrapeInstagram } from "@/lib/scrape-instagram";
 import { scrapeOnlyFinder, scrapeFanFox, scrapeJuicySearch } from "@/lib/scrape-aggregators";
 import { ingestLeads, type IngestLeadInput } from "@/lib/ingest-leads";
+import { validateLead, filterCreatorImages } from "@/lib/validate-lead";
 
 export type { ScrapeCriteria };
 
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
   const [ytResult, redditResult, igResult, onlyfinderResult, fanfoxResult, juicyResult] = await Promise.all([
     scrapeYouTube(criteria, { withDiagnostics: true }),
     scrapeReddit(criteria, { withDiagnostics: true }),
-    scrapeInstagram({ withDiagnostics: true }),
+    scrapeInstagram({ followerFloor: 100000, withDiagnostics: true }),
     scrapeOnlyFinder(undefined, { withDiagnostics: true }),
     scrapeFanFox(undefined, { withDiagnostics: true }),
     scrapeJuicySearch(undefined, { withDiagnostics: true }),
@@ -68,33 +69,42 @@ export async function POST(request: Request) {
   for (const l of ytLeads) {
     const key = `${l.platform}:${l.handle.toLowerCase()}`;
     if (!seen.has(key)) {
+      const lead = mapToIngest(l);
+      if (!isValidLead(lead)) continue;
       seen.add(key);
-      allLeads.push({ lead: mapToIngest(l), source: "youtube" });
+      allLeads.push({ lead, source: "youtube" });
     }
   }
   for (const l of redditLeads) {
     const key = `${l.platform}:${l.handle.toLowerCase()}`;
     if (!seen.has(key)) {
+      const lead = mapToIngest(l);
+      if (!isValidLead(lead)) continue;
       seen.add(key);
-      allLeads.push({ lead: mapToIngest(l), source: "reddit" });
+      allLeads.push({ lead, source: "reddit" });
     }
   }
   for (const l of igLeads) {
     const key = `${l.platform}:${l.handle.toLowerCase()}`;
     if (!seen.has(key)) {
+      const lead = mapToIngest(l);
+      if (!isValidLead(lead)) continue;
       seen.add(key);
-      allLeads.push({ lead: mapToIngest(l), source: "instagram" });
+      allLeads.push({ lead, source: "instagram" });
     }
   }
   for (const l of [...onlyfinderLeads, ...fanfoxLeads, ...juicyLeads]) {
     const key = `${l.platform}:${l.handle.toLowerCase()}`;
     if (!seen.has(key)) {
+      const lead = mapToIngest(l);
+      if (!isValidLead(lead)) continue;
       seen.add(key);
-      allLeads.push({ lead: mapToIngest(l), source: "aggregator" });
+      allLeads.push({ lead, source: "aggregator" });
     }
   }
 
   function mapToIngest(l: ScrapedLead): IngestLeadInput {
+    const sampleUrls = l.sampleUrls?.length ? filterCreatorImages(l.sampleUrls) : undefined;
     return {
       handle: l.handle,
       platform: l.platform,
@@ -104,8 +114,12 @@ export async function POST(request: Request) {
       followerCount: l.followerCount,
       engagementRate: l.engagementRate,
       luxuryTagHits: l.luxuryTagHits,
-      sampleUrls: l.sampleUrls,
+      sampleUrls: sampleUrls?.length ? sampleUrls : undefined,
     };
+  }
+
+  function isValidLead(lead: IngestLeadInput): boolean {
+    return validateLead(lead);
   }
 
   let importedYt = 0;

@@ -23,11 +23,8 @@ export type ScrapedLead = {
 const SUBREDDITS = [
   "OnlyFans",
   "Fansly",
-  "CreatorEconomy",
-  "ContentCreator",
-  "influencermarketing",
-  "Creators",
-  "CreatorsAdvice",
+  "OnlyFansPromotion",
+  "FanslyCreators",
 ];
 
 export type ScrapeResult = {
@@ -76,17 +73,35 @@ export async function scrapeReddit(
       score?: number;
       imageUrls?: string[];
       thumbnail?: string;
+      url?: string;
+      selftext?: string;
+      title?: string;
+      flair?: string;
+      linkFlairText?: string;
     }>;
 
     for (const p of posts) {
       if (p.type !== "post") continue;
       const author = p.author;
       if (!author || author === "[deleted]" || seen.has(author.toLowerCase())) continue;
+
+      const postText = [p.url ?? "", p.selftext ?? "", p.title ?? "", p.flair ?? "", p.linkFlairText ?? ""].join(" ");
+      const hasCreatorLink = /onlyfans\.com|fansly\.com/i.test(postText);
+      const hasCreatorFlair = /creator|onlyfans|fansly|verified/i.test((p.linkFlairText ?? p.flair ?? "").toLowerCase());
+      if (!hasCreatorLink && !hasCreatorFlair) continue;
+
       seen.add(author.toLowerCase());
 
       const followerMin = criteria?.followerRange?.reddit?.min ?? 0;
       const score = p.score ?? 0;
       if (followerMin > 0 && score < followerMin / 1000) continue;
+
+      const profileUrls: Record<string, string> = { reddit: `https://reddit.com/user/${author}` };
+      const ofMatch = postText.match(/https?:\/\/(?:www\.)?onlyfans\.com\/(@?[a-zA-Z0-9_.-]+)/i);
+      const fanslyMatch = postText.match(/https?:\/\/(?:www\.)?fansly\.com\/([a-zA-Z0-9_.-]+)/i);
+      if (ofMatch) profileUrls.onlyfans = `https://onlyfans.com/${ofMatch[1].replace(/^@/, "")}`;
+      if (fanslyMatch) profileUrls.fansly = `https://fansly.com/${fanslyMatch[1]}`;
+      const platformsFound = ["reddit", ...(profileUrls.onlyfans ? ["onlyfans"] : []), ...(profileUrls.fansly ? ["fansly"] : [])].filter((x, i, a) => a.indexOf(x) === i);
 
       const sampleUrls: string[] = [];
       if (Array.isArray(p.imageUrls)) sampleUrls.push(...p.imageUrls.filter((u) => u?.startsWith("http")));
@@ -97,9 +112,9 @@ export async function scrapeReddit(
       leads.push({
         handle: author,
         platform: "reddit",
-        profileUrl: `https://reddit.com/user/${author}`,
-        platformsFound: ["reddit"],
-        profileUrls: { reddit: `https://reddit.com/user/${author}` },
+        profileUrl: profileUrls.onlyfans ?? profileUrls.fansly ?? `https://reddit.com/user/${author}`,
+        platformsFound,
+        profileUrls,
         followerCount: Math.max(score, 0),
         engagementRate: 1,
         luxuryTagHits: 0,

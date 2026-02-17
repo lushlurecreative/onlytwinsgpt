@@ -104,6 +104,7 @@ export async function scrapeYouTube(
           id: string;
           snippet?: {
             title?: string;
+            description?: string;
             customUrl?: string;
             thumbnails?: { default?: { url?: string }; medium?: { url?: string }; high?: { url?: string } };
           };
@@ -118,16 +119,28 @@ export async function scrapeYouTube(
         const subCount = parseInt(ch.statistics?.subscriberCount ?? "0", 10);
         if (followerMin > 0 && subCount < followerMin) continue;
 
-        const handle = ch.snippet?.customUrl?.replace(/^@/, "") ?? ch.snippet?.title ?? ch.id;
-        const profileUrl = `https://youtube.com/channel/${ch.id}`;
+        const description = ch.snippet?.description ?? "";
+        const hasCreatorSignal = /onlyfans\.com|fansly\.com|instagram\.com/i.test(description);
+        if (!hasCreatorSignal) continue;
 
+        const profileUrls: Record<string, string> = { youtube: `https://youtube.com/channel/${ch.id}` };
+        const ofMatch = description.match(/https?:\/\/(?:www\.)?onlyfans\.com\/(@?[a-zA-Z0-9_.-]+)/i);
+        const fanslyMatch = description.match(/https?:\/\/(?:www\.)?fansly\.com\/([a-zA-Z0-9_.-]+)/i);
+        const igMatch = description.match(/https?:\/\/(?:www\.)?instagram\.com\/([a-zA-Z0-9_.]+)/i);
+        if (ofMatch) profileUrls.onlyfans = `https://onlyfans.com/${ofMatch[1].replace(/^@/, "")}`;
+        if (fanslyMatch) profileUrls.fansly = `https://fansly.com/${fanslyMatch[1]}`;
+        if (igMatch) profileUrls.instagram = `https://instagram.com/${igMatch[1]}`;
+        const platformsFound = ["youtube", ...Object.keys(profileUrls).filter((k) => k !== "youtube")];
+
+        const handle = ch.snippet?.customUrl?.replace(/^@/, "") ?? ch.snippet?.title ?? ch.id;
+        const profileUrl = profileUrls.onlyfans ?? profileUrls.fansly ?? profileUrls.instagram ?? profileUrls.youtube;
         const thumb = ch.snippet?.thumbnails?.high?.url ?? ch.snippet?.thumbnails?.medium?.url ?? ch.snippet?.thumbnails?.default?.url;
         leads.push({
           handle,
           platform: "youtube",
           profileUrl,
-          platformsFound: ["youtube"],
-          profileUrls: { youtube: profileUrl },
+          platformsFound,
+          profileUrls,
           followerCount: subCount,
           engagementRate: 0,
           luxuryTagHits: 0,
