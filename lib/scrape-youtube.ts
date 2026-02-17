@@ -16,6 +16,9 @@ const SEARCH_QUERIES = [
   "creator economy",
   "YouTuber",
   "vlog",
+  "OnlyFans creator",
+  "adult content creator",
+  "subscription creator",
 ];
 
 export type YouTubeScrapeResult = {
@@ -47,7 +50,7 @@ export async function scrapeYouTube(
       searchUrl.searchParams.set("part", "snippet");
       searchUrl.searchParams.set("type", "channel");
       searchUrl.searchParams.set("q", q);
-      searchUrl.searchParams.set("maxResults", "10");
+      searchUrl.searchParams.set("maxResults", "25");
       searchUrl.searchParams.set("key", apiKey);
 
       const searchRes = await fetch(searchUrl.toString(), {
@@ -99,7 +102,11 @@ export async function scrapeYouTube(
       const channelsData = (await channelsRes.json()) as {
         items?: Array<{
           id: string;
-          snippet?: { title?: string; customUrl?: string };
+          snippet?: {
+            title?: string;
+            customUrl?: string;
+            thumbnails?: { default?: { url?: string }; medium?: { url?: string }; high?: { url?: string } };
+          };
           statistics?: { subscriberCount?: string; videoCount?: string };
         }>;
       };
@@ -114,6 +121,7 @@ export async function scrapeYouTube(
         const handle = ch.snippet?.customUrl?.replace(/^@/, "") ?? ch.snippet?.title ?? ch.id;
         const profileUrl = `https://youtube.com/channel/${ch.id}`;
 
+        const thumb = ch.snippet?.thumbnails?.high?.url ?? ch.snippet?.thumbnails?.medium?.url ?? ch.snippet?.thumbnails?.default?.url;
         leads.push({
           handle,
           platform: "youtube",
@@ -123,6 +131,7 @@ export async function scrapeYouTube(
           followerCount: subCount,
           engagementRate: 0,
           luxuryTagHits: 0,
+          sampleUrls: thumb ? [thumb] : undefined,
         });
       }
     } catch (err) {
@@ -134,7 +143,7 @@ export async function scrapeYouTube(
     }
   }
 
-  const result = leads.slice(0, 20);
+  const result = leads.slice(0, 80);
   if (opts?.withDiagnostics) {
     return { leads: result, diagnostics };
   }

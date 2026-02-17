@@ -93,6 +93,7 @@ export async function POST(request: Request) {
       followerCount: l.followerCount,
       engagementRate: l.engagementRate,
       luxuryTagHits: l.luxuryTagHits,
+      sampleUrls: l.sampleUrls,
     };
   }
 

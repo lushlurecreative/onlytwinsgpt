@@ -18,6 +18,7 @@ export type ScrapedLead = {
   followerCount: number;
   engagementRate: number;
   luxuryTagHits: number;
+  sampleUrls?: string[];
 };
 
 const SUBREDDITS = [
@@ -130,7 +131,7 @@ export async function scrapeReddit(
     }
   }
 
-  const result = leads.slice(0, 20);
+  const result = leads.slice(0, 100);
   if (opts?.withDiagnostics) {
     return { leads: result, diagnostics };
   }

@@ -35,14 +35,32 @@ const BROWSER_HEADERS: Record<string, string> = {
 const DEFAULT_ONLYFINDER_URLS = [
   "https://onlyfinder.com/free",
   "https://onlyfinder.com/top",
+  "https://onlyfinder.com/new",
+  "https://onlyfinder.com/popular",
 ];
 
 const DEFAULT_FANFOX_URLS = [
   "https://fanfox.com/blogs/onlyfans/best-onlyfans-2025",
   "https://fanfox.com/blogs/onlyfans/free-onlyfans",
+  "https://fanfox.com/blogs/onlyfans/amateur-onlyfans",
+  "https://fanfox.com/blogs/onlyfans/petite-onlyfans",
+  "https://fanfox.com/blogs/onlyfans/blonde-onlyfans",
+  "https://fanfox.com/blogs/onlyfans/latina-onlyfans",
+  "https://fanfox.com/blogs/onlyfans/redhead-onlyfans",
+  "https://fanfox.com/blogs/onlyfans/british-onlyfans",
+  "https://fanfox.com/blogs/onlyfans/trans-onlyfans",
 ];
 
-const DEFAULT_JUICYSEARCH_QUERIES = ["Curvy milf", "free onlyfans"];
+const DEFAULT_JUICYSEARCH_QUERIES = [
+  "Curvy milf",
+  "free onlyfans",
+  "best onlyfans",
+  "amateur onlyfans",
+  "petite onlyfans",
+  "blonde onlyfans",
+  "latina onlyfans",
+  "redhead onlyfans",
+];
 
 function extractUsernameFromLinkText(text: string): string | null {
   const match = text.match(/onlyfans\.com\s*>\s*([^\s\]|]+)/i);
@@ -67,9 +85,49 @@ function extractUsernameFromEncodedUrl(href: string): string | null {
 }
 
 function parseFollowerCount(numStr: string): number {
-  const cleaned = numStr.replace(/[,\s]/g, "");
-  const n = parseInt(cleaned, 10);
+  const cleaned = numStr.replace(/[,\s]/g, "").toLowerCase();
+  if (cleaned.endsWith("m")) return Math.floor(parseFloat(cleaned) * 1_000_000) || 0;
+  if (cleaned.endsWith("k")) return Math.floor(parseFloat(cleaned) * 1_000) || 0;
+  const n = parseInt(numStr.replace(/[,\s]/g, ""), 10);
   return Number.isNaN(n) ? 0 : n;
+}
+
+function parseFollowerFromText(text: string): number {
+  const m1 = text.match(/(\d+(?:[.,]\d+)?)\s*(?:M|m|million)/);
+  if (m1) return Math.floor(parseFloat(m1[1].replace(",", "")) * 1_000_000) || 0;
+  const m2 = text.match(/(\d+(?:[.,]\d+)?)\s*(?:K|k| thousand)/);
+  if (m2) return Math.floor(parseFloat(m2[1].replace(",", "")) * 1_000) || 0;
+  const m3 = text.match(/(\d{1,3}(?:,\d{3})*)\s*(?:followers?|subs?|fans?)/i);
+  if (m3) return parseFollowerCount(m3[1]) || 0;
+  const m4 = text.match(/\b(\d{1,3}(?:,\d{3})*)\b/);
+  if (m4) return parseFollowerCount(m4[1]) || 0;
+  return 0;
+}
+
+function resolveUrl(base: string, href: string): string {
+  if (!href || !href.startsWith("/") && !href.startsWith("./")) return href;
+  try {
+    return new URL(href, base).href;
+  } catch {
+    return href;
+  }
+}
+
+function extractImageUrls($: cheerio.CheerioAPI, $container: ReturnType<cheerio.CheerioAPI>, baseUrl: string): string[] {
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  $container.find("img[src]").each((_, img) => {
+    const src = $(img).attr("src");
+    if (!src || seen.has(src) || /logo|icon|avatar-placeholder|pixel|1x1|spacer/i.test(src)) return;
+    if (/\.(webp|gif|jpg|jpeg|png)/i.test(src) || src.includes("cdn") || src.includes("image") || src.includes("gravatar")) {
+      const abs = resolveUrl(baseUrl, src);
+      if (abs.startsWith("http")) {
+        seen.add(src);
+        urls.push(abs);
+      }
+    }
+  });
+  return urls.slice(0, 5);
 }
 
 const ALLORIGINS_BASE = "https://api.allorigins.win/raw?url=";
@@ -147,6 +205,7 @@ async function scrapeOnlyFinderPage(
   const $ = cheerio.load(html);
   const leads: ScrapedLead[] = [];
   const seen = new Set<string>();
+  const baseUrl = url.replace(/\/[^/]*$/, "/");
 
   $('a[href*="visit-profile"]').each((_i, el) => {
     const $el = $(el);
@@ -159,17 +218,15 @@ async function scrapeOnlyFinderPage(
     seen.add(username.toLowerCase());
 
     const profileUrl = `https://onlyfans.com/${username}`;
-    let followerCount = 0;
-
-    const $parent = $el.closest("div, article, section, li");
-    if ($parent.length) {
-      const parentText = $parent.text();
-      const numMatches = parentText.match(/\d{1,3}(?:,\d{3})+/g);
-      if (numMatches && numMatches.length > 0) {
-        const first = parseFollowerCount(numMatches[0]);
-        if (first > 100) followerCount = first;
-      }
+    const $parent = $el.closest("div, article, section, li, [class*='card'], [class*='item'], [class*='creator']");
+    const parentText = $parent.length ? $parent.text() : "";
+    let followerCount = parseFollowerFromText(parentText);
+    if (followerCount === 0) {
+      const m = parentText.match(/\d{1,3}(?:,\d{3})+/g);
+      if (m?.length) followerCount = parseFollowerCount(m[0]);
     }
+
+    const sampleUrls = $parent.length ? extractImageUrls($, $parent.first(), baseUrl) : [];
 
     leads.push({
       handle: username,
@@ -178,8 +235,9 @@ async function scrapeOnlyFinderPage(
       platformsFound: ["onlyfans"],
       profileUrls: { onlyfans: profileUrl },
       followerCount,
-      engagementRate: 0,
+      engagementRate: followerCount > 0 ? 1 : 0,
       luxuryTagHits: 0,
+      sampleUrls: sampleUrls.length ? sampleUrls : undefined,
     });
   });
 
@@ -194,7 +252,7 @@ export async function scrapeOnlyFinder(
   const seen = new Set<string>();
   const diagnostics: AggregatorDiagnostic[] = [];
 
-  for (const url of urls.slice(0, 3)) {
+  for (const url of urls.slice(0, 6)) {
     try {
       const { leads, error } = await scrapeOnlyFinderPage(url);
       if (error) {
@@ -221,7 +279,7 @@ export async function scrapeOnlyFinder(
     }
   }
 
-  const result = allLeads.slice(0, 30);
+  const result = allLeads.slice(0, 500);
   if (opts?.withDiagnostics) {
     return { leads: result, diagnostics };
   }
@@ -239,24 +297,32 @@ async function scrapeFanFoxPage(
   const $ = cheerio.load(html);
   const leads: ScrapedLead[] = [];
   const seen = new Set<string>();
+  const baseUrl = "https://fanfox.com";
 
   $('a[href*="onlyfans.com"]').each((_i, el) => {
-    const href = $(el).attr("href") ?? "";
+    const $el = $(el);
+    const href = $el.attr("href") ?? "";
     const username = extractUsernameFromHref(href);
     if (!username || seen.has(username.toLowerCase())) return;
     if (username.length < 3 || username.length > 50) return;
     seen.add(username.toLowerCase());
 
     const profileUrl = `https://onlyfans.com/${username}`;
+    const $parent = $el.closest("div, article, section, li, [class*='card'], [class*='item'], [class*='creator'], figure");
+    const parentText = $parent.length ? $parent.text() : "";
+    const followerCount = parseFollowerFromText(parentText);
+    const sampleUrls = $parent.length ? extractImageUrls($, $parent.first(), baseUrl) : [];
+
     leads.push({
       handle: username,
       platform: "onlyfans",
       profileUrl,
       platformsFound: ["onlyfans"],
       profileUrls: { onlyfans: profileUrl },
-      followerCount: 0,
-      engagementRate: 0,
+      followerCount,
+      engagementRate: followerCount > 0 ? 1 : 0,
       luxuryTagHits: 0,
+      sampleUrls: sampleUrls.length ? sampleUrls : undefined,
     });
   });
 
@@ -271,7 +337,7 @@ export async function scrapeFanFox(
   const seen = new Set<string>();
   const diagnostics: AggregatorDiagnostic[] = [];
 
-  for (const url of urls.slice(0, 5)) {
+  for (const url of urls.slice(0, 9)) {
     try {
       const { leads, error } = await scrapeFanFoxPage(url);
       if (error) {
@@ -298,7 +364,7 @@ export async function scrapeFanFox(
     }
   }
 
-  const result = allLeads.slice(0, 30);
+  const result = allLeads.slice(0, 500);
   if (opts?.withDiagnostics) {
     return { leads: result, diagnostics };
   }
@@ -362,22 +428,29 @@ async function scrapeJuicySearchPage(
   const seen = new Set<string>();
 
   $('a[href*="onlyfans.com"]').each((_i, el) => {
-    const href = $(el).attr("href") ?? "";
+    const $el = $(el);
+    const href = $el.attr("href") ?? "";
     const username = extractUsernameFromHref(href);
     if (!username || seen.has(username.toLowerCase())) return;
     if (username.length < 3 || username.length > 50) return;
     seen.add(username.toLowerCase());
 
     const profileUrl = `https://onlyfans.com/${username}`;
+    const $parent = $el.closest("div, article, section, li, [class*='card'], [class*='item'], [class*='creator']");
+    const parentText = $parent.length ? $parent.text() : "";
+    const followerCount = parseFollowerFromText(parentText);
+    const sampleUrls = $parent.length ? extractImageUrls($, $parent.first(), baseUrl + "/") : [];
+
     leads.push({
       handle: username,
       platform: "onlyfans",
       profileUrl,
       platformsFound: ["onlyfans"],
       profileUrls: { onlyfans: profileUrl },
-      followerCount: 0,
-      engagementRate: 0,
+      followerCount,
+      engagementRate: followerCount > 0 ? 1 : 0,
       luxuryTagHits: 0,
+      sampleUrls: sampleUrls.length ? sampleUrls : undefined,
     });
   });
 
@@ -393,7 +466,7 @@ export async function scrapeJuicySearch(
   const diagnostics: AggregatorDiagnostic[] = [];
   let cookieJar: string[] | undefined;
 
-  for (const q of queries.slice(0, 3)) {
+  for (const q of queries.slice(0, 8)) {
     const url = `https://juicysearch.com/results/?q=${encodeURIComponent(q)}`;
     try {
       const { leads, error, cookies } = await scrapeJuicySearchPage(q, cookieJar);
@@ -422,7 +495,7 @@ export async function scrapeJuicySearch(
     }
   }
 
-  const result = allLeads.slice(0, 30);
+  const result = allLeads.slice(0, 500);
   if (opts?.withDiagnostics) {
     return { leads: result, diagnostics };
   }

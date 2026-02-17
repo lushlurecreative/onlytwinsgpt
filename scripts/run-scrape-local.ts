@@ -43,6 +43,7 @@ function toIngestLead(l: ScrapedLead) {
     followerCount: l.followerCount,
     engagementRate: l.engagementRate,
     luxuryTagHits: l.luxuryTagHits,
+    sampleUrls: l.sampleUrls,
   };
 }
 
