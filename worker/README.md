@@ -76,6 +76,13 @@ docker run --gpus all --env-file worker/.env onlytwins-worker
 4. **Run the worker**  
    On a RunPod GPU pod: install deps (see “Run (full)” above) and run `python main.py`. Or run the Docker image with `--gpus all` and the same env.
 
+   **Start worker without terminal (Jupyter)**  
+   If the RunPod web terminal does not accept input, use Jupyter instead:
+   - In RunPod: **Connect** → **Start Jupyter Notebook** (or your template's equivalent).
+   - In Jupyter, open `worker/start_worker.ipynb` (e.g. from the file browser under `/workspace/onlytwinsgpt/worker/`).
+   - Set env vars in the RunPod pod template (**Edit Template** → **Environment Variables**) so they are available to Jupyter.
+   - In the notebook: **Run** → **Run All** (or run the code cell). The worker runs and logs appear in the notebook; no web terminal required.
+
 5. **Test**  
    In the app: create a subject, have admin approve consent, add 30–60 photos in vault, start training. Then trigger a generation request and confirm the worker processes jobs.
 
