@@ -46,27 +46,34 @@ export async function GET() {
     "id, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, notes, sample_preview_path, approved_at, messaged_at, created_at";
   const minSelect = "id, source, handle, platform, follower_count, score, status, profile_url, created_at";
 
-  let result = await admin.from("leads").select(fullSelect).order("score", { ascending: false }).limit(1000);
-  const errMsg = result.error?.message ?? "";
+  let data: unknown[] | null = null;
+  let err: { message: string } | null = null;
 
-  if (result.error) {
+  const q = (select: string) =>
+    admin.from("leads").select(select).order("score", { ascending: false }).limit(1000);
+
+  let r = await q(fullSelect);
+  if (r.error) {
     await runMigrations();
-    result = await admin.from("leads").select(fullSelect).order("score", { ascending: false }).limit(1000);
+    r = await q(fullSelect);
   }
-  if (result.error) {
-    result = await admin.from("leads").select(baseSelect).order("score", { ascending: false }).limit(1000);
-  }
-  if (result.error) {
-    result = await admin.from("leads").select(minSelect).order("score", { ascending: false }).limit(1000);
+  if (!r.error) {
+    data = r.data ?? null;
+  } else {
+    const r2 = await q(baseSelect);
+    if (!r2.error) {
+      data = r2.data ?? null;
+    } else {
+      const r3 = await q(minSelect);
+      data = r3.data ?? null;
+      err = r3.error;
+    }
   }
 
-  if (result.error) {
-    return NextResponse.json(
-      { leads: [] as unknown[], error: result.error.message },
-      { status: 200 }
-    );
+  if (err) {
+    return NextResponse.json({ leads: [] as unknown[], error: err.message }, { status: 200 });
   }
-  return NextResponse.json({ leads: (result.data ?? []) as unknown[] }, { status: 200 });
+  return NextResponse.json({ leads: (data ?? []) as unknown[] }, { status: 200 });
 }
 
 export async function POST(request: Request) {

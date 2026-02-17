@@ -1,0 +1,14 @@
+---
+description: User preferences - deploy changes, no assumed technical knowledge
+alwaysApply: true
+---
+
+# User Preferences
+
+## Deployment
+- **Always deploy changes for the user.** Do not tell them to deploy to Vercel (or elsewhere). Either deploy yourself via `git push origin main` (triggers Vercel auto-deploy) or, if that's not possible, give them exact step-by-step deployment instructions.
+- This project uses Vercel with GitHub: pushing to `main` triggers automatic deployment.
+
+## Technical Instructions
+- **Never assume the user knows how to do technical tasks.** If a task requires user action (e.g., opening DevTools, checking env vars, running a command), provide clear, numbered step-by-step instructions suitable for someone with no technical background.
+- Prefer doing technical tasks yourself when possible (running commands, deploying, etc.) rather than instructing the user.
