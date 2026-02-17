@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "scrape:local": "tsx scripts/run-scrape-local.ts"
+    "scrape:local": "tsx scripts/run-scrape-local.ts",
+    "add-scrape-env": "bash scripts/add-scrape-env-to-vercel.sh"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

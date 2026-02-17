@@ -72,13 +72,19 @@ function parseFollowerCount(numStr: string): number {
   return Number.isNaN(n) ? 0 : n;
 }
 
+async function fetchPage(url: string): Promise<Response> {
+  const key = process.env.SCRAPER_API_KEY?.trim();
+  if (key) {
+    const proxyUrl = `https://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(url)}`;
+    return fetch(proxyUrl, { signal: AbortSignal.timeout(20000) });
+  }
+  return fetch(url, { headers: BROWSER_HEADERS, signal: AbortSignal.timeout(15000) });
+}
+
 async function scrapeOnlyFinderPage(
   url: string
 ): Promise<{ leads: ScrapedLead[]; error?: string }> {
-  const res = await fetch(url, {
-    headers: BROWSER_HEADERS,
-    signal: AbortSignal.timeout(15000),
-  });
+  const res = await fetchPage(url);
   if (!res.ok) {
     return { leads: [], error: `HTTP ${res.status}` };
   }
@@ -170,10 +176,7 @@ export async function scrapeOnlyFinder(
 async function scrapeFanFoxPage(
   url: string
 ): Promise<{ leads: ScrapedLead[]; error?: string }> {
-  const res = await fetch(url, {
-    headers: BROWSER_HEADERS,
-    signal: AbortSignal.timeout(15000),
-  });
+  const res = await fetchPage(url);
   if (!res.ok) {
     return { leads: [], error: `HTTP ${res.status}` };
   }
@@ -270,33 +273,23 @@ async function scrapeJuicySearchPage(
   const baseUrl = "https://juicysearch.com";
   const searchUrl = `${baseUrl}/results/?q=${encodeURIComponent(query)}`;
 
-  const headers: Record<string, string> = { ...BROWSER_HEADERS };
-
   let cookies = cookieJar ?? [];
 
   if (cookies.length === 0) {
-    const homeRes = await fetch(baseUrl + "/", {
-      headers,
-      signal: AbortSignal.timeout(10000),
-    });
+    const homeRes = await fetchPage(baseUrl + "/");
     cookies = parseSetCookies(homeRes);
   }
 
   const ageCookies = ["age_gate=1", "isAgeVerified=1", "adult=1"];
-  headers["Cookie"] = [...cookies, ...ageCookies].join("; ");
+  cookies = [...cookies, ...ageCookies];
 
   const verifyPaths = ["/enter", "/verify", "/age-verify"];
   for (const path of verifyPaths) {
     try {
-      const verifyRes = await fetch(baseUrl + path, {
-        headers,
-        signal: AbortSignal.timeout(8000),
-        redirect: "follow",
-      });
+      const verifyRes = await fetchPage(baseUrl + path);
       const newCookies = parseSetCookies(verifyRes);
       if (newCookies.length > 0) {
         cookies = [...cookies, ...newCookies];
-        headers["Cookie"] = [...cookies, ...ageCookies].join("; ");
         break;
       }
     } catch {
@@ -304,12 +297,9 @@ async function scrapeJuicySearchPage(
     }
   }
 
-  const res = await fetch(searchUrl, {
-    headers,
-    signal: AbortSignal.timeout(15000),
-  });
+  const res = await fetchPage(searchUrl);
   if (!res.ok) {
-    return { leads: [], error: `HTTP ${res.status}`, cookies: [...cookies, ...ageCookies] };
+    return { leads: [], error: `HTTP ${res.status}`, cookies };
   }
   const html = await res.text();
   const $ = cheerio.load(html);
@@ -336,7 +326,7 @@ async function scrapeJuicySearchPage(
     });
   });
 
-  return { leads, cookies: [...cookies, ...ageCookies] };
+  return { leads, cookies };
 }
 
 export async function scrapeJuicySearch(
