@@ -41,10 +41,12 @@ def headers():
 def poll_jobs():
     """Fetch pending training and generation jobs from app internal API."""
     if not APP_URL or not WORKER_SECRET:
+        print("Poll skip: APP_URL or WORKER_SECRET not set")
         return None, None
     try:
         r = requests.get(f"{APP_URL}/api/internal/worker/jobs", headers=headers(), timeout=30)
         if r.status_code != 200:
+            print(f"Poll HTTP {r.status_code} (check WORKER_SECRET and APP_URL)")
             return [], []
         data = r.json()
         return data.get("training_jobs", []), data.get("generation_jobs", [])
@@ -148,6 +150,7 @@ def run_training_job(job: dict) -> None:
     """
     job_id = job.get("id")
     subject_id = job.get("subject_id")
+    print(f"Processing training job {job_id} (subject {subject_id})")
     sample_paths = job.get("sample_paths") or []
 
     if not subject_consent_allowed(subject_id):
@@ -260,15 +263,33 @@ def run_generation_job(job: dict) -> None:
 def main():
     poll_interval = int(os.environ.get("WORKER_POLL_INTERVAL_SEC", "15"))
     print(f"Worker started. Polling {APP_URL or 'APP_URL not set'} every {poll_interval}s.")
+    last_idle_log = 0.0
     while True:
         training_jobs, generation_jobs = poll_jobs()
         if training_jobs is None:
             time.sleep(poll_interval)
             continue
+        if training_jobs or generation_jobs:
+            print(f"Poll: {len(training_jobs)} training, {len(generation_jobs)} generation jobs")
+        else:
+            now = time.time()
+            if now - last_idle_log >= 60:
+                print("Polling... (no jobs)")
+                last_idle_log = now
         for job in training_jobs:
-            run_training_job(job)
+            try:
+                run_training_job(job)
+            except Exception as e:
+                print(f"Training job error: {e}")
+                import traceback
+                traceback.print_exc()
         for job in generation_jobs:
-            run_generation_job(job)
+            try:
+                run_generation_job(job)
+            except Exception as e:
+                print(f"Generation job error: {e}")
+                import traceback
+                traceback.print_exc()
         time.sleep(poll_interval)
 
 
