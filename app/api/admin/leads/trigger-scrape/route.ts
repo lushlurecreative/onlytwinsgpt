@@ -130,7 +130,7 @@ export async function POST(request: Request) {
     const failedAgg = aggDiagnostics.filter((d) => !d.ok);
     const diagnosticParts: string[] = [];
     if (failedRd.length > 0)
-      diagnosticParts.push(`Reddit: ${failedRd.map((d) => `${(d as { subreddit?: string }).subreddit ?? "?"} (${d.error})`).join("; ")}`);
+      diagnosticParts.push(`Reddit: ${failedRd.map((d) => `${(d as { subreddit?: string }).subreddit ?? "?"} (${d.error})`).join("; ")}. Add REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET in Vercel (reddit.com/prefs/apps)`);
     if (failedYt.length > 0)
       diagnosticParts.push(`YouTube: ${failedYt.map((d) => `${(d as { query?: string }).query ?? "?"} (${d.error})`).join("; ")}. Set YOUTUBE_API_KEY in Vercel`);
     if (failedAgg.length > 0)

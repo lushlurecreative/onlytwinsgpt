@@ -1,6 +1,7 @@
 /**
  * Reddit scraper - fetches recent posts from subreddits and extracts author handles as leads.
- * Used when "Run scrape" is triggered from admin (runs inline, no separate process).
+ * Uses OAuth when REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET are set (required since Reddit blocks unauthenticated requests).
+ * Create an app at https://www.reddit.com/prefs/apps (Script or Web type) and add credentials to Vercel.
  */
 
 export type ScrapeCriteria = {
@@ -33,6 +34,29 @@ export type ScrapeResult = {
   diagnostics: { subreddit: string; ok: boolean; postCount?: number; error?: string }[];
 };
 
+const USER_AGENT = "web:com.onlytwins:v1.0 (by /u/onlytwins)";
+
+async function getRedditAccessToken(): Promise<string | null> {
+  const clientId = process.env.REDDIT_CLIENT_ID?.trim();
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) return null;
+
+  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const res = await fetch("https://www.reddit.com/api/v1/access_token", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": USER_AGENT,
+    },
+    body: "grant_type=client_credentials",
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) return null;
+  const json = (await res.json()) as { access_token?: string };
+  return json.access_token ?? null;
+}
+
 export async function scrapeReddit(criteria?: ScrapeCriteria): Promise<ScrapedLead[]>;
 export async function scrapeReddit(
   criteria: ScrapeCriteria | undefined,
@@ -46,13 +70,25 @@ export async function scrapeReddit(
   const seen = new Set<string>();
   const diagnostics: { subreddit: string; ok: boolean; postCount?: number; error?: string }[] = [];
 
-  const userAgent = "web:com.onlytwins:v1.0 (by /u/onlytwins)";
+  const token = await getRedditAccessToken();
+  if (!token) {
+    const err = "REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET not set. Add them in Vercel (create app at reddit.com/prefs/apps)";
+    diagnostics.push({ subreddit: "setup", ok: false, error: err });
+    if (opts?.withDiagnostics) return { leads: [], diagnostics };
+    return [];
+  }
+
+  const baseUrl = "https://oauth.reddit.com";
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    "User-Agent": USER_AGENT,
+  };
 
   for (const sub of SUBREDDITS) {
     try {
-      const url = `https://www.reddit.com/r/${sub}/new.json?limit=25`;
+      const url = `${baseUrl}/r/${sub}/new.json?limit=25`;
       const res = await fetch(url, {
-        headers: { "User-Agent": userAgent },
+        headers,
         signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) {

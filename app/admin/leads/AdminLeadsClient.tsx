@@ -373,7 +373,25 @@ export default function AdminLeadsClient() {
       ) : null}
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Lead Pipeline</h2>
-        <p className="muted">Click Run scrape to fetch leads from Reddit. Review, approve, generate AI samples, and send outreach.</p>
+        <p className="muted">Click Run scrape to fetch leads from YouTube, Reddit, and aggregators. Review, approve, generate AI samples, and send outreach.</p>
+
+        <details className="card" style={{ marginTop: 12, padding: 12 }}>
+          <summary style={{ cursor: "pointer", fontWeight: 600 }}>Setup: API keys required for scraping</summary>
+          <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.6 }}>
+            <p><strong>Add these in Vercel → Settings → Environment Variables:</strong></p>
+            <ul style={{ margin: "8px 0", paddingLeft: 20 }}>
+              <li><code>YOUTUBE_API_KEY</code> — <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">Google Cloud Console</a> → Create API Key (enable YouTube Data API v3)</li>
+              <li><code>REDDIT_CLIENT_ID</code> + <code>REDDIT_CLIENT_SECRET</code> — <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noreferrer">reddit.com/prefs/apps</a> → Create app (Script or Web type)</li>
+              <li><code>ANTIGRAVITY_WEBHOOK_SECRET</code> — For ingest webhook and local scrape script (choose a random string)</li>
+            </ul>
+            <p style={{ marginTop: 8 }}>
+              <strong>If Vercel gets 403</strong> (Reddit/aggregators block cloud IPs), run scrapers locally:
+            </p>
+            <pre style={{ margin: "8px 0", padding: 10, background: "var(--surface-soft)", borderRadius: 8, fontSize: 12, overflow: "auto" }}>
+{`BASE_URL=https://your-app.vercel.app WEBHOOK_SECRET=<ANTIGRAVITY_WEBHOOK_SECRET> npm run scrape:local`}
+            </pre>
+          </div>
+        </details>
 
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginTop: 12 }}>
           <button
@@ -398,7 +416,7 @@ export default function AdminLeadsClient() {
             </span>
           ) : null}
           <span className="muted" style={{ fontSize: 13 }}>
-            Scraping runs immediately when you click. Fetches recent posts from r/Creators, r/NewTubers, etc. If Reddit returns 0 leads, demo leads are inserted.
+            Runs YouTube, Reddit, OnlyFinder, FanFox, JuicySearch. Add API keys above if scraping returns 0 leads.
           </span>
         </div>
 
