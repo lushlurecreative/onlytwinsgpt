@@ -21,23 +21,21 @@ export type IngestLeadInput = {
   contentVerticals?: string[];
 };
 
+/**
+ * 0 = no photos and no user info (lowest value)
+ * 5 = user info only (profile URL, handle, platformsFound)
+ * 10 = at least 3 photos + user info (highest value)
+ */
 function scoreLead(input: {
-  followerCount: number;
-  engagementRate: number;
-  luxuryTagHits: number;
-  platformsFoundCount?: number;
-  contentVerticalsCount?: number;
-  hasProfileUrl?: boolean;
-  hasSampleUrls?: boolean;
+  hasUserInfo: boolean;
+  sampleCount: number;
 }) {
-  const followerScore = Math.min(50, Math.floor(input.followerCount / 5000));
-  const engagementScore = Math.min(30, Math.floor(input.engagementRate * 4));
-  const luxuryScore = Math.min(20, input.luxuryTagHits * 2);
-  const platformsBonus = Math.min(10, (input.platformsFoundCount ?? 0) * 2);
-  const verticalsBonus = Math.min(5, input.contentVerticalsCount ?? 0);
-  const profileBonus = input.hasProfileUrl ? 5 : 0;
-  const photosBonus = input.hasSampleUrls ? 15 : 0;
-  return Math.max(10, followerScore + engagementScore + luxuryScore + platformsBonus + verticalsBonus + profileBonus + photosBonus);
+  const { hasUserInfo, sampleCount } = input;
+  const hasEnoughPhotos = sampleCount >= 3;
+  if (!hasUserInfo && !hasEnoughPhotos) return 0;
+  if (hasUserInfo && !hasEnoughPhotos) return 5;
+  if (hasUserInfo && hasEnoughPhotos) return 10;
+  return 0;
 }
 
 async function fetchAndUploadSamples(
@@ -121,7 +119,7 @@ async function insertViaPg(row: {
  */
 export async function ingestLeads(
   leads: IngestLeadInput[],
-  source: "reddit" | "youtube" | "antigravity" | "aggregator" = "antigravity"
+  source: "reddit" | "youtube" | "antigravity" | "aggregator" | "instagram" = "antigravity"
 ): Promise<{ imported: number; firstError?: string }> {
   const admin = getSupabaseAdmin();
   await runMigrations();
@@ -165,6 +163,12 @@ export async function ingestLeads(
           .slice(0, 10)
       : [];
 
+    const hasUserInfo =
+      !!profileUrl ||
+      !!handle ||
+      platformsFound.length > 0 ||
+      (profileUrls && typeof profileUrls === "object" && Object.keys(profileUrls).length > 0);
+    const sampleCount = samplePaths.length || (Array.isArray(lead.sampleUrls) ? lead.sampleUrls.length : 0);
     const minimalRow = {
       source,
       handle,
@@ -172,15 +176,7 @@ export async function ingestLeads(
       follower_count: followerCount,
       engagement_rate: engagementRate,
       luxury_tag_hits: luxuryTagHits,
-      score: scoreLead({
-        followerCount,
-        engagementRate,
-        luxuryTagHits,
-        platformsFoundCount: platformsFound.length,
-        contentVerticalsCount: contentVerticals.length,
-        hasProfileUrl: !!profileUrl,
-        hasSampleUrls: samplePaths.length > 0 || (Array.isArray(lead.sampleUrls) && lead.sampleUrls.length > 0),
-      }),
+      score: scoreLead({ hasUserInfo, sampleCount }),
       profile_url: profileUrl,
       notes: typeof lead.notes === "string" && lead.notes.trim() ? lead.notes.trim() : null,
     };

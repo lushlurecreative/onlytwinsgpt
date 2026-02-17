@@ -138,6 +138,15 @@ function resolveUrl(base: string, href: string): string {
   }
 }
 
+function extractInstagramUrl($: cheerio.CheerioAPI, $container: ReturnType<cheerio.CheerioAPI>, baseUrl: string): string | null {
+  const ig = $container.find('a[href*="instagram.com"]').first();
+  const href = ig.attr("href");
+  if (!href) return null;
+  const abs = resolveUrl(baseUrl, href);
+  if (/instagram\.com\//i.test(abs)) return abs;
+  return null;
+}
+
 function getImgUrl($: cheerio.CheerioAPI, img: unknown, baseUrl: string): string | null {
   const $img = $(img as Parameters<cheerio.CheerioAPI>[0]);
   const src =
@@ -269,13 +278,20 @@ async function scrapeOnlyFinderPage(
     }
 
     const sampleUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl) : [];
+    const instagramUrl = $parent.length ? extractInstagramUrl($, $parent.first(), baseUrl) : null;
+    const profileUrls: Record<string, string> = { onlyfans: profileUrl };
+    const platformsFound = ["onlyfans"];
+    if (instagramUrl) {
+      profileUrls.instagram = instagramUrl;
+      platformsFound.push("instagram");
+    }
 
     leads.push({
       handle: username,
       platform: "onlyfans",
       profileUrl,
-      platformsFound: ["onlyfans"],
-      profileUrls: { onlyfans: profileUrl },
+      platformsFound,
+      profileUrls,
       followerCount,
       engagementRate: followerCount > 0 ? 1 : 0,
       luxuryTagHits: 0,
@@ -354,13 +370,20 @@ async function scrapeFanFoxPage(
     const parentText = $parent.length ? $parent.text() : "";
     const followerCount = parseFollowerFromText(parentText);
     const sampleUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl) : [];
+    const instagramUrl = $parent.length ? extractInstagramUrl($, $parent.first(), baseUrl) : null;
+    const profileUrls: Record<string, string> = { onlyfans: profileUrl };
+    const platformsFound = ["onlyfans"];
+    if (instagramUrl) {
+      profileUrls.instagram = instagramUrl;
+      platformsFound.push("instagram");
+    }
 
     leads.push({
       handle: username,
       platform: "onlyfans",
       profileUrl,
-      platformsFound: ["onlyfans"],
-      profileUrls: { onlyfans: profileUrl },
+      platformsFound,
+      profileUrls,
       followerCount,
       engagementRate: followerCount > 0 ? 1 : 0,
       luxuryTagHits: 0,
@@ -482,13 +505,20 @@ async function scrapeJuicySearchPage(
     const parentText = $parent.length ? $parent.text() : "";
     const followerCount = parseFollowerFromText(parentText);
     const sampleUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl + "/") : [];
+    const instagramUrl = $parent.length ? extractInstagramUrl($, $parent.first(), baseUrl + "/") : null;
+    const profileUrls: Record<string, string> = { onlyfans: profileUrl };
+    const platformsFound = ["onlyfans"];
+    if (instagramUrl) {
+      profileUrls.instagram = instagramUrl;
+      platformsFound.push("instagram");
+    }
 
     leads.push({
       handle: username,
       platform: "onlyfans",
       profileUrl,
-      platformsFound: ["onlyfans"],
-      profileUrls: { onlyfans: profileUrl },
+      platformsFound,
+      profileUrls,
       followerCount,
       engagementRate: followerCount > 0 ? 1 : 0,
       luxuryTagHits: 0,

@@ -13,17 +13,16 @@ type LeadInput = {
   luxuryTagHits?: number;
   profileUrl?: string;
   notes?: string;
+  sampleUrls?: string[];
 };
 
-function scoreLead(input: {
-  followerCount: number;
-  engagementRate: number;
-  luxuryTagHits: number;
-}) {
-  const followerScore = Math.min(50, Math.floor(input.followerCount / 5000));
-  const engagementScore = Math.min(30, Math.floor(input.engagementRate * 4));
-  const luxuryScore = Math.min(20, input.luxuryTagHits * 2);
-  return followerScore + engagementScore + luxuryScore;
+function scoreLead(input: { hasUserInfo: boolean; sampleCount: number }) {
+  const { hasUserInfo, sampleCount } = input;
+  const hasEnoughPhotos = sampleCount >= 3;
+  if (!hasUserInfo && !hasEnoughPhotos) return 0;
+  if (hasUserInfo && !hasEnoughPhotos) return 5;
+  if (hasUserInfo && hasEnoughPhotos) return 10;
+  return 0;
 }
 
 export async function GET() {
@@ -105,6 +104,8 @@ export async function POST(request: Request) {
     const followerCount = Math.max(0, Number(lead.followerCount ?? 0));
     const engagementRate = Math.max(0, Number(lead.engagementRate ?? 0));
     const luxuryTagHits = Math.max(0, Number(lead.luxuryTagHits ?? 0));
+    const hasUserInfo = !!(lead.profileUrl?.trim() || lead.handle?.trim());
+    const sampleCount = Array.isArray(lead.sampleUrls) ? lead.sampleUrls.length : 0;
     return {
       source: lead.source.trim(),
       handle: lead.handle.trim(),
@@ -112,7 +113,7 @@ export async function POST(request: Request) {
       follower_count: followerCount,
       engagement_rate: engagementRate,
       luxury_tag_hits: luxuryTagHits,
-      score: scoreLead({ followerCount, engagementRate, luxuryTagHits }),
+      score: scoreLead({ hasUserInfo, sampleCount }),
       profile_url: lead.profileUrl?.trim() || null,
       notes: lead.notes?.trim() || null,
     };

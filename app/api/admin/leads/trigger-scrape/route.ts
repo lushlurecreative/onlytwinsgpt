@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
 import { scrapeReddit, type ScrapeCriteria, type ScrapedLead } from "@/lib/scrape-reddit";
 import { scrapeYouTube } from "@/lib/scrape-youtube";
+import { scrapeInstagram } from "@/lib/scrape-instagram";
 import { scrapeOnlyFinder, scrapeFanFox, scrapeJuicySearch } from "@/lib/scrape-aggregators";
 import { ingestLeads, type IngestLeadInput } from "@/lib/ingest-leads";
 
@@ -35,9 +36,10 @@ export async function POST(request: Request) {
     // no body or invalid JSON - use defaults
   }
 
-  const [ytResult, redditResult, onlyfinderResult, fanfoxResult, juicyResult] = await Promise.all([
+  const [ytResult, redditResult, igResult, onlyfinderResult, fanfoxResult, juicyResult] = await Promise.all([
     scrapeYouTube(criteria, { withDiagnostics: true }),
     scrapeReddit(criteria, { withDiagnostics: true }),
+    scrapeInstagram({ withDiagnostics: true }),
     scrapeOnlyFinder(undefined, { withDiagnostics: true }),
     scrapeFanFox(undefined, { withDiagnostics: true }),
     scrapeJuicySearch(undefined, { withDiagnostics: true }),
@@ -47,6 +49,8 @@ export async function POST(request: Request) {
   const ytDiagnostics = Array.isArray(ytResult) ? [] : ytResult.diagnostics;
   const redditLeads = redditResult.leads;
   const redditDiagnostics = redditResult.diagnostics;
+  const igLeads = Array.isArray(igResult) ? igResult : igResult.leads;
+  const igDiagnostics = Array.isArray(igResult) ? [] : igResult.diagnostics;
 
   const onlyfinderLeads = Array.isArray(onlyfinderResult) ? onlyfinderResult : onlyfinderResult.leads;
   const fanfoxLeads = Array.isArray(fanfoxResult) ? fanfoxResult : fanfoxResult.leads;
@@ -59,7 +63,7 @@ export async function POST(request: Request) {
   ];
 
   const seen = new Set<string>();
-  const allLeads: { lead: IngestLeadInput; source: "youtube" | "reddit" | "aggregator" }[] = [];
+  const allLeads: { lead: IngestLeadInput; source: "youtube" | "reddit" | "instagram" | "aggregator" }[] = [];
 
   for (const l of ytLeads) {
     const key = `${l.platform}:${l.handle.toLowerCase()}`;
@@ -73,6 +77,13 @@ export async function POST(request: Request) {
     if (!seen.has(key)) {
       seen.add(key);
       allLeads.push({ lead: mapToIngest(l), source: "reddit" });
+    }
+  }
+  for (const l of igLeads) {
+    const key = `${l.platform}:${l.handle.toLowerCase()}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      allLeads.push({ lead: mapToIngest(l), source: "instagram" });
     }
   }
   for (const l of [...onlyfinderLeads, ...fanfoxLeads, ...juicyLeads]) {
@@ -99,12 +110,14 @@ export async function POST(request: Request) {
 
   let importedYt = 0;
   let importedRd = 0;
+  let importedIg = 0;
   let importedAgg = 0;
   let firstError: string | undefined;
 
   if (allLeads.length > 0) {
     const ytInputs = allLeads.filter((x) => x.source === "youtube").map((x) => x.lead);
     const rdInputs = allLeads.filter((x) => x.source === "reddit").map((x) => x.lead);
+    const igInputs = allLeads.filter((x) => x.source === "instagram").map((x) => x.lead);
     const aggInputs = allLeads.filter((x) => x.source === "aggregator").map((x) => x.lead);
     if (ytInputs.length > 0) {
       const r = await ingestLeads(ytInputs, "youtube");
@@ -116,6 +129,11 @@ export async function POST(request: Request) {
       importedRd = r.imported;
       if (r.firstError && !firstError) firstError = r.firstError;
     }
+    if (igInputs.length > 0) {
+      const r = await ingestLeads(igInputs, "instagram");
+      importedIg = r.imported;
+      if (r.firstError && !firstError) firstError = r.firstError;
+    }
     if (aggInputs.length > 0) {
       const r = await ingestLeads(aggInputs, "aggregator");
       importedAgg = r.imported;
@@ -123,17 +141,20 @@ export async function POST(request: Request) {
     }
   }
 
-  const imported = importedYt + importedRd + importedAgg;
+  const imported = importedYt + importedRd + importedIg + importedAgg;
 
   if (allLeads.length === 0) {
     const failedYt = ytDiagnostics.filter((d) => !d.ok);
     const failedRd = redditDiagnostics.filter((d) => !d.ok);
+    const failedIg = igDiagnostics.filter((d) => !d.ok);
     const failedAgg = aggDiagnostics.filter((d) => !d.ok);
     const diagnosticParts: string[] = [];
     if (failedRd.length > 0)
-      diagnosticParts.push(`Reddit: ${failedRd.map((d) => `${(d as { subreddit?: string }).subreddit ?? "?"} (${d.error})`).join("; ")}. Add REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET in Vercel (reddit.com/prefs/apps)`);
+      diagnosticParts.push(`Reddit: ${failedRd.map((d) => `${(d as { subreddit?: string }).subreddit ?? "?"} (${d.error})`).join("; ")}. Set APIFY_TOKEN in Vercel`);
+    if (failedIg.length > 0)
+      diagnosticParts.push(`Instagram: ${failedIg.map((d) => `${(d as { source?: string }).source ?? "?"} (${d.error})`).join("; ")}`);
     if (failedYt.length > 0)
-      diagnosticParts.push(`YouTube: ${failedYt.map((d) => `${(d as { query?: string }).query ?? "?"} (${d.error})`).join("; ")}. Set YOUTUBE_API_KEY in Vercel`);
+      diagnosticParts.push(`YouTube: Set YOUTUBE_API_KEY in Vercel`);
     if (failedAgg.length > 0)
       diagnosticParts.push(`Aggregators: ${failedAgg.map((d) => `${d.url} (${d.error})`).join("; ")}`);
     const hint = diagnosticParts.length > 0 ? ` ${diagnosticParts.join(". ")}.` : "";
@@ -141,7 +162,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error: `All sources returned 0 leads.${hint}`,
-        diagnostics: { youtube: ytDiagnostics, reddit: redditDiagnostics, aggregator: aggDiagnostics },
+        diagnostics: { youtube: ytDiagnostics, reddit: redditDiagnostics, instagram: igDiagnostics, aggregator: aggDiagnostics },
       },
       { status: 400 }
     );
@@ -161,6 +182,7 @@ export async function POST(request: Request) {
   const parts: string[] = [];
   if (importedYt > 0) parts.push(`${importedYt} from YouTube`);
   if (importedRd > 0) parts.push(`${importedRd} from Reddit`);
+  if (importedIg > 0) parts.push(`${importedIg} from Instagram`);
   if (importedAgg > 0) parts.push(`${importedAgg} from aggregators (OnlyFinder, FanFox, JuicySearch)`);
   const message = `Imported ${parts.join(", ")}.`;
 
@@ -170,8 +192,9 @@ export async function POST(request: Request) {
       imported,
       importedYt,
       importedRd,
+      importedIg,
       importedAgg,
-      diagnostics: { youtube: ytDiagnostics, reddit: redditDiagnostics, aggregator: aggDiagnostics },
+      diagnostics: { youtube: ytDiagnostics, reddit: redditDiagnostics, instagram: igDiagnostics, aggregator: aggDiagnostics },
       message,
     },
     { status: 201 }
