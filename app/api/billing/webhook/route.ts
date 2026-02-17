@@ -6,6 +6,8 @@ import { checkRateLimit, getClientIpFromHeaders } from "@/lib/rate-limit";
 import { logError, logWarn, sendAlert } from "@/lib/observability";
 import { RATE_LIMITS } from "@/lib/security-config";
 import { getServiceCreatorId } from "@/lib/service-creator";
+import { PACKAGE_PLANS } from "@/lib/package-plans";
+import { getPlanKeyForStripePriceId } from "@/lib/plan-entitlements";
 
 export const runtime = "nodejs";
 
@@ -204,6 +206,35 @@ export async function POST(request: Request) {
           message: error.message,
         });
         return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+
+      const planKey = getPlanKeyForStripePriceId(priceId);
+      const amountCents = planKey ? Math.round(PACKAGE_PLANS[planKey].amountUsd * 100) : 0;
+      if (amountCents > 0) {
+        await supabaseAdmin.from("revenue_events").insert({
+          user_id: subscriberId,
+          lead_id: (subscription.metadata?.lead_id as string) || null,
+          amount_cents: amountCents,
+          currency: "usd",
+          stripe_event_id: event.id,
+          plan_key: planKey,
+        });
+      }
+      const leadId = (subscription.metadata?.lead_id as string)?.trim();
+      if (leadId && (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated")) {
+        const status = mapStripeStatus(subscription.status);
+        if (status === "active" || status === "trialing") {
+          await supabaseAdmin
+            .from("leads")
+            .update({ status: "converted", updated_at: new Date().toISOString() })
+            .eq("id", leadId);
+          await supabaseAdmin.from("automation_events").insert({
+            event_type: "converted",
+            entity_type: "lead",
+            entity_id: leadId,
+            payload_json: { stripe_subscription_id: subscription.id, subscriber_id: subscriberId },
+          });
+        }
       }
     }
 

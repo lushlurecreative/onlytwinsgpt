@@ -390,38 +390,38 @@ export default function VaultClient({ userId }: VaultClientProps) {
     setRequestMessage("");
 
     try {
+      const sceneCounts: Record<string, number> = {};
       for (const scene of selectedScenes) {
         const count = sceneImageCounts[scene] ?? 0;
-        if (count <= 0) continue;
-
-        const response = await fetch("/api/generation-requests", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            samplePaths: sampleSet,
-            scenePreset: scene,
-            contentMode: requestContentMode,
-            imageCount: count,
-            videoCount: clamp(requestVideoCount, 0, 20),
-          }),
-        });
-
-        const result = (await response.json().catch(() => ({}))) as { request?: { id: string }; error?: string };
-        if (!response.ok) {
-          throw new Error(result.error ?? "Request submit failed");
-        }
+        if (count > 0) sceneCounts[scene] = count;
       }
+      const response = await fetch("/api/vault/generate-my-twin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sceneCounts,
+          contentMode: requestContentMode,
+          videoCount: clamp(requestVideoCount, 0, 20),
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        error?: string;
+        request_ids?: string[];
+      };
+      if (!response.ok) {
+        throw new Error(result.error ?? "Submit failed");
+      }
+      setRequestMessage(result.message ?? "Submitted. We'll notify you when your vault is ready.");
+      await loadRequests();
+      setStep(3);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       setRequestMessage(message);
+    } finally {
       setIsSubmittingRequest(false);
-      return;
     }
-
-    setRequestMessage("Submitted. Our team will review your samples next.");
-    await loadRequests();
-    setIsSubmittingRequest(false);
-    setStep(3);
   }
 
   const latestRequest = requests[0];
@@ -841,7 +841,7 @@ export default function VaultClient({ userId }: VaultClientProps) {
                 disabled={!entitlements || !sampleCountOk || !imageSplitOk || isSubmittingRequest}
                 type="button"
               >
-                {isSubmittingRequest ? "Submitting…" : "Submit request"}
+                {isSubmittingRequest ? "Submitting…" : "Generate my twin"}
               </button>
               <span className="muted" style={{ fontSize: 12 }}>
                 Upload {minSamples}-{maxSamples} photos · Select scenes · Totals must equal {includedImages} images.

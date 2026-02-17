@@ -1,5 +1,5 @@
 """
-Supabase storage: download from uploads bucket, upload to model_artifacts or uploads.
+Supabase storage: download from uploads bucket or URL, upload to model_artifacts or uploads.
 Uses SUPABASE_SERVICE_ROLE_KEY only.
 """
 
@@ -7,10 +7,32 @@ import os
 from typing import List, Optional
 
 try:
+    import requests
+except ImportError:
+    requests = None
+
+try:
     from supabase import create_client, Client
 except ImportError:
     create_client = None
     Client = None
+
+
+def download_from_url(url: str, dest_path: str, timeout: int = 30) -> bool:
+    """Download one file from HTTP(S) URL to local path. Used for lead_sample reference images."""
+    if not url or not url.strip().startswith("http"):
+        return False
+    if not requests:
+        return False
+    try:
+        r = requests.get(url.strip(), timeout=timeout)
+        r.raise_for_status()
+        with open(dest_path, "wb") as f:
+            f.write(r.content)
+        return True
+    except Exception as e:
+        print(f"Download URL error {url[:80]}: {e}")
+        return False
 
 
 def get_supabase() -> Optional["Client"]:

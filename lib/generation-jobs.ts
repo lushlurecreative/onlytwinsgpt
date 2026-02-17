@@ -17,6 +17,8 @@ export type CreateGenerationJobInput = {
   lora_model_reference?: string | null;
   controlnet_input_path?: string | null;
   generation_request_id?: string | null;
+  job_type?: "user" | "lead_sample";
+  lead_id?: string | null;
 };
 
 export async function getApprovedSubjectIdForUser(userId: string): Promise<string | null> {
@@ -61,6 +63,7 @@ export async function getPresetIdBySceneKey(sceneKey: string): Promise<string | 
 
 export async function createGenerationJob(input: CreateGenerationJobInput): Promise<string | null> {
   const admin = getSupabaseAdmin();
+  const jobType = input.job_type ?? "user";
   const { data, error } = await admin
     .from("generation_jobs")
     .insert({
@@ -70,6 +73,8 @@ export async function createGenerationJob(input: CreateGenerationJobInput): Prom
       lora_model_reference: input.lora_model_reference ?? null,
       controlnet_input_path: input.controlnet_input_path ?? null,
       generation_request_id: input.generation_request_id ?? null,
+      job_type: jobType,
+      lead_id: input.lead_id ?? null,
       status: "pending",
     })
     .select("id")
@@ -82,6 +87,8 @@ export async function createGenerationJob(input: CreateGenerationJobInput): Prom
     reference_image_path: input.reference_image_path,
     lora_model_reference: input.lora_model_reference ?? null,
     controlnet_input_path: input.controlnet_input_path ?? null,
+    job_type: jobType,
+    lead_id: input.lead_id ?? null,
   });
   if (runpodJobId) {
     await admin

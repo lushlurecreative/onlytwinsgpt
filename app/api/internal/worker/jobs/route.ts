@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       .limit(50),
     admin
       .from("generation_jobs")
-      .select("id, subject_id, preset_id, reference_image_path, lora_model_reference, controlnet_input_path, status")
+      .select("id, subject_id, preset_id, reference_image_path, lora_model_reference, controlnet_input_path, status, job_type, lead_id")
       .eq("status", "pending")
       .is("runpod_job_id", null)
       .order("created_at", { ascending: true })
@@ -46,6 +46,8 @@ export async function GET(request: Request) {
     lora_model_reference: string | null;
     controlnet_input_path: string | null;
     status: string;
+    job_type: string;
+    lead_id: string | null;
   }>;
 
   return NextResponse.json({

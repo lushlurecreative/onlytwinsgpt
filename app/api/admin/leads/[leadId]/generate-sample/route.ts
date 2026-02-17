@@ -5,12 +5,30 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import {
   getPresetIdBySceneKey,
   createGenerationJob,
-  pollAllGenerationJobsUntilDone,
 } from "@/lib/generation-jobs";
 
 type Params = { params: Promise<{ leadId: string }> };
 
-export async function POST(request: Request, { params }: Params) {
+/** Get first reference image: URL from image_urls_json or path from sample_paths. */
+function getLeadReferenceImage(lead: {
+  image_urls_json?: unknown;
+  sample_paths?: string[];
+}): string | null {
+  const urls = lead.image_urls_json;
+  if (Array.isArray(urls) && urls.length > 0) {
+    const first = urls[0];
+    if (typeof first === "string" && first.startsWith("http")) return first;
+  }
+  if (typeof urls === "object" && urls !== null && "url" in (urls as Record<string, unknown>)) {
+    const u = (urls as { url?: string }).url;
+    if (typeof u === "string" && u.startsWith("http")) return u;
+  }
+  const paths = (lead.sample_paths ?? []) as string[];
+  if (paths.length > 0 && paths[0]) return paths[0];
+  return null;
+}
+
+export async function POST(_request: Request, { params }: Params) {
   const { leadId } = await params;
   const session = await createClient();
   const {
@@ -27,7 +45,7 @@ export async function POST(request: Request, { params }: Params) {
   const admin = getSupabaseAdmin();
   const { data: lead, error: leadError } = await admin
     .from("leads")
-    .select("id, handle, sample_paths")
+    .select("id, handle, sample_paths, image_urls_json")
     .eq("id", leadId)
     .single();
 
@@ -35,10 +53,10 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: leadError?.message ?? "Lead not found" }, { status: 404 });
   }
 
-  const samplePaths = (lead.sample_paths ?? []) as string[];
-  if (samplePaths.length === 0) {
+  const referenceImage = getLeadReferenceImage(lead);
+  if (!referenceImage) {
     return NextResponse.json(
-      { error: "Lead has no scraped sample photos." },
+      { error: "Lead has no reference image (set image_urls_json or sample_paths)." },
       { status: 400 }
     );
   }
@@ -52,55 +70,38 @@ export async function POST(request: Request, { params }: Params) {
     );
   }
 
-  const referencePath = samplePaths[0];
-  const jobIds: string[] = [];
-  for (let i = 0; i < 2; i++) {
-    const id = await createGenerationJob({
-      subject_id: null,
-      preset_id: presetId,
-      reference_image_path: referencePath,
-      lora_model_reference: null,
-      generation_request_id: null,
-    });
-    if (id) jobIds.push(id);
-  }
-
-  if (jobIds.length === 0) {
-    return NextResponse.json({ error: "Failed to create generation jobs" }, { status: 500 });
-  }
-
-  const { output_paths, allOk, firstError } = await pollAllGenerationJobsUntilDone(jobIds);
-
-  if (!allOk || output_paths.length === 0) {
-    return NextResponse.json(
-      {
-        error: firstError ?? "Generation failed or timed out. Ensure the RunPod worker is running and WORKER_SECRET is set.",
-      },
-      { status: 500 }
-    );
-  }
-
-  const samplePreviewPath = output_paths[0];
-
-  const { error: updateError } = await admin
+  await admin
     .from("leads")
-    .update({
-      sample_preview_path: samplePreviewPath,
-      generated_sample_paths: output_paths,
-    })
+    .update({ status: "sample_queued", updated_at: new Date().toISOString() })
     .eq("id", leadId);
 
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 400 });
+  const jobId = await createGenerationJob({
+    subject_id: null,
+    preset_id: presetId,
+    reference_image_path: referenceImage,
+    lora_model_reference: null,
+    generation_request_id: null,
+    job_type: "lead_sample",
+    lead_id: leadId,
+  });
+
+  if (!jobId) {
+    await admin
+      .from("leads")
+      .update({ status: "qualified", updated_at: new Date().toISOString() })
+      .eq("id", leadId);
+    return NextResponse.json({ error: "Failed to create generation job (RunPod may be unconfigured)." }, { status: 500 });
   }
 
+  await admin.from("automation_events").insert({
+    event_type: "job_enqueued",
+    entity_type: "lead",
+    entity_id: leadId,
+    payload_json: { generation_job_id: jobId, source: "admin_generate_sample" },
+  });
+
   return NextResponse.json(
-    {
-      ok: true,
-      generated: output_paths.length,
-      samplePreviewPath,
-      generatedSamplePaths: output_paths,
-    },
-    { status: 200 }
+    { ok: true, message: "Sample generation queued.", generation_job_id: jobId },
+    { status: 202 }
   );
 }

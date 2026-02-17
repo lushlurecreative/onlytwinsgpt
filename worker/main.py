@@ -21,6 +21,7 @@ except ImportError:
 
 from storage import (
     download_from_uploads,
+    download_from_url,
     download_many_from_uploads,
     download_from_model_artifacts,
     upload_to_model_artifacts,
@@ -221,9 +222,14 @@ def run_generation_job(job: dict) -> None:
 
     with tempfile.TemporaryDirectory() as tmp:
         ref_local = os.path.join(tmp, "ref.jpg")
-        if not download_from_uploads(reference_image_path, ref_local):
-            update_generation_job(job_id, "failed", None)
-            return
+        if reference_image_path.strip().startswith("http"):
+            if not download_from_url(reference_image_path, ref_local):
+                update_generation_job(job_id, "failed", None)
+                return
+        else:
+            if not download_from_uploads(reference_image_path, ref_local):
+                update_generation_job(job_id, "failed", None)
+                return
 
         lora_local = None
         if lora_model_reference and lora_model_reference.startswith("model_artifacts/"):
@@ -251,11 +257,43 @@ def run_generation_job(job: dict) -> None:
             update_generation_job(job_id, "failed", None)
             return
 
-        user_prefix = reference_image_path.split("/")[0] if "/" in reference_image_path else "generated"
+        job_type = job.get("job_type") or "user"
+        lead_id = job.get("lead_id")
+        watermark_hash = None
+        if job_type == "lead_sample" and lead_id:
+            try:
+                from watermark import build_payload, embed
+                payload = build_payload("lead_sample", lead_id=lead_id, generation_job_id=job_id)
+                watermark_hash = embed(out_local, payload, out_local)
+            except Exception as e:
+                print(f"Watermark embed failed: {e}")
+                update_generation_job(job_id, "failed", None)
+                return
+
+        user_prefix = reference_image_path.split("/")[0] if "/" in reference_image_path and not reference_image_path.startswith("http") else "leads"
         output_path = f"{user_prefix}/generated/{job_id}-{uuid.uuid4().hex[:8]}.jpg"
         if not upload_to_uploads(out_local, output_path):
             update_generation_job(job_id, "failed", None)
             return
+
+        if job_type == "lead_sample" and lead_id and watermark_hash and APP_URL and WORKER_SECRET:
+            try:
+                r = requests.post(
+                    f"{APP_URL}/api/internal/watermark/log",
+                    headers=headers(),
+                    json={
+                        "asset_type": "lead_sample",
+                        "lead_id": lead_id,
+                        "generation_job_id": job_id,
+                        "asset_path": output_path,
+                        "watermark_hash": watermark_hash,
+                    },
+                    timeout=15,
+                )
+                if r.status_code != 200:
+                    print(f"Watermark log HTTP {r.status_code}")
+            except Exception as e:
+                print(f"Watermark log error: {e}")
 
     update_generation_job(job_id, "completed", output_path)
 

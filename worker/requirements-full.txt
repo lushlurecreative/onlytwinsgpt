@@ -21,5 +21,9 @@ sentencepiece
 # Optional: 4-bit training (saves VRAM)
 # bitsandbytes
 
+# Watermark (forensic embed/decode)
+invisible-watermark>=0.2.0
+opencv-python-headless>=4.8.0
+
 # Upscale (optional; generation still works without it)
 # realesrgan  # or: pip install git+https://github.com/sberbank-ai/Real-ESRGAN.git

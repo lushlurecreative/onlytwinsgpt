@@ -57,18 +57,38 @@ export async function POST(request: Request) {
     }
     const { data: gen } = await admin
       .from("generation_jobs")
-      .select("id, status, output_path")
+      .select("id, status, output_path, lead_id")
       .eq("runpod_job_id", runpodId)
       .maybeSingle();
-    if (gen?.id && gen.status !== "completed" && body.output && typeof body.output === "object") {
-      const out = body.output as { output_path?: string };
-      if (out.output_path) {
+    if (gen?.id) {
+      const out = body.output && typeof body.output === "object" ? (body.output as { output_path?: string }) : null;
+      const outputPath = out?.output_path ?? (gen.output_path as string | null) ?? null;
+      if (outputPath && gen.status !== "completed") {
         await admin
           .from("generation_jobs")
-          .update({ status: "completed", output_path: out.output_path })
+          .update({ status: "completed", output_path: outputPath })
           .eq("id", gen.id);
       }
-      return NextResponse.json({ ok: true, updated: "generation_job" });
+      const leadId = (gen as { lead_id?: string | null }).lead_id;
+      if (leadId && outputPath) {
+        await admin
+          .from("leads")
+          .update({
+            sample_asset_path: outputPath,
+            status: "sample_done",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", leadId);
+        await admin.from("automation_events").insert({
+          event_type: "sample_done",
+          entity_type: "lead",
+          entity_id: leadId,
+          payload_json: { generation_job_id: gen.id, output_path: outputPath },
+        });
+      }
+      if (gen.status !== "completed" || leadId) {
+        return NextResponse.json({ ok: true, updated: "generation_job" });
+      }
     }
   }
 

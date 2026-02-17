@@ -214,6 +214,21 @@ export async function POST(_request: Request, { params }: Params) {
     })
     .eq("id", requestId);
 
+  if (finalStatus === "completed" && requestRow.user_id) {
+    const { sendAlert } = await import("@/lib/observability");
+    await sendAlert("vault_ready", {
+      user_id: requestRow.user_id,
+      request_id: requestId,
+      image_count: done - videosDone,
+      video_count: videosDone,
+    });
+    await admin.from("user_notifications").insert({
+      user_id: requestRow.user_id,
+      type: "vault_ready",
+      payload_json: { request_id: requestId, image_count: done - videosDone, video_count: videosDone },
+    });
+  }
+
   return NextResponse.json(
     {
       requestId,

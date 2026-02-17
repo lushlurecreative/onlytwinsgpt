@@ -2,11 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { isAdminUser } from "@/lib/admin";
-import { sendAlert } from "@/lib/observability";
+import { sendOutreach, type LeadForOutreach } from "@/lib/outreach";
 
-type Params = {
-  params: Promise<{ leadId: string }>;
-};
+type Params = { params: Promise<{ leadId: string }> };
 
 export async function POST(_request: Request, { params }: Params) {
   const { leadId } = await params;
@@ -23,52 +21,49 @@ export async function POST(_request: Request, { params }: Params) {
   }
 
   const admin = getSupabaseAdmin();
+  const { data: maxRow } = await admin
+    .from("app_settings")
+    .select("value")
+    .eq("key", "outreach_max_attempts")
+    .maybeSingle();
+  const maxAttempts = Math.max(1, parseInt(String(maxRow?.value ?? "3"), 10) || 3);
+
   const { data: lead, error: leadError } = await admin
     .from("leads")
-    .select("id, handle, platform, status, sample_preview_path, notes")
+    .select("id, handle, platform, status, sample_preview_path, sample_asset_path, notes, outreach_attempts")
     .eq("id", leadId)
     .single();
 
   if (leadError || !lead) {
     return NextResponse.json({ error: leadError?.message ?? "Lead not found" }, { status: 404 });
   }
-  if (lead.status !== "approved") {
-    return NextResponse.json({ error: "Lead must be approved before outreach" }, { status: 400 });
+
+  const allowedStatuses = ["approved", "sample_done"];
+  if (!allowedStatuses.includes(lead.status)) {
+    return NextResponse.json(
+      { error: `Lead must be approved or sample_done before outreach. Current: ${lead.status}` },
+      { status: 400 }
+    );
+  }
+  const attempts = (lead.outreach_attempts ?? 0) as number;
+  if (attempts >= maxAttempts) {
+    return NextResponse.json(
+      { error: `Max outreach attempts (${maxAttempts}) reached for this lead.` },
+      { status: 400 }
+    );
   }
 
-  const outreachMessage =
-    `Hi ${lead.handle}, we help creators scale with done-for-you AI content. ` +
-    `We generated a personalized concept sample and can help you launch quickly. ` +
-    `Even if you do not want our services, the generated sample is yours to keep and use. ` +
-    `Click to learn more.`;
+  const result = await sendOutreach(admin, lead as LeadForOutreach);
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error ?? "Outreach failed" }, { status: 500 });
+  }
 
-  // Placeholder delivery hook; connect DM provider here.
-  await sendAlert("lead_outreach_triggered", {
-    lead_id: lead.id,
-    handle: lead.handle,
-    platform: lead.platform,
-    sample_preview_path: lead.sample_preview_path,
-    outreach_message: outreachMessage,
+  await admin.from("automation_events").insert({
+    event_type: "outreach_sent",
+    entity_type: "lead",
+    entity_id: leadId,
+    payload_json: { source: "admin_send_outreach", attempt: attempts + 1 },
   });
-
-  const existingNotes = (lead.notes ?? "").trim();
-  const newNotes = existingNotes
-    ? `${existingNotes}\n\n[Outreach ${new Date().toISOString()}]\n${outreachMessage}`
-    : `[Outreach ${new Date().toISOString()}]\n${outreachMessage}`;
-
-  const { error: updateError } = await admin
-    .from("leads")
-    .update({
-      status: "messaged",
-      messaged_at: new Date().toISOString(),
-      notes: newNotes,
-    })
-    .eq("id", lead.id);
-
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 400 });
-  }
 
   return NextResponse.json({ ok: true }, { status: 200 });
 }
-

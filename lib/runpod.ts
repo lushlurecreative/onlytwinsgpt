@@ -119,6 +119,8 @@ export async function dispatchGenerationJobToRunPod(
     reference_image_path: string;
     lora_model_reference?: string | null;
     controlnet_input_path?: string | null;
+    job_type?: "user" | "lead_sample";
+    lead_id?: string | null;
   }
 ): Promise<string | null> {
   const config = await getRunPodConfig();
@@ -137,6 +139,8 @@ export async function dispatchGenerationJobToRunPod(
       reference_image_path: payload.reference_image_path,
       lora_model_reference: payload.lora_model_reference ?? null,
       controlnet_input_path: payload.controlnet_input_path ?? null,
+      job_type: payload.job_type ?? "user",
+      lead_id: payload.lead_id ?? null,
       app_url: appUrl,
       worker_secret: workerSecret,
     },

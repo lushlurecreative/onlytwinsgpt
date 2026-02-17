@@ -1,17 +1,21 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getStripe } from "@/lib/stripe";
 import { checkRateLimit, getClientIpFromHeaders } from "@/lib/rate-limit";
 import { logError, sendAlert } from "@/lib/observability";
 import { RATE_LIMITS } from "@/lib/security-config";
 import { PRICE_ID_ENV_BY_PLAN, type PlanKey } from "@/lib/package-plans";
 import { getServiceCreatorId } from "@/lib/service-creator";
+import { isUserSuspended } from "@/lib/suspend";
 
 type CheckoutBody = {
   creatorId?: string;
   successUrl?: string;
   cancelUrl?: string;
   plan?: PlanKey;
+  /** When a lead converts via checkout, pass their lead_id so webhook can set status=converted. */
+  leadId?: string;
 };
 
 function isUuid(value: string) {
@@ -44,6 +48,10 @@ export async function POST(request: Request) {
 
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const admin = getSupabaseAdmin();
+    if (await isUserSuspended(admin, user.id)) {
+      return NextResponse.json({ error: "Account access is suspended." }, { status: 403 });
     }
 
     let body: CheckoutBody = {};
@@ -101,26 +109,24 @@ export async function POST(request: Request) {
       const successUrl = body.successUrl ?? `${baseUrl}/login?redirectTo=${encodeURIComponent(redirectPath)}`;
       const cancelUrl = body.cancelUrl ?? `${baseUrl}/pricing?payment=cancel&method=stripe&plan=${body.plan}`;
       const serviceCreatorId = getServiceCreatorId();
+      const metadata: Record<string, string> = {
+        plan: body.plan,
+        creator_id: serviceCreatorId,
+        subscriber_id: user.id,
+      };
+      if (body.leadId?.trim()) metadata.lead_id = body.leadId.trim();
       session = await stripe.checkout.sessions.create({
         mode: isOneTime ? "payment" : "subscription",
         customer: stripeCustomerId,
         line_items: [{ price: planPriceId, quantity: 1 }],
         success_url: successUrl,
         cancel_url: cancelUrl,
-        metadata: {
-          plan: body.plan,
-          creator_id: serviceCreatorId,
-          subscriber_id: user.id,
-        },
+        metadata,
         ...(isOneTime
           ? {}
           : {
               subscription_data: {
-                metadata: {
-                  plan: body.plan,
-                  creator_id: serviceCreatorId,
-                  subscriber_id: user.id,
-                },
+                metadata: { ...metadata },
               },
             }),
       });

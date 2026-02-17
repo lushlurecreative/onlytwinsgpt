@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getScenePresetByKey } from "@/lib/scene-presets";
 import { sendAlert } from "@/lib/observability";
+import { isUserSuspended } from "@/lib/suspend";
 
 type CreateBody = {
   samplePaths?: string[];
@@ -44,6 +46,10 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const admin = getSupabaseAdmin();
+  if (await isUserSuspended(admin, user.id)) {
+    return NextResponse.json({ error: "Account access is suspended." }, { status: 403 });
   }
 
   let body: CreateBody = {};

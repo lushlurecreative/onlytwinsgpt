@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir torch torchvision --index-url https://download.py
 
 RUN pip install --no-cache-dir realesrgan 2>/dev/null || true
 
-COPY storage.py train_lora.py generate_flux.py main.py handler.py ./
+COPY storage.py train_lora.py generate_flux.py main.py handler.py watermark.py ./
 
 # Serverless: one job per request; app_url and worker_secret come in each request input
 CMD ["python3", "handler.py"]

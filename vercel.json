@@ -1,4 +1,18 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/daily-lead-scrape",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/enqueue-lead-samples",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/send-outreach",
+      "schedule": "0 10 * * *"
+    }
+  ]
 }
