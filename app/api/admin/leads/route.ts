@@ -126,3 +126,36 @@ export async function POST(request: Request) {
   return NextResponse.json({ imported: data?.length ?? 0 }, { status: 201 });
 }
 
+export async function DELETE(request: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!isAdminUser(user.id)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  let body: { ids?: string[] } = {};
+  try {
+    body = await request.json().catch(() => ({}));
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const ids = body.ids ?? [];
+  if (ids.length === 0) {
+    return NextResponse.json({ error: "ids[] is required" }, { status: 400 });
+  }
+
+  const admin = getSupabaseAdmin();
+  const { error } = await admin.from("leads").delete().in("id", ids);
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  return NextResponse.json({ deleted: ids.length }, { status: 200 });
+}
+

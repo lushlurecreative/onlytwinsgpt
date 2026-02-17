@@ -120,35 +120,31 @@ export async function POST(request: Request) {
       importedAgg = r.imported;
       if (r.firstError && !firstError) firstError = r.firstError;
     }
-  } else {
-    const demoLeads: IngestLeadInput[] = [
-      {
-        handle: `demo_${Date.now().toString(36)}`,
-        platform: "reddit",
-        profileUrl: "https://reddit.com",
-        profileUrls: { reddit: "https://reddit.com" },
-        platformsFound: ["reddit"],
-        followerCount: 0,
-        engagementRate: 0,
-        luxuryTagHits: 0,
-      },
-      {
-        handle: `demo_${(Date.now() + 1).toString(36)}`,
-        platform: "reddit",
-        profileUrl: "https://reddit.com",
-        profileUrls: { reddit: "https://reddit.com" },
-        platformsFound: ["reddit"],
-        followerCount: 0,
-        engagementRate: 0,
-        luxuryTagHits: 0,
-      },
-    ];
-    const r = await ingestLeads(demoLeads, "reddit");
-    importedRd = r.imported;
-    firstError = r.firstError;
   }
 
   const imported = importedYt + importedRd + importedAgg;
+
+  if (allLeads.length === 0) {
+    const failedYt = ytDiagnostics.filter((d) => !d.ok);
+    const failedRd = redditDiagnostics.filter((d) => !d.ok);
+    const failedAgg = aggDiagnostics.filter((d) => !d.ok);
+    const diagnosticParts: string[] = [];
+    if (failedRd.length > 0)
+      diagnosticParts.push(`Reddit: ${failedRd.map((d) => `${(d as { subreddit?: string }).subreddit ?? "?"} (${d.error})`).join("; ")}`);
+    if (failedYt.length > 0)
+      diagnosticParts.push(`YouTube: ${failedYt.map((d) => `${(d as { query?: string }).query ?? "?"} (${d.error})`).join("; ")}. Set YOUTUBE_API_KEY in Vercel`);
+    if (failedAgg.length > 0)
+      diagnosticParts.push(`Aggregators: ${failedAgg.map((d) => `${d.url} (${d.error})`).join("; ")}`);
+    const hint = diagnosticParts.length > 0 ? ` ${diagnosticParts.join(". ")}.` : "";
+
+    return NextResponse.json(
+      {
+        error: `All sources returned 0 leads.${hint}`,
+        diagnostics: { youtube: ytDiagnostics, reddit: redditDiagnostics, aggregator: aggDiagnostics },
+      },
+      { status: 400 }
+    );
+  }
 
   if (imported === 0) {
     return NextResponse.json(
@@ -161,26 +157,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const isDemo = importedYt === 0 && importedRd > 0 && allLeads.length === 0;
-  const failedYt = ytDiagnostics.filter((d) => !d.ok);
-  const failedRd = redditDiagnostics.filter((d) => !d.ok);
-  const failedAgg = aggDiagnostics.filter((d) => !d.ok);
-  const diagnosticParts: string[] = [];
-  if (failedRd.length > 0)
-    diagnosticParts.push(`Reddit: ${failedRd.map((d) => `${(d as { subreddit?: string }).subreddit ?? "?"} (${d.error})`).join("; ")}`);
-  if (failedYt.length > 0)
-    diagnosticParts.push(`YouTube: ${failedYt.map((d) => `${(d as { query?: string }).query ?? "?"} (${d.error})`).join("; ")}. Set YOUTUBE_API_KEY in Vercel`);
-  if (failedAgg.length > 0)
-    diagnosticParts.push(`Aggregators: ${failedAgg.map((d) => `${d.url} (${d.error})`).join("; ")}`);
-  const diagnosticHint = isDemo && diagnosticParts.length > 0 ? ` ${diagnosticParts.join(". ")}.` : "";
-
   const parts: string[] = [];
   if (importedYt > 0) parts.push(`${importedYt} from YouTube`);
   if (importedRd > 0) parts.push(`${importedRd} from Reddit`);
   if (importedAgg > 0) parts.push(`${importedAgg} from aggregators (OnlyFinder, FanFox, JuicySearch)`);
-  const message = isDemo
-    ? `All sources returned 0 leads. Inserted ${imported} demo leads to verify pipeline.${diagnosticHint}`
-    : `Imported ${parts.join(", ")}.`;
+  const message = `Imported ${parts.join(", ")}.`;
 
   return NextResponse.json(
     {
@@ -189,7 +170,6 @@ export async function POST(request: Request) {
       importedYt,
       importedRd,
       importedAgg,
-      isDemo,
       diagnostics: { youtube: ytDiagnostics, reddit: redditDiagnostics, aggregator: aggDiagnostics },
       message,
     },

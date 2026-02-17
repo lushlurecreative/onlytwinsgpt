@@ -50,6 +50,8 @@ export default function AdminLeadsClient() {
   const [showCriteria, setShowCriteria] = useState(false);
   const [outreachPreview, setOutreachPreview] = useState<{ id: string; handle: string; message: string } | null>(null);
   const [sendingOutreach, setSendingOutreach] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
   const [criteria, setCriteria] = useState<ScrapeCriteria>({
     preset: "default",
     followerMin: 50000,
@@ -100,6 +102,45 @@ export default function AdminLeadsClient() {
     return haystack.includes(normalizedQuery);
   });
   const sorted = [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === sorted.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(sorted.map((r) => r.id)));
+    }
+  }
+
+  async function deleteSelected() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Delete ${ids.length} selected lead(s)?`)) return;
+    setDeleting(true);
+    setMessage("Deleting...");
+    const res = await fetch("/api/admin/leads", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string; deleted?: number };
+    if (!res.ok) {
+      setMessage(json.error ?? "Delete failed");
+    } else {
+      setMessage(`Deleted ${json.deleted ?? ids.length} lead(s).`);
+      setSelectedIds(new Set());
+      await load();
+    }
+    setDeleting(false);
+  }
 
   async function approve(id: string, approved: boolean) {
     setMessage("Updating...");
@@ -503,6 +544,17 @@ export default function AdminLeadsClient() {
           <button className="btn btn-ghost" onClick={() => void load()} type="button">
             Refresh
           </button>
+          {selectedIds.size > 0 ? (
+            <button
+              className="btn btn-ghost"
+              onClick={() => void deleteSelected()}
+              disabled={deleting}
+              type="button"
+              style={{ color: "var(--error, #e5534b)" }}
+            >
+              {deleting ? "Deleting…" : `Delete ${selectedIds.size} selected`}
+            </button>
+          ) : null}
           <span className="muted" style={{ fontSize: 12 }}>
             {sorted.length} / {rows.length}
           </span>
@@ -518,6 +570,14 @@ export default function AdminLeadsClient() {
           <table className="table" style={{ width: "100%", minWidth: 900 }}>
             <thead>
               <tr>
+                <th style={{ width: 40 }}>
+                  <input
+                    type="checkbox"
+                    checked={sorted.length > 0 && selectedIds.size === sorted.length}
+                    onChange={() => toggleSelectAll()}
+                    aria-label="Select all"
+                  />
+                </th>
                 <th>Handle</th>
                 <th>Platform</th>
                 <th>Followers</th>
@@ -535,6 +595,14 @@ export default function AdminLeadsClient() {
                 return (
                   <Fragment key={row.id}>
                     <tr>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(row.id)}
+                          onChange={() => toggleSelect(row.id)}
+                          aria-label={`Select ${row.handle}`}
+                        />
+                      </td>
                       <td>
                         <strong>{row.handle}</strong>
                         {row.profile_url ? (
@@ -577,7 +645,7 @@ export default function AdminLeadsClient() {
                     </tr>
                     {isExpanded ? (
                       <tr>
-                        <td colSpan={10}>
+                        <td colSpan={9}>
                           <div className="card" style={{ margin: "10px 0", padding: 14 }}>
                             <div className="split" style={{ gap: 20, alignItems: "start" }}>
                               <div>
