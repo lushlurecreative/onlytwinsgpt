@@ -1,7 +1,7 @@
 #!/bin/bash
 # Add scraping-related env vars from .env.local to Vercel.
 # Run from project root: ./scripts/add-scrape-env-to-vercel.sh
-# Prereqs: Add YOUTUBE_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET to .env.local (optional: SCRAPER_API_KEY)
+# Prereqs: Add YOUTUBE_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, APIFY_TOKEN to .env.local (optional: SCRAPER_API_KEY)
 #   Create at: Google Cloud Console, reddit.com/prefs/apps. Aggregators use free AllOrigins fallback when blocked.
 
 set -e
@@ -31,6 +31,7 @@ add_or_update() {
 add_or_update YOUTUBE_API_KEY
 add_or_update REDDIT_CLIENT_ID
 add_or_update REDDIT_CLIENT_SECRET
+add_or_update APIFY_TOKEN
 add_or_update SCRAPER_API_KEY
 
 echo "Done. Redeploy for changes: git commit --allow-empty -m 'trigger redeploy' && git push"

@@ -382,7 +382,8 @@ export default function AdminLeadsClient() {
             <ul style={{ margin: "8px 0", paddingLeft: 20 }}>
               <li><code>YOUTUBE_API_KEY</code> — <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">Google Cloud Console</a> → Create API Key (enable YouTube Data API v3)</li>
               <li><code>REDDIT_CLIENT_ID</code> + <code>REDDIT_CLIENT_SECRET</code> — <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noreferrer">reddit.com/prefs/apps</a> → Create app (Script or Web type)</li>
-              <li><code>SCRAPER_API_KEY</code> — (optional) scraperapi.com if you want paid proxy. Otherwise we use free AllOrigins fallback when direct fetch fails</li>
+              <li><code>APIFY_TOKEN</code> — <a href="https://console.apify.com/account/integrations" target="_blank" rel="noreferrer">Apify</a> (free $5/mo) for FanFox, OnlyFinder, JuicySearch</li>
+              <li><code>SCRAPER_API_KEY</code> — (optional) scraperapi.com if you want paid proxy; otherwise AllOrigins fallback</li>
               <li><code>ANTIGRAVITY_WEBHOOK_SECRET</code> — For ingest webhook and local scrape script (choose a random string)</li>
             </ul>
             <p style={{ marginTop: 8 }}>

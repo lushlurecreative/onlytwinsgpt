@@ -90,7 +90,33 @@ async function fetchViaAllOrigins(url: string): Promise<Response> {
   return new Response(html, { status: res.ok ? 200 : res.status });
 }
 
+async function fetchViaApify(url: string): Promise<Response> {
+  const token = process.env.APIFY_TOKEN?.trim();
+  if (!token) throw new Error("APIFY_TOKEN not set");
+  const { ApifyClient } = await import("apify-client");
+  const client = new ApifyClient({ token });
+  const run = await client.actor("dataguru/html-extractor").call(
+    { url, timeoutSec: 30 },
+    { waitSecs: 90 }
+  );
+  const { items } = await client.dataset(run.defaultDatasetId).listItems();
+  const item = items?.[0] as { html?: string; statusCode?: number } | undefined;
+  const html = item?.html ?? "";
+  const status = item?.statusCode ?? (html ? 200 : 502);
+  return new Response(html, { status });
+}
+
 async function fetchPage(url: string): Promise<Response> {
+  const apifyToken = process.env.APIFY_TOKEN?.trim();
+  if (apifyToken) {
+    try {
+      return await fetchViaApify(url);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return new Response(`Apify error: ${msg}`, { status: 502 });
+    }
+  }
+
   const key = process.env.SCRAPER_API_KEY?.trim();
   if (key) {
     const proxyUrl = `https://api.scraperapi.com?api_key=${key}&url=${encodeURIComponent(url)}`;
