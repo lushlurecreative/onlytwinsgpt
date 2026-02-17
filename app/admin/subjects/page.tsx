@@ -44,7 +44,12 @@ export default async function AdminSubjectsPage() {
       </p>
       <h1>Subjects (consent)</h1>
       <p className="muted">Approve or revoke consent for digital twin training and generation.</p>
-      {error && <p style={{ color: "red" }}>{error.message}</p>}
+      {error && (
+        <p style={{ color: "red", marginBottom: 16 }}>
+          Database error: {error.message}. Run the RLS policy SQL in Supabase (see README or ask support).
+        </p>
+      )}
+      <p style={{ marginBottom: 16 }}>{subjects.length} subject(s) loaded.</p>
       <AdminSubjectsClient initialSubjects={subjects} />
     </div>
   );
