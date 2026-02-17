@@ -66,15 +66,56 @@ async function fetchAndUploadSamples(
   return paths;
 }
 
+async function insertViaPg(row: {
+  source: string;
+  handle: string;
+  platform: string;
+  follower_count: number;
+  engagement_rate: number;
+  luxury_tag_hits: number;
+  score: number;
+  profile_url: string | null;
+  notes: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (!databaseUrl) return { ok: false, error: "DATABASE_URL not set" };
+  try {
+    const { default: pg } = await import("pg");
+    const client = new pg.Client({ connectionString: databaseUrl });
+    await client.connect();
+    await client.query(
+      `insert into public.leads (source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, profile_url, notes)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        row.source,
+        row.handle,
+        row.platform,
+        row.follower_count,
+        row.engagement_rate,
+        row.luxury_tag_hits,
+        row.score,
+        row.profile_url,
+        row.notes,
+      ]
+    );
+    await client.end();
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: msg };
+  }
+}
+
 /**
  * Insert leads into the leads table. Returns number of successfully imported leads.
  */
 export async function ingestLeads(
   leads: IngestLeadInput[],
   source: "reddit" | "antigravity" = "antigravity"
-): Promise<{ imported: number }> {
+): Promise<{ imported: number; firstError?: string }> {
   const admin = getSupabaseAdmin();
   let imported = 0;
+  let firstError: string | undefined;
 
   for (const lead of leads) {
     if (typeof lead?.handle !== "string" || !lead.handle.trim()) continue;
@@ -151,8 +192,28 @@ export async function ingestLeads(
       const retry = await admin.from("leads").insert(minimalRow);
       error = retry.error;
     }
-    if (!error) imported += 1;
+    if (error) {
+      if (!firstError) firstError = error.message;
+      const pgResult = await insertViaPg({
+        source: minimalRow.source,
+        handle: minimalRow.handle,
+        platform: minimalRow.platform,
+        follower_count: minimalRow.follower_count,
+        engagement_rate: minimalRow.engagement_rate,
+        luxury_tag_hits: minimalRow.luxury_tag_hits,
+        score: minimalRow.score,
+        profile_url: minimalRow.profile_url,
+        notes: minimalRow.notes,
+      });
+      if (pgResult.ok) {
+        imported += 1;
+      } else if (!firstError) {
+        firstError = pgResult.error;
+      }
+    } else {
+      imported += 1;
+    }
   }
 
-  return { imported };
+  return { imported, firstError };
 }

@@ -70,12 +70,14 @@ export async function POST(request: Request) {
     luxuryTagHits: l.luxuryTagHits,
   }));
 
-  const { imported } = await ingestLeads(inputs, "reddit");
+  const { imported, lastError } = await ingestLeads(inputs, "reddit");
 
   if (imported === 0) {
     return NextResponse.json(
       {
-        error: "Scrape found leads but none could be saved. Check database schema and RLS policies.",
+        error: lastError
+          ? `Could not save leads: ${lastError}`
+          : "Scrape found leads but none could be saved. Check database schema and RLS policies.",
       },
       { status: 500 }
     );
