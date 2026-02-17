@@ -1,0 +1,11 @@
+# ONLYTWINS RunPod worker – FLUX + LoRA + IP-Adapter + ControlNet + Real-ESRGAN
+# Install on RunPod with: pip install -r requirements.txt
+
+requests>=2.28.0
+python-dotenv>=1.0.0
+
+# Supabase (service role only; never anon)
+supabase>=2.0.0
+
+# Optional: direct Postgres instead of app API
+psycopg2-binary>=2.9.0
