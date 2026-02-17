@@ -231,16 +231,73 @@ export async function scrapeFanFox(
   return result;
 }
 
+function parseSetCookies(res: Response): string[] {
+  const cookies: string[] = [];
+  res.headers.getSetCookie?.()?.forEach((c) => {
+    const part = c.split(";")[0];
+    if (part) cookies.push(part);
+  });
+  const legacy = res.headers.get("set-cookie");
+  if (legacy && !res.headers.getSetCookie) {
+    legacy.split(/,(?=\s*\w+=)/).forEach((c) => {
+      const part = c.split(";")[0].trim();
+      if (part) cookies.push(part);
+    });
+  }
+  return cookies;
+}
+
 async function scrapeJuicySearchPage(
-  query: string
-): Promise<{ leads: ScrapedLead[]; error?: string }> {
-  const url = `https://juicysearch.com/results/?q=${encodeURIComponent(query)}`;
-  const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT },
+  query: string,
+  cookieJar?: string[]
+): Promise<{ leads: ScrapedLead[]; error?: string; cookies?: string[] }> {
+  const baseUrl = "https://juicysearch.com";
+  const searchUrl = `${baseUrl}/results/?q=${encodeURIComponent(query)}`;
+
+  const headers: Record<string, string> = {
+    "User-Agent": USER_AGENT,
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+  };
+
+  let cookies = cookieJar ?? [];
+
+  if (cookies.length === 0) {
+    const homeRes = await fetch(baseUrl + "/", {
+      headers,
+      signal: AbortSignal.timeout(10000),
+    });
+    cookies = parseSetCookies(homeRes);
+  }
+
+  const ageCookies = ["age_gate=1", "isAgeVerified=1", "adult=1"];
+  headers["Cookie"] = [...cookies, ...ageCookies].join("; ");
+
+  const verifyPaths = ["/enter", "/verify", "/age-verify"];
+  for (const path of verifyPaths) {
+    try {
+      const verifyRes = await fetch(baseUrl + path, {
+        headers,
+        signal: AbortSignal.timeout(8000),
+        redirect: "follow",
+      });
+      const newCookies = parseSetCookies(verifyRes);
+      if (newCookies.length > 0) {
+        cookies = [...cookies, ...newCookies];
+        headers["Cookie"] = [...cookies, ...ageCookies].join("; ");
+        break;
+      }
+    } catch {
+      break;
+    }
+  }
+
+  const res = await fetch(searchUrl, {
+    headers,
     signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) {
-    return { leads: [], error: `HTTP ${res.status}` };
+    return { leads: [], error: `HTTP ${res.status}`, cookies: [...cookies, ...ageCookies] };
   }
   const html = await res.text();
   const $ = cheerio.load(html);
@@ -267,7 +324,7 @@ async function scrapeJuicySearchPage(
     });
   });
 
-  return { leads };
+  return { leads, cookies: [...cookies, ...ageCookies] };
 }
 
 export async function scrapeJuicySearch(
@@ -277,11 +334,13 @@ export async function scrapeJuicySearch(
   const allLeads: ScrapedLead[] = [];
   const seen = new Set<string>();
   const diagnostics: AggregatorDiagnostic[] = [];
+  let cookieJar: string[] | undefined;
 
   for (const q of queries.slice(0, 3)) {
     const url = `https://juicysearch.com/results/?q=${encodeURIComponent(q)}`;
     try {
-      const { leads, error } = await scrapeJuicySearchPage(q);
+      const { leads, error, cookies } = await scrapeJuicySearchPage(q, cookieJar);
+      if (cookies && cookies.length > 0) cookieJar = cookies;
       if (error) {
         diagnostics.push({ url, ok: false, error });
         continue;
