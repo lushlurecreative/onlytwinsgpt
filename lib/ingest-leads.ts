@@ -51,7 +51,13 @@ async function fetchAndUploadSamples(
     const url = allowed[i];
     if (typeof url !== "string" || !url.startsWith("http")) continue;
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(15000),
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+          Referer: new URL(url).origin + "/",
+        },
+      });
       if (!res.ok) continue;
       const buf = await res.arrayBuffer();
       const bytes = new Uint8Array(buf);
