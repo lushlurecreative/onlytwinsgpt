@@ -5,6 +5,11 @@
 
 import type { ScrapedLead } from "./scrape-reddit";
 
+// Platform-Specific (Direct): #OnlyFans, #PremiumContent, #ExclusiveContent, #SupportCreators
+// Suggestive: #NSFW, #LinkInBio, #Spicy, #Exclusive
+// Platform-Specific: #FanPage, #Subscribers, #CreatorLife
+// Niche (Fitness/Models, Glamour/Art, Alternative): #FitnessModel, #GymGirl, #GirlsWhoLift, #FitInspo, #BoudoirPhotography, #SensualArt, #Modellife, #ArtisticNude, #KinkFriendly, #FetishCommunity, #CosplayGirl, #GamerGirl
+// Scouting / New Talent: #WLYG, #MakeMeElite, #WeScoutUSA, #ModelScout, #AspiringModel, #NewFace, #ContentCreator
 const HASHTAGS = [
   "FitnessModel",
   "BoudoirPhotography",
@@ -40,11 +45,6 @@ const HASHTAGS = [
 ];
 
 const USERNAME_SEARCH_TERMS = ["of", "onlyfans"];
-
-function hasSubscriptionUrl(bio: string | undefined, externalUrl: string | undefined): boolean {
-  const text = [bio ?? "", externalUrl ?? ""].join(" ").toLowerCase();
-  return /onlyfans\.com|fansly\.com|link\s*in\s*bio|linkin\.bio|beacons\.ai|linktr\.ee/i.test(text);
-}
 
 export type InstagramScrapeResult = {
   leads: ScrapedLead[];
@@ -173,7 +173,6 @@ export async function scrapeInstagram(opts?: {
           if (!username) continue;
           if (!username.includes("of")) continue;
           if (followerFloor > 0 && (p.followersCount ?? 0) < followerFloor) continue;
-          if (!hasSubscriptionUrl(p.biography, p.externalUrl)) continue;
           const latestUrls: string[] = [];
           for (const post of p.latestPosts ?? []) {
             if (post.displayUrl) latestUrls.push(post.displayUrl);

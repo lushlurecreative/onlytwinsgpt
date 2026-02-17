@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   const [ytResult, redditResult, igResult, onlyfinderResult, fanfoxResult, juicyResult] = await Promise.all([
     scrapeYouTube(criteria, { withDiagnostics: true }),
     scrapeReddit(criteria, { withDiagnostics: true }),
-    scrapeInstagram({ followerFloor: 100000, withDiagnostics: true }),
+    scrapeInstagram({ followerFloor: 5000, withDiagnostics: true }),
     scrapeOnlyFinder(undefined, { withDiagnostics: true }),
     scrapeFanFox(undefined, { withDiagnostics: true }),
     scrapeJuicySearch(undefined, { withDiagnostics: true }),
