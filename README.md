@@ -29,6 +29,15 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Lead Scraping (Admin)
+
+The Lead Pipeline scrapes YouTube and Reddit for creator leads. To enable YouTube:
+
+1. Create an API key at [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → YouTube Data API v3
+2. Add `YOUTUBE_API_KEY` to your Vercel project environment variables
+
+Without it, only Reddit is scraped (and demo leads are used when both return empty).
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.

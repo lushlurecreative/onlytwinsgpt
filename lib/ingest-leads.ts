@@ -111,7 +111,7 @@ async function insertViaPg(row: {
  */
 export async function ingestLeads(
   leads: IngestLeadInput[],
-  source: "reddit" | "antigravity" = "antigravity"
+  source: "reddit" | "youtube" | "antigravity" | "aggregator" = "antigravity"
 ): Promise<{ imported: number; firstError?: string }> {
   const admin = getSupabaseAdmin();
   await runMigrations();

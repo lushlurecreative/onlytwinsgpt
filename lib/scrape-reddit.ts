@@ -33,9 +33,9 @@ export type ScrapeResult = {
   diagnostics: { subreddit: string; ok: boolean; postCount?: number; error?: string }[];
 };
 
-export async function scrapeReddit(criteria: ScrapeCriteria = {}): Promise<ScrapedLead[]>;
+export async function scrapeReddit(criteria?: ScrapeCriteria): Promise<ScrapedLead[]>;
 export async function scrapeReddit(
-  criteria: ScrapeCriteria,
+  criteria: ScrapeCriteria | undefined,
   opts: { withDiagnostics: true }
 ): Promise<ScrapeResult>;
 export async function scrapeReddit(
