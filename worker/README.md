@@ -54,8 +54,12 @@ docker build -t onlytwins-worker ./worker
 docker run --gpus all --env-file worker/.env onlytwins-worker
 ```
 
-## Flow
+## Flow (two modes)
 
+**RunPod Serverless (recommended, admin-controlled)**  
+The app submits each job to RunPod Serverless via API; no terminal or long-lived worker. Configure RunPod API key and endpoint ID in **Admin → GPU Worker**. Build and deploy the serverless image once (see below); after that, all control is from the website.
+
+**Polling worker (legacy)**  
 1. Poll `GET {APP_URL}/api/internal/worker/jobs` (header: `Authorization: Bearer {WORKER_SECRET}`).
 2. **Training:** Check subject consent → download sample_paths from uploads → run FLUX LoRA training (`train_lora.py`) → upload LoRA to **model_artifacts** `{subject_id}/lora.safetensors` → PATCH job + subjects_models.
 3. **Generation:** Check consent if subject_id → fetch preset (prompt/negative_prompt) → download reference image (and optional LoRA from model_artifacts) → run FLUX inference (`generate_flux.py`), optional Real-ESRGAN upscale → upload to **uploads** → PATCH job.
@@ -85,6 +89,11 @@ docker run --gpus all --env-file worker/.env onlytwins-worker
 
 5. **Test**  
    In the app: create a subject, have admin approve consent, add 30–60 photos in vault, start training. Then trigger a generation request and confirm the worker processes jobs.
+
+**RunPod Serverless (no terminal)**  
+1. Build: `docker build -f worker/Dockerfile.serverless -t onlytwins-worker-serverless ./worker`. Push to Docker Hub (or RunPod’s registry).
+2. In RunPod Console → Serverless → Create endpoint. Use the image above; set GPU type and env: `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `HF_TOKEN`. Copy the endpoint ID.
+3. In the app: **Admin → GPU Worker**. Paste RunPod API key and endpoint ID, Save. From then on, training and generation are dispatched from the app; jobs appear under Recent jobs.
 
 ## Notes
 

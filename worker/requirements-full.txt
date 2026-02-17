@@ -2,6 +2,7 @@
 # Install (GPU): pip install torch torchvision then pip install -r requirements-full.txt
 # Requires: Python 3.10+, CUDA, ~24GB+ VRAM for training, ~12GB+ for inference
 
+runpod>=1.0.0
 requests>=2.28.0
 python-dotenv>=1.0.0
 supabase>=2.0.0

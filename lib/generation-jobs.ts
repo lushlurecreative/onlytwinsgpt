@@ -1,11 +1,11 @@
 /**
  * Generation jobs: create job(s), poll until complete.
- * Worker (RunPod) processes jobs; app creates and waits.
- * Requires: RunPod worker running, WORKER_SECRET set in app and worker, model_artifacts bucket in Supabase.
+ * When RunPod Serverless is configured, app dispatches to RunPod automatically; no polling worker needed.
  */
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getScenePresetByKey } from "@/lib/scene-presets";
+import { dispatchGenerationJobToRunPod } from "@/lib/runpod";
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 300_000; // 5 min per job
@@ -75,7 +75,21 @@ export async function createGenerationJob(input: CreateGenerationJobInput): Prom
     .select("id")
     .single();
   if (error || !data?.id) return null;
-  return data.id as string;
+  const jobId = data.id as string;
+  const runpodJobId = await dispatchGenerationJobToRunPod(jobId, {
+    subject_id: input.subject_id,
+    preset_id: input.preset_id,
+    reference_image_path: input.reference_image_path,
+    lora_model_reference: input.lora_model_reference ?? null,
+    controlnet_input_path: input.controlnet_input_path ?? null,
+  });
+  if (runpodJobId) {
+    await admin
+      .from("generation_jobs")
+      .update({ runpod_job_id: runpodJobId })
+      .eq("id", jobId);
+  }
+  return jobId;
 }
 
 export async function getGenerationJobStatus(

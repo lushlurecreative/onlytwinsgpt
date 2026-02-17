@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getApprovedSubjectIdForUser } from "@/lib/generation-jobs";
+import { dispatchTrainingJobToRunPod } from "@/lib/runpod";
 
 const MIN_PHOTOS = 30;
 const MAX_PHOTOS = 60;
@@ -93,5 +94,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: insertError.message }, { status: 400 });
   }
 
-  return NextResponse.json({ job }, { status: 201 });
+  const runpodJobId = await dispatchTrainingJobToRunPod(
+    job.id,
+    job.subject_id,
+    pathsToUse
+  );
+  if (runpodJobId) {
+    await admin
+      .from("training_jobs")
+      .update({ runpod_job_id: runpodJobId })
+      .eq("id", job.id);
+  }
+
+  return NextResponse.json(
+    { job, runpod_dispatched: !!runpodJobId },
+    { status: 201 }
+  );
 }

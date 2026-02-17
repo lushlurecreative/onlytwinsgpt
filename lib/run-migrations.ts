@@ -95,6 +95,12 @@ const MIGRATIONS = [
   `create index if not exists generation_jobs_generation_request_id_idx on public.generation_jobs(generation_request_id);`,
   `do $$ begin if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'generation_requests') then alter table public.generation_jobs add constraint generation_jobs_generation_request_id_fkey foreign key (generation_request_id) references public.generation_requests(id) on delete set null; end if; exception when duplicate_object then null; end $$;`,
 
+  `create table if not exists public.app_settings ( key text primary key, value text not null default '', updated_at timestamptz not null default timezone('utc', now()) );`,
+  `alter table public.training_jobs add column if not exists runpod_job_id text null;`,
+  `alter table public.generation_jobs add column if not exists runpod_job_id text null;`,
+  `create index if not exists training_jobs_runpod_job_id_idx on public.training_jobs(runpod_job_id) where runpod_job_id is not null;`,
+  `create index if not exists generation_jobs_runpod_job_id_idx on public.generation_jobs(runpod_job_id) where runpod_job_id is not null;`,
+
   // Seed presets from scene presets (only when empty)
   `insert into public.presets (name, prompt, negative_prompt, parameter_json)
    select v.name, v.prompt, v.neg, v.params from (values

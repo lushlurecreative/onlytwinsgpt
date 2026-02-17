@@ -14,17 +14,20 @@ export async function GET(request: Request) {
 
   const admin = getSupabaseAdmin();
 
+  // Only return jobs not yet dispatched to RunPod Serverless (runpod_job_id is null)
   const [trainingRes, generationRes] = await Promise.all([
     admin
       .from("training_jobs")
       .select("id, subject_id, sample_paths, status")
       .eq("status", "pending")
+      .is("runpod_job_id", null)
       .order("created_at", { ascending: true })
       .limit(50),
     admin
       .from("generation_jobs")
       .select("id, subject_id, preset_id, reference_image_path, lora_model_reference, controlnet_input_path, status")
       .eq("status", "pending")
+      .is("runpod_job_id", null)
       .order("created_at", { ascending: true })
       .limit(50),
   ]);

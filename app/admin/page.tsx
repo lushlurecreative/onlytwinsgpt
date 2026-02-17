@@ -117,6 +117,15 @@ export default async function AdminOverviewPage() {
               </Link>
             </div>
           </article>
+          <article className="card">
+            <div className="muted">GPU worker</div>
+            <div className="muted" style={{ fontSize: 12 }}>RunPod Serverless: configure and view training & generation jobs</div>
+            <div style={{ marginTop: 10 }}>
+              <Link className="btn btn-ghost" href="/admin/worker">
+                Worker
+              </Link>
+            </div>
+          </article>
         </div>
       </section>
     </div>
