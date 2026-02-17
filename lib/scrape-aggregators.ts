@@ -32,14 +32,23 @@ const BROWSER_HEADERS: Record<string, string> = {
   Referer: "https://www.google.com/",
 };
 
-const DEFAULT_ONLYFINDER_URLS = [
+const ONLYFINDER_BASES = [
   "https://onlyfinder.com/free",
   "https://onlyfinder.com/top",
   "https://onlyfinder.com/new",
   "https://onlyfinder.com/popular",
 ];
 
-const DEFAULT_FANFOX_URLS = [
+function onlyFinderUrls(): string[] {
+  const urls: string[] = [];
+  for (const base of ONLYFINDER_BASES) {
+    urls.push(base);
+    for (let p = 2; p <= 10; p++) urls.push(`${base}?page=${p}`);
+  }
+  return urls;
+}
+
+const FANFOX_BASES = [
   "https://fanfox.com/blogs/onlyfans/best-onlyfans-2025",
   "https://fanfox.com/blogs/onlyfans/free-onlyfans",
   "https://fanfox.com/blogs/onlyfans/amateur-onlyfans",
@@ -49,7 +58,17 @@ const DEFAULT_FANFOX_URLS = [
   "https://fanfox.com/blogs/onlyfans/redhead-onlyfans",
   "https://fanfox.com/blogs/onlyfans/british-onlyfans",
   "https://fanfox.com/blogs/onlyfans/trans-onlyfans",
+  "https://fanfox.com/blogs/onlyfans/best-onlyfans",
 ];
+
+function fanFoxUrls(): string[] {
+  const urls: string[] = [];
+  for (const base of FANFOX_BASES) {
+    urls.push(base);
+    for (let p = 2; p <= 5; p++) urls.push(`${base}?page=${p}`);
+  }
+  return urls;
+}
 
 const DEFAULT_JUICYSEARCH_QUERIES = [
   "Curvy milf",
@@ -95,12 +114,18 @@ function parseFollowerCount(numStr: string): number {
 function parseFollowerFromText(text: string): number {
   const m1 = text.match(/(\d+(?:[.,]\d+)?)\s*(?:M|m|million)/);
   if (m1) return Math.floor(parseFloat(m1[1].replace(",", "")) * 1_000_000) || 0;
-  const m2 = text.match(/(\d+(?:[.,]\d+)?)\s*(?:K|k| thousand)/);
+  const m2 = text.match(/(\d+(?:[.,]\d+)?)\s*(?:K|k|thousand)/);
   if (m2) return Math.floor(parseFloat(m2[1].replace(",", "")) * 1_000) || 0;
-  const m3 = text.match(/(\d{1,3}(?:,\d{3})*)\s*(?:followers?|subs?|fans?)/i);
-  if (m3) return parseFollowerCount(m3[1]) || 0;
-  const m4 = text.match(/\b(\d{1,3}(?:,\d{3})*)\b/);
-  if (m4) return parseFollowerCount(m4[1]) || 0;
+  const m3 = text.match(/(\d+(?:[.,]\d+)?)\s*(?:M|m)(?!\w)/);
+  if (m3) return Math.floor(parseFloat(m3[1].replace(",", "")) * 1_000_000) || 0;
+  const m4 = text.match(/(\d+(?:[.,]\d+)?)\s*(?:K|k)(?!\w)/);
+  if (m4) return Math.floor(parseFloat(m4[1].replace(",", "")) * 1_000) || 0;
+  const m5 = text.match(/(\d{1,3}(?:,\d{3})*)\s*(?:followers?|subs?|fans?|likes?)/i);
+  if (m5) return parseFollowerCount(m5[1]) || 0;
+  const m6 = text.match(/\b(\d{1,3}(?:,\d{3})+)\b/);
+  if (m6) return parseFollowerCount(m6[1]) || 0;
+  const m7 = text.match(/\b(\d{4,})\b/);
+  if (m7) return parseFollowerCount(m7[1]) || 0;
   return 0;
 }
 
@@ -113,20 +138,37 @@ function resolveUrl(base: string, href: string): string {
   }
 }
 
-function extractImageUrls($: cheerio.CheerioAPI, $container: ReturnType<cheerio.CheerioAPI>, baseUrl: string): string[] {
+function getImgUrl($: cheerio.CheerioAPI, img: unknown, baseUrl: string): string | null {
+  const $img = $(img as Parameters<cheerio.CheerioAPI>[0]);
+  const src =
+    $img.attr("src") ??
+    $img.attr("data-src") ??
+    $img.attr("data-lazy-src") ??
+    (() => {
+      const srcset = $img.attr("data-srcset") ?? $img.attr("srcset");
+      if (srcset) {
+        const first = srcset.split(",")[0]?.trim().split(/\s+/)[0];
+        return first ?? null;
+      }
+      return null;
+    })();
+  if (!src || /logo|icon|avatar-placeholder|pixel|1x1|spacer|badge/i.test(src)) return null;
+  if (!/\.(webp|gif|jpg|jpeg|png)/i.test(src) && !/cdn|cloudfront|img|image|gravatar|assets/i.test(src)) return null;
+  const abs = resolveUrl(baseUrl, src);
+  return abs.startsWith("http") ? abs : null;
+}
+
+function extractImageUrls($: cheerio.CheerioAPI, $link: ReturnType<cheerio.CheerioAPI>, $container: ReturnType<cheerio.CheerioAPI>, baseUrl: string): string[] {
   const urls: string[] = [];
   const seen = new Set<string>();
-  $container.find("img[src]").each((_, img) => {
-    const src = $(img).attr("src");
-    if (!src || seen.has(src) || /logo|icon|avatar-placeholder|pixel|1x1|spacer/i.test(src)) return;
-    if (/\.(webp|gif|jpg|jpeg|png)/i.test(src) || src.includes("cdn") || src.includes("image") || src.includes("gravatar")) {
-      const abs = resolveUrl(baseUrl, src);
-      if (abs.startsWith("http")) {
-        seen.add(src);
-        urls.push(abs);
-      }
+  const add = (src: string | null) => {
+    if (src && !seen.has(src)) {
+      seen.add(src);
+      urls.push(src);
     }
-  });
+  };
+  $link.find("img").each((_, img) => add(getImgUrl($, img, baseUrl)));
+  $container.find("img").each((_, img) => add(getImgUrl($, img, baseUrl)));
   return urls.slice(0, 5);
 }
 
@@ -226,7 +268,7 @@ async function scrapeOnlyFinderPage(
       if (m?.length) followerCount = parseFollowerCount(m[0]);
     }
 
-    const sampleUrls = $parent.length ? extractImageUrls($, $parent.first(), baseUrl) : [];
+    const sampleUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl) : [];
 
     leads.push({
       handle: username,
@@ -245,14 +287,14 @@ async function scrapeOnlyFinderPage(
 }
 
 export async function scrapeOnlyFinder(
-  urls: string[] = DEFAULT_ONLYFINDER_URLS,
+  urls: string[] = onlyFinderUrls(),
   opts?: { withDiagnostics?: boolean }
 ): Promise<ScrapedLead[] | { leads: ScrapedLead[]; diagnostics: AggregatorDiagnostic[] }> {
   const allLeads: ScrapedLead[] = [];
   const seen = new Set<string>();
   const diagnostics: AggregatorDiagnostic[] = [];
 
-  for (const url of urls.slice(0, 6)) {
+  for (const url of urls.slice(0, 30)) {
     try {
       const { leads, error } = await scrapeOnlyFinderPage(url);
       if (error) {
@@ -311,7 +353,7 @@ async function scrapeFanFoxPage(
     const $parent = $el.closest("div, article, section, li, [class*='card'], [class*='item'], [class*='creator'], figure");
     const parentText = $parent.length ? $parent.text() : "";
     const followerCount = parseFollowerFromText(parentText);
-    const sampleUrls = $parent.length ? extractImageUrls($, $parent.first(), baseUrl) : [];
+    const sampleUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl) : [];
 
     leads.push({
       handle: username,
@@ -330,14 +372,14 @@ async function scrapeFanFoxPage(
 }
 
 export async function scrapeFanFox(
-  urls: string[] = DEFAULT_FANFOX_URLS,
+  urls: string[] = fanFoxUrls(),
   opts?: { withDiagnostics?: boolean }
 ): Promise<ScrapedLead[] | { leads: ScrapedLead[]; diagnostics: AggregatorDiagnostic[] }> {
   const allLeads: ScrapedLead[] = [];
   const seen = new Set<string>();
   const diagnostics: AggregatorDiagnostic[] = [];
 
-  for (const url of urls.slice(0, 9)) {
+  for (const url of urls.slice(0, 50)) {
     try {
       const { leads, error } = await scrapeFanFoxPage(url);
       if (error) {
@@ -439,7 +481,7 @@ async function scrapeJuicySearchPage(
     const $parent = $el.closest("div, article, section, li, [class*='card'], [class*='item'], [class*='creator']");
     const parentText = $parent.length ? $parent.text() : "";
     const followerCount = parseFollowerFromText(parentText);
-    const sampleUrls = $parent.length ? extractImageUrls($, $parent.first(), baseUrl + "/") : [];
+    const sampleUrls = $parent.length ? extractImageUrls($, $el, $parent.first(), baseUrl + "/") : [];
 
     leads.push({
       handle: username,

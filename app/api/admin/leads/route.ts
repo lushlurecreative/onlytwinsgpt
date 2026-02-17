@@ -50,7 +50,7 @@ export async function GET() {
   let err: { message: string } | null = null;
 
   const q = (select: string) =>
-    admin.from("leads").select(select).order("score", { ascending: false }).limit(1000);
+    admin.from("leads").select(select).order("platform", { ascending: true }).order("score", { ascending: false }).limit(2000);
 
   let r = await q(fullSelect);
   if (r.error) {

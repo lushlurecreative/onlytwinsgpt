@@ -27,13 +27,17 @@ function scoreLead(input: {
   luxuryTagHits: number;
   platformsFoundCount?: number;
   contentVerticalsCount?: number;
+  hasProfileUrl?: boolean;
+  hasSampleUrls?: boolean;
 }) {
   const followerScore = Math.min(50, Math.floor(input.followerCount / 5000));
   const engagementScore = Math.min(30, Math.floor(input.engagementRate * 4));
   const luxuryScore = Math.min(20, input.luxuryTagHits * 2);
   const platformsBonus = Math.min(10, (input.platformsFoundCount ?? 0) * 2);
   const verticalsBonus = Math.min(5, input.contentVerticalsCount ?? 0);
-  return followerScore + engagementScore + luxuryScore + platformsBonus + verticalsBonus;
+  const profileBonus = input.hasProfileUrl ? 5 : 0;
+  const photosBonus = input.hasSampleUrls ? 15 : 0;
+  return Math.max(10, followerScore + engagementScore + luxuryScore + platformsBonus + verticalsBonus + profileBonus + photosBonus);
 }
 
 async function fetchAndUploadSamples(
@@ -168,6 +172,8 @@ export async function ingestLeads(
         luxuryTagHits,
         platformsFoundCount: platformsFound.length,
         contentVerticalsCount: contentVerticals.length,
+        hasProfileUrl: !!profileUrl,
+        hasSampleUrls: samplePaths.length > 0 || (Array.isArray(lead.sampleUrls) && lead.sampleUrls.length > 0),
       }),
       profile_url: profileUrl,
       notes: typeof lead.notes === "string" && lead.notes.trim() ? lead.notes.trim() : null,

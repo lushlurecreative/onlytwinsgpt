@@ -101,7 +101,12 @@ export default function AdminLeadsClient() {
     const haystack = [row.handle, row.platform, ...platforms, ...verticals].join(" ").toLowerCase();
     return haystack.includes(normalizedQuery);
   });
-  const sorted = [...filtered].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const sorted = [...filtered].sort((a, b) => {
+    const pa = (a.platform ?? "").toLowerCase();
+    const pb = (b.platform ?? "").toLowerCase();
+    if (pa !== pb) return pa.localeCompare(pb);
+    return (b.score ?? 0) - (a.score ?? 0) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
