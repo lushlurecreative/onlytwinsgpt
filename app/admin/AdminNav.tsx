@@ -4,15 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/admin", label: "Inbox" },
-  { href: "/admin/automation", label: "Automation" },
-  { href: "/admin/worker", label: "GPU Worker" },
-  { href: "/admin/cost", label: "Cost" },
-  { href: "/admin/watermark", label: "Watermark Decode" },
-  { href: "/admin/generation-requests", label: "Generation Requests" },
-  { href: "/admin/leads", label: "Lead Pipeline" },
-  { href: "/admin/webhook-health", label: "Webhooks" },
-  { href: "/admin/diagnostics", label: "Diagnostics" },
+  { href: "/admin", label: "Home" },
+  { href: "/admin/leads", label: "Leads" },
+  { href: "/admin/settings", label: "Settings" },
 ];
 
 export default function AdminNav() {

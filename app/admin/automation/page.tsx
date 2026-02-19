@@ -17,6 +17,8 @@ export default function AdminAutomationPage() {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsMessage, setSettingsMessage] = useState("");
+  const [migrateLoading, setMigrateLoading] = useState(false);
+  const [migrateMessage, setMigrateMessage] = useState("");
 
   useEffect(() => {
     fetch("/api/admin/app-settings")
@@ -27,6 +29,22 @@ export default function AdminAutomationPage() {
       .catch(() => setLeadScrapeHandles(""))
       .finally(() => setSettingsLoading(false));
   }, []);
+
+  async function runMigrations() {
+    setMigrateLoading(true);
+    setMigrateMessage("");
+    try {
+      const res = await fetch("/api/admin/run-migrations", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; message?: string };
+      if (data.ok) {
+        setMigrateMessage("Database updated. You can refresh the page.");
+      } else {
+        setMigrateMessage(data.error ?? "Update failed. Check that DATABASE_URL is set in Vercel.");
+      }
+    } finally {
+      setMigrateLoading(false);
+    }
+  }
 
   async function saveSettings() {
     setSettingsSaving(true);
@@ -91,7 +109,7 @@ export default function AdminAutomationPage() {
       <div className="card" style={{ marginTop: 16, padding: 16 }}>
         <h3 style={{ marginTop: 0 }}>Lead scrape handles</h3>
         <p className="muted" style={{ fontSize: 13 }}>
-          Instagram usernames the daily scrape will fetch (comma-separated). Run migrations once if this section is empty.
+          Instagram usernames the daily scrape will fetch (comma-separated). Example: <code>user1,user2,user3</code>
         </p>
         {settingsLoading ? (
           <p className="muted">Loading…</p>
@@ -116,6 +134,20 @@ export default function AdminAutomationPage() {
             {settingsMessage ? <p style={{ marginTop: 8, marginBottom: 0 }}>{settingsMessage}</p> : null}
           </>
         )}
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border, #333)" }}>
+          <p className="muted" style={{ fontSize: 13, marginBottom: 8 }}>
+            If the box above won’t load or save, click below once to update the database (creates the settings rows).
+          </p>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => void runMigrations()}
+            disabled={migrateLoading}
+          >
+            {migrateLoading ? "Updating…" : "Update database"}
+          </button>
+          {migrateMessage ? <p style={{ marginTop: 8, marginBottom: 0, fontSize: 13 }}>{migrateMessage}</p> : null}
+        </div>
       </div>
 
       <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
