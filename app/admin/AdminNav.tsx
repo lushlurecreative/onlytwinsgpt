@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/admin", label: "Home" },
   { href: "/admin/leads", label: "Leads" },
-  { href: "/admin/settings", label: "Settings" },
+  { href: "/admin/customers", label: "Customers" },
+  { href: "/admin/revenue", label: "Revenue" },
 ];
 
 export default function AdminNav() {

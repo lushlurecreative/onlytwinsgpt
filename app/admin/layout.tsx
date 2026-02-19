@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
 import AdminNav from "./AdminNav";
+import AdminGlobalHealth from "./AdminGlobalHealth";
 import BrandName from "@/app/components/BrandName";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -39,7 +40,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
         <AdminNav />
       </aside>
-      <div className="admin-content">{children}</div>
+      <div className="admin-content">
+        <AdminGlobalHealth />
+        {children}
+      </div>
     </section>
   );
 }

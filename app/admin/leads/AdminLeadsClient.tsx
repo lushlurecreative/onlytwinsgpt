@@ -92,6 +92,32 @@ export default function AdminLeadsClient() {
     { total: 0, byStatus: {} as Record<string, number> }
   );
 
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const summary = {
+    newToday: rows.filter((r) => new Date(r.created_at) >= todayStart).length,
+    qualified: rows.filter((r) =>
+      ["qualified", "approved", "sample_queued", "sample_done", "outreach_sent", "replied", "converted", "messaged"].includes(r.status)
+    ).length,
+    sent: rows.filter((r) =>
+      ["outreach_sent", "messaged", "replied", "converted"].includes(r.status)
+    ).length,
+    converted: rows.filter((r) => r.status === "converted").length,
+  };
+
+  function sampleStatus(row: LeadRow): "Not Generated" | "Generated" | "Sent" {
+    if (["outreach_sent", "messaged", "replied", "converted"].includes(row.status)) return "Sent";
+    if (row.status === "sample_done" || (row.generated_sample_paths?.length ?? 0) > 0) return "Generated";
+    return "Not Generated";
+  }
+
+  function outreachStatus(row: LeadRow): "Not Sent" | "Sent" | "Replied" | "Converted" {
+    if (row.status === "converted") return "Converted";
+    if (row.status === "replied") return "Replied";
+    if (["outreach_sent", "messaged"].includes(row.status)) return "Sent";
+    return "Not Sent";
+  }
+
   const normalizedQuery = query.trim().toLowerCase();
   const filtered = rows.filter((row) => {
     if (statusFilter !== "all" && row.status !== statusFilter) return false;
@@ -533,14 +559,24 @@ export default function AdminLeadsClient() {
           </p>
         </details>
 
-        <div className="tabs" style={{ marginTop: 14 }}>
+        <div style={{ display: "flex", gap: 24, marginTop: 14, marginBottom: 8, flexWrap: "wrap" }}>
+          <span>New Today: <strong>{summary.newToday}</strong></span>
+          <span>Qualified: <strong>{summary.qualified}</strong></span>
+          <span>Sent: <strong>{summary.sent}</strong></span>
+          <span>Converted: <strong>{summary.converted}</strong></span>
+        </div>
+
+        <div className="tabs" style={{ marginTop: 8 }}>
           {(
             [
               ["all", "All"],
               ["imported", "Imported"],
               ["approved", "Approved"],
+              ["qualified", "Qualified"],
               ["rejected", "Rejected"],
               ["messaged", "Messaged"],
+              ["outreach_sent", "Outreach sent"],
+              ["converted", "Converted"],
             ] as const
           ).map(([key, label]) => {
             const n = key === "all" ? counts.total : counts.byStatus[key] ?? 0;
@@ -603,13 +639,13 @@ export default function AdminLeadsClient() {
                     aria-label="Select all"
                   />
                 </th>
-                <th>Handle</th>
                 <th>Platform</th>
-                <th>Followers</th>
-                <th>Engagement</th>
+                <th>Handle</th>
                 <th>Score</th>
                 <th>Status</th>
-                <th>Created</th>
+                <th>Sample Status</th>
+                <th>Outreach Status</th>
+                <th>Last Activity</th>
                 <th />
               </tr>
             </thead>
@@ -628,6 +664,7 @@ export default function AdminLeadsClient() {
                           aria-label={`Select ${row.handle}`}
                         />
                       </td>
+                      <td>{row.platform}</td>
                       <td>
                         <strong>{row.handle}</strong>
                         {row.profile_url ? (
@@ -650,15 +687,10 @@ export default function AdminLeadsClient() {
                           </div>
                         ) : null}
                       </td>
-                      <td>{row.platform}</td>
-                      <td>{row.follower_count}</td>
-                      <td>{row.engagement_rate}%</td>
-                      <td>
-                        <strong>{row.score}</strong>
-                      </td>
-                      <td>
-                        <span className="badge">{row.status}</span>
-                      </td>
+                      <td><strong>{row.score}</strong></td>
+                      <td><span className="badge">{row.status}</span></td>
+                      <td>{sampleStatus(row)}</td>
+                      <td>{outreachStatus(row)}</td>
                       <td className="muted" style={{ fontSize: 13 }}>
                         {new Date(row.created_at).toLocaleDateString()}
                       </td>
@@ -670,7 +702,7 @@ export default function AdminLeadsClient() {
                     </tr>
                     {isExpanded ? (
                       <tr>
-                        <td colSpan={9}>
+                        <td colSpan={10}>
                           <div className="card" style={{ margin: "10px 0", padding: 14 }}>
                             <div className="split" style={{ gap: 20, alignItems: "start" }}>
                               <div>
@@ -777,16 +809,17 @@ export default function AdminLeadsClient() {
                                     onClick={() => void generateSample(row.id)}
                                     disabled={!assets || assets.samples.length === 0}
                                     type="button"
+                                    title="Generate sample now (manual override)"
                                   >
-                                    Generate AI sample
+                                    Generate Sample Now
                                   </button>
                                   <button
                                     className="btn btn-primary"
                                     onClick={() => openOutreachPreview(row)}
-                                    disabled={row.status !== "approved"}
+                                    disabled={row.status !== "approved" && !["messaged", "outreach_sent", "replied"].includes(row.status)}
                                     type="button"
                                   >
-                                    Send outreach
+                                    {["messaged", "outreach_sent", "replied"].includes(row.status) ? "Resend outreach" : "Send outreach"}
                                   </button>
                                 </div>
                               </div>

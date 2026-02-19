@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
+import { getServiceCreatorId } from "@/lib/service-creator";
 
 type RevenueRow = {
   id: string;
   creator_id: string;
+  subscriber_id: string;
   status: string;
   stripe_price_id: string | null;
   created_at: string;
   current_period_end: string | null;
+  canceled_at: string | null;
 };
 
 function monthKey(dateIso: string) {
@@ -17,7 +20,6 @@ function monthKey(dateIso: string) {
 }
 
 function estimatePlanAmount(priceId: string | null) {
-  // Placeholder pricing map until full Stripe price sync is added.
   if (!priceId) return 9.99;
   return 9.99;
 }
@@ -36,9 +38,11 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const serviceCreatorId = getServiceCreatorId();
   const { data, error } = await supabase
     .from("subscriptions")
-    .select("id, creator_id, status, stripe_price_id, created_at, current_period_end")
+    .select("id, creator_id, subscriber_id, status, stripe_price_id, created_at, current_period_end, canceled_at")
+    .eq("creator_id", serviceCreatorId)
     .order("created_at", { ascending: false })
     .limit(5000);
 
@@ -50,49 +54,59 @@ export async function GET() {
   const activeLike = rows.filter((r) => ["active", "trialing", "past_due"].includes(r.status));
   const estMrr = activeLike.reduce((sum, row) => sum + estimatePlanAmount(row.stripe_price_id), 0);
 
-  const byCreator = new Map<string, { subs: number; mrr: number }>();
-  for (const row of activeLike) {
-    const entry = byCreator.get(row.creator_id) ?? { subs: 0, mrr: 0 };
-    entry.subs += 1;
-    entry.mrr += estimatePlanAmount(row.stripe_price_id);
-    byCreator.set(row.creator_id, entry);
-  }
-  const topCreators = [...byCreator.entries()]
-    .map(([creatorId, v]) => ({ creatorId, subscribers: v.subs, estMrr: Number(v.mrr.toFixed(2)) }))
-    .sort((a, b) => b.estMrr - a.estMrr)
-    .slice(0, 20);
+  const now = new Date();
+  const thisMonthKey = monthKey(now.toISOString());
+  const newThisMonth = rows.filter((r) => monthKey(r.created_at) === thisMonthKey).length;
+  const canceledThisMonth = rows.filter(
+    (r) => r.canceled_at && monthKey(r.canceled_at) === thisMonthKey
+  ).length;
+  const revenueThisMonth = Number(estMrr.toFixed(2));
 
-  const byMonth = new Map<string, { started: number; activeNow: number }>();
-  const nowMs = Date.now();
-  for (const row of rows) {
-    const key = monthKey(row.created_at);
-    const entry = byMonth.get(key) ?? { started: 0, activeNow: 0 };
-    entry.started += 1;
-    const endMs = row.current_period_end ? new Date(row.current_period_end).getTime() : null;
-    const activeNow =
-      ["active", "trialing", "past_due"].includes(row.status) &&
-      (endMs === null || (Number.isFinite(endMs) && endMs > nowMs));
-    if (activeNow) entry.activeNow += 1;
-    byMonth.set(key, entry);
+  const subscriberIds = [...new Set(rows.map((r) => r.subscriber_id))];
+  const profileMap = new Map<string, string>();
+  if (subscriberIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", subscriberIds);
+    for (const p of profiles ?? []) {
+      const row = p as { id: string; full_name?: string | null };
+      profileMap.set(row.id, (row.full_name && row.full_name.trim()) || row.id.slice(0, 8) + "…");
+    }
   }
-  const monthly = [...byMonth.entries()]
-    .map(([month, v]) => ({
-      month,
-      started: v.started,
-      activeNow: v.activeNow,
-      retainedPct: v.started > 0 ? Math.round((v.activeNow / v.started) * 100) : 0,
-    }))
-    .sort((a, b) => b.month.localeCompare(a.month))
-    .slice(0, 12);
+
+  const subscriptionList = rows.map((r) => {
+    const statusLabel =
+      r.status === "trialing"
+        ? "Trial"
+        : r.status === "active"
+          ? "Active"
+          : r.status === "past_due"
+            ? "Past Due"
+            : r.status === "canceled"
+              ? "Canceled"
+              : r.status === "expired"
+                ? "Expired"
+                : r.status;
+    return {
+      creator: profileMap.get(r.subscriber_id) ?? r.subscriber_id.slice(0, 8) + "…",
+      plan: r.stripe_price_id ? "Subscription" : "—",
+      status: statusLabel,
+      renewalDate: r.current_period_end
+        ? new Date(r.current_period_end).toLocaleDateString()
+        : "—",
+    };
+  });
 
   return NextResponse.json(
     {
       summary: {
-        activeLikeCount: activeLike.length,
-        estMrr: Number(estMrr.toFixed(2)),
+        activeSubscribers: activeLike.length,
+        revenueThisMonth,
+        newThisMonth,
+        canceledThisMonth,
       },
-      topCreators,
-      monthly,
+      subscriptionList,
     },
     { status: 200 }
   );

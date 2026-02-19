@@ -64,7 +64,7 @@ export default async function StartPage() {
       <section style={{ marginTop: 14 }}>
         <h2 style={{ marginBottom: 8 }}>If you are an Admin</h2>
         <p>
-          Open <Link href="/admin">Admin</Link> to review requests and run generation.
+          Open <Link href="/admin/leads">Admin</Link> to review leads and run generation.
         </p>
       </section>
     </main>
