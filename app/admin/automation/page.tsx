@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 type Result = { ok?: boolean; imported?: number; enqueued?: number; sent?: number; reason?: string; error?: string };
@@ -12,6 +12,38 @@ export default function AdminAutomationPage() {
   const [enqueueLoading, setEnqueueLoading] = useState(false);
   const [outreachResult, setOutreachResult] = useState<Result | null>(null);
   const [outreachLoading, setOutreachLoading] = useState(false);
+
+  const [leadScrapeHandles, setLeadScrapeHandles] = useState("");
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsMessage, setSettingsMessage] = useState("");
+
+  useEffect(() => {
+    fetch("/api/admin/app-settings")
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => {
+        setLeadScrapeHandles(data.lead_scrape_handles ?? "");
+      })
+      .catch(() => setLeadScrapeHandles(""))
+      .finally(() => setSettingsLoading(false));
+  }, []);
+
+  async function saveSettings() {
+    setSettingsSaving(true);
+    setSettingsMessage("");
+    try {
+      const res = await fetch("/api/admin/app-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lead_scrape_handles: leadScrapeHandles.trim() }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (data.ok) setSettingsMessage("Saved.");
+      else setSettingsMessage(data.error ?? "Save failed.");
+    } finally {
+      setSettingsSaving(false);
+    }
+  }
 
   async function runScrape() {
     setScrapeLoading(true);
@@ -55,6 +87,36 @@ export default function AdminAutomationPage() {
       <p className="muted">
         Trigger cron jobs manually. Normal schedule: daily scrape 8:00 UTC, enqueue samples 9:00, outreach 10:00.
       </p>
+
+      <div className="card" style={{ marginTop: 16, padding: 16 }}>
+        <h3 style={{ marginTop: 0 }}>Lead scrape handles</h3>
+        <p className="muted" style={{ fontSize: 13 }}>
+          Instagram usernames the daily scrape will fetch (comma-separated). Run migrations once if this section is empty.
+        </p>
+        {settingsLoading ? (
+          <p className="muted">Loading…</p>
+        ) : (
+          <>
+            <textarea
+              className="input"
+              rows={3}
+              value={leadScrapeHandles}
+              onChange={(e) => setLeadScrapeHandles(e.target.value)}
+              placeholder="handle1,handle2,handle3"
+              style={{ width: "100%", maxWidth: 480 }}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={() => void saveSettings()}
+              disabled={settingsSaving}
+              style={{ marginTop: 8 }}
+            >
+              {settingsSaving ? "Saving…" : "Save"}
+            </button>
+            {settingsMessage ? <p style={{ marginTop: 8, marginBottom: 0 }}>{settingsMessage}</p> : null}
+          </>
+        )}
+      </div>
 
       <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
         <div className="card" style={{ padding: 16 }}>

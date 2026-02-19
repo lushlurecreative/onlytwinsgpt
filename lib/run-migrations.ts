@@ -141,6 +141,9 @@ const MIGRATIONS = [
   `create index if not exists gpu_usage_job_type_idx on public.gpu_usage(job_type);`,
   `create index if not exists gpu_usage_created_at_idx on public.gpu_usage(created_at desc);`,
 
+  // Seed app_settings for automation (upsert so safe to run repeatedly)
+  `insert into public.app_settings (key, value, updated_at) values ('lead_scrape_handles', '', timezone('utc', now())), ('lead_sample_max_per_run', '10', timezone('utc', now())), ('lead_sample_daily_budget_usd', '0', timezone('utc', now())), ('outreach_max_attempts', '3', timezone('utc', now())), ('outreach_cron_max_per_run', '20', timezone('utc', now())) on conflict (key) do update set value = excluded.value, updated_at = timezone('utc', now());`,
+
   // Seed presets from scene presets (only when empty)
   `insert into public.presets (name, prompt, negative_prompt, parameter_json)
    select v.name, v.prompt, v.neg, v.params from (values
