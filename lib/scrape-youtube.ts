@@ -50,7 +50,7 @@ export async function scrapeYouTube(
       searchUrl.searchParams.set("part", "snippet");
       searchUrl.searchParams.set("type", "channel");
       searchUrl.searchParams.set("q", q);
-      searchUrl.searchParams.set("maxResults", "25");
+      searchUrl.searchParams.set("maxResults", "50");
       searchUrl.searchParams.set("key", apiKey);
 
       const searchRes = await fetch(searchUrl.toString(), {
@@ -156,7 +156,7 @@ export async function scrapeYouTube(
     }
   }
 
-  const result = leads.slice(0, 80);
+  const result = leads.slice(0, 2000);
   if (opts?.withDiagnostics) {
     return { leads: result, diagnostics };
   }

@@ -71,10 +71,13 @@ export default function AdminGlobalHealth() {
     }
 
     void load();
-    const t = setInterval(load, 60 * 1000);
+    const t = setInterval(load, 30 * 1000);
+    const onRefresh = () => { if (!cancelled) void load(); };
+    window.addEventListener("admin-health-refresh", onRefresh);
     return () => {
       cancelled = true;
       clearInterval(t);
+      window.removeEventListener("admin-health-refresh", onRefresh);
     };
   }, []);
 

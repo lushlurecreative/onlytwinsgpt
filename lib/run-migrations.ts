@@ -158,6 +158,10 @@ const MIGRATIONS = [
      ('City', 'A polished city environment with realistic architecture, natural perspective, and editorial quality lighting.', '', '{}')
    ) as v(name, prompt, neg, params)
    where (select count(*) from public.presets) = 0;`,
+  // Ensure Beach preset exists (for lead sample generation; idempotent)
+  `insert into public.presets (name, prompt, negative_prompt, parameter_json)
+   select 'Beach', 'A realistic beach scene with natural daylight, ocean water movement, and authentic skin texture.', '', '{}'
+   where not exists (select 1 from public.presets where name ilike 'Beach');`,
 ];
 
 export async function runMigrations(): Promise<{ ok: boolean; error?: string }> {

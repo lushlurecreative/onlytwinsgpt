@@ -7,8 +7,12 @@ import { scrapeInstagram } from "@/lib/scrape-instagram";
 import { scrapeOnlyFinder, scrapeFanFox, scrapeJuicySearch } from "@/lib/scrape-aggregators";
 import { ingestLeads, type IngestLeadInput } from "@/lib/ingest-leads";
 import { validateLead, filterCreatorImages } from "@/lib/validate-lead";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { runEnqueueLeadSamples } from "@/lib/enqueue-lead-samples";
 
 export type { ScrapeCriteria };
+
+export const maxDuration = 300;
 
 /**
  * Admin clicks "Run scrape" - runs scrapers inline (YouTube + Reddit + OnlyFinder) and inserts leads.
@@ -128,6 +132,10 @@ export async function POST(request: Request) {
   let importedAgg = 0;
   let firstError: string | undefined;
 
+  let updatedYt = 0;
+  let updatedRd = 0;
+  let updatedIg = 0;
+  let updatedAgg = 0;
   if (allLeads.length > 0) {
     const ytInputs = allLeads.filter((x) => x.source === "youtube").map((x) => x.lead);
     const rdInputs = allLeads.filter((x) => x.source === "reddit").map((x) => x.lead);
@@ -136,26 +144,31 @@ export async function POST(request: Request) {
     if (ytInputs.length > 0) {
       const r = await ingestLeads(ytInputs, "youtube");
       importedYt = r.imported;
+      updatedYt = r.updated ?? 0;
       if (r.firstError && !firstError) firstError = r.firstError;
     }
     if (rdInputs.length > 0) {
       const r = await ingestLeads(rdInputs, "reddit");
       importedRd = r.imported;
+      updatedRd = r.updated ?? 0;
       if (r.firstError && !firstError) firstError = r.firstError;
     }
     if (igInputs.length > 0) {
       const r = await ingestLeads(igInputs, "instagram");
       importedIg = r.imported;
+      updatedIg = r.updated ?? 0;
       if (r.firstError && !firstError) firstError = r.firstError;
     }
     if (aggInputs.length > 0) {
       const r = await ingestLeads(aggInputs, "aggregator");
       importedAgg = r.imported;
+      updatedAgg = r.updated ?? 0;
       if (r.firstError && !firstError) firstError = r.firstError;
     }
   }
 
   const imported = importedYt + importedRd + importedIg + importedAgg;
+  const updated = updatedYt + updatedRd + updatedIg + updatedAgg;
 
   if (allLeads.length === 0) {
     const failedYt = ytDiagnostics.filter((d) => !d.ok);
@@ -182,32 +195,43 @@ export async function POST(request: Request) {
     );
   }
 
-  if (imported === 0) {
+  if (imported === 0 && updated === 0) {
     return NextResponse.json(
       {
         error: firstError
           ? `Scrape found leads but none could be saved: ${firstError}`
-          : "Scrape found leads but none could be saved. Ensure DATABASE_URL is set in Vercel.",
+          : "Scrape found leads but none could be saved. Ensure DATABASE_URL is set and leads have at least 1 image.",
       },
       { status: 500 }
     );
   }
 
   const parts: string[] = [];
-  if (importedYt > 0) parts.push(`${importedYt} from YouTube`);
-  if (importedRd > 0) parts.push(`${importedRd} from Reddit`);
-  if (importedIg > 0) parts.push(`${importedIg} from Instagram`);
-  if (importedAgg > 0) parts.push(`${importedAgg} from aggregators (OnlyFinder, FanFox, JuicySearch)`);
-  const message = `Imported ${parts.join(", ")}.`;
+  if (imported > 0) {
+    const imp: string[] = [];
+    if (importedYt > 0) imp.push(`${importedYt} from YouTube`);
+    if (importedRd > 0) imp.push(`${importedRd} from Reddit`);
+    if (importedIg > 0) imp.push(`${importedIg} from Instagram`);
+    if (importedAgg > 0) imp.push(`${importedAgg} from aggregators`);
+    parts.push(`Imported ${imp.join(", ")}`);
+  }
+  if (updated > 0) parts.push(`updated ${updated} existing`);
+  let message = parts.join(". ") + ".";
+
+  const admin = getSupabaseAdmin();
+  const { enqueued } = await runEnqueueLeadSamples(admin);
+  if (enqueued > 0) message += ` Queued ${enqueued} for AI sample generation.`;
 
   return NextResponse.json(
     {
       ok: true,
       imported,
+      updated,
       importedYt,
       importedRd,
       importedIg,
       importedAgg,
+      enqueued,
       diagnostics: { youtube: ytDiagnostics, reddit: redditDiagnostics, instagram: igDiagnostics, aggregator: aggDiagnostics },
       message,
     },

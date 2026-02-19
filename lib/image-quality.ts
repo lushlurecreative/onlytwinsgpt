@@ -1,5 +1,10 @@
 /**
- * Image quality checks for lead ingest: clear face and waist-up framing.
+ * Image quality checks for lead ingest. Used when FACE_FILTER_ENABLED=true.
+ *
+ * Requirements (agreed for lead sample images):
+ * - Full face visible, no obstructions, not from behind.
+ * - Waist-up or portrait: head and upper body at least to waist; not legs-only or full-body-only.
+ *
  * Uses Replicate LLaVA for vision. Requires REPLICATE_API_TOKEN.
  */
 

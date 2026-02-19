@@ -59,6 +59,24 @@ export default function AdminLeadsClient() {
     platforms: ["instagram", "twitter", "reddit"],
     activityMode: "active",
   });
+  const [workerConfig, setWorkerConfig] = useState<{
+    configured: boolean;
+    endpointId?: string | null;
+    hasApiKey?: boolean;
+    source?: string;
+  } | null>(null);
+  const [workerSaving, setWorkerSaving] = useState(false);
+  const [workerApiKey, setWorkerApiKey] = useState("");
+  const [workerEndpointId, setWorkerEndpointId] = useState("");
+  const [enqueueingSamples, setEnqueueingSamples] = useState(false);
+  const [setupStatus, setSetupStatus] = useState<{
+    database?: boolean;
+    supabase?: boolean;
+    runpod?: boolean;
+    workerSecret?: boolean;
+    appUrl?: boolean;
+    scrape?: { youtube?: boolean; reddit?: boolean; apify?: boolean };
+  } | null>(null);
 
   async function load() {
     const res = await fetch("/api/admin/leads");
@@ -74,6 +92,32 @@ export default function AdminLeadsClient() {
 
   useEffect(() => {
     void load();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/worker/config")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setWorkerConfig(data as { configured: boolean; endpointId?: string | null; hasApiKey?: boolean; source?: string });
+      })
+      .catch(() => {
+        if (!cancelled) setWorkerConfig({ configured: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workerSaving]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/admin/setup-status")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!cancelled && data) setSetupStatus(data);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -279,12 +323,37 @@ export default function AdminLeadsClient() {
     }));
   }
 
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
-  const ingestUrl = `${baseUrl}/api/admin/leads/ingest`;
-
-  function copyIngestUrl() {
-    navigator.clipboard.writeText(ingestUrl);
-    setMessage("Copied to clipboard");
+  async function saveWorkerConfig() {
+    if (!workerApiKey.trim() || !workerEndpointId.trim()) {
+      setMessage("Enter both RunPod API key and endpoint ID.");
+      return;
+    }
+    setWorkerSaving(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/worker/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          runpod_api_key: workerApiKey.trim(),
+          runpod_endpoint_id: workerEndpointId.trim(),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok) {
+        setMessage(data.error ?? "Failed to save worker config");
+        return;
+      }
+      setMessage("Worker credentials saved.");
+      setWorkerApiKey("");
+      setWorkerEndpointId("");
+      setWorkerConfig({ configured: true, endpointId: workerEndpointId.trim(), source: "db" });
+      window.dispatchEvent(new Event("admin-health-refresh"));
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setWorkerSaving(false);
+    }
   }
 
   async function triggerScrape() {
@@ -316,7 +385,7 @@ export default function AdminLeadsClient() {
       const text = await res.text();
       const json = (() => {
         try {
-          return JSON.parse(text) as { error?: string; imported?: number; message?: string };
+          return JSON.parse(text) as { error?: string; imported?: number; updated?: number; enqueued?: number; message?: string };
         } catch {
           return {};
         }
@@ -325,13 +394,38 @@ export default function AdminLeadsClient() {
         setMessage(json.error ?? `Scrape failed (${res.status})`);
         return;
       }
-      setMessage(json.message ?? `Imported ${json.imported ?? 0} leads.`);
+      setMessage(json.message ?? `Imported ${json.imported ?? 0} leads.${(json.updated ?? 0) > 0 ? ` Updated ${json.updated} existing.` : ""}${(json.enqueued ?? 0) > 0 ? ` Queued ${json.enqueued} for AI samples.` : ""}`);
       await load();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setMessage(`Scrape failed: ${msg}`);
     } finally {
       setTriggeringScrape(false);
+    }
+  }
+
+  async function enqueueSamples() {
+    setEnqueueingSamples(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/automation/run-enqueue-samples", { method: "POST", credentials: "same-origin" });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; enqueued?: number; error?: string; reason?: string };
+      if (!res.ok) {
+        setMessage(json.error ?? `Enqueue failed (${res.status})`);
+        return;
+      }
+      const n = json.enqueued ?? 0;
+      if (n > 0) {
+        setMessage(`Queued ${n} lead(s) for AI sample generation. Worker will process when running.`);
+        await load();
+      } else {
+        setMessage(json.reason === "daily_budget_reached" ? "Daily budget reached; no new jobs queued." : "No qualified leads to enqueue (need 3+ images per lead) or already queued.");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setMessage(`Enqueue failed: ${msg}`);
+    } finally {
+      setEnqueueingSamples(false);
     }
   }
 
@@ -407,34 +501,94 @@ export default function AdminLeadsClient() {
         <h2 style={{ marginTop: 0 }}>Lead Pipeline</h2>
         <p className="muted">Click Run scrape to fetch leads from YouTube, Reddit, and aggregators. Review, approve, generate AI samples, and send outreach.</p>
 
+        {setupStatus ? (
+          <details className="card" style={{ marginTop: 12, padding: 12 }}>
+            <summary style={{ cursor: "pointer", fontWeight: 600 }}>Setup checklist</summary>
+            <div style={{ marginTop: 10, fontSize: 13 }}>
+              <p className="muted" style={{ marginBottom: 8 }}>Set missing items in Vercel → Settings → Environment Variables, or in the Worker section below. See SETUP.md in the repo.</p>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                <li>{setupStatus.database ? "✓" : "✗"} DATABASE_URL</li>
+                <li>{setupStatus.supabase ? "✓" : "✗"} Supabase (URL + service role key)</li>
+                <li>{setupStatus.runpod ? "✓" : "✗"} RunPod (API key + endpoint ID)</li>
+                <li>{setupStatus.workerSecret ? "✓" : "✗"} WORKER_SECRET</li>
+                <li>{setupStatus.appUrl ? "✓" : "✗"} APP_URL</li>
+                <li>{setupStatus.scrape?.youtube ? "✓" : "✗"} YOUTUBE_API_KEY (optional)</li>
+                <li>{setupStatus.scrape?.apify ? "✓" : "✗"} APIFY_TOKEN (optional, for Reddit/Instagram)</li>
+              </ul>
+            </div>
+          </details>
+        ) : null}
         <details className="card" style={{ marginTop: 12, padding: 12 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 600 }}>Setup: API keys required for scraping</summary>
+          <summary style={{ cursor: "pointer", fontWeight: 600 }}>Worker (RunPod) — for AI samples &amp; training</summary>
           <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.6 }}>
-            <p><strong>Add these in Vercel → Settings → Environment Variables:</strong></p>
-            <ul style={{ margin: "8px 0", paddingLeft: 20 }}>
-              <li><code>YOUTUBE_API_KEY</code> — <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">Google Cloud Console</a> → Create API Key (enable YouTube Data API v3)</li>
-              <li><code>APIFY_TOKEN</code> — <a href="https://console.apify.com/account/integrations" target="_blank" rel="noreferrer">Apify</a> (free $5/mo) for Reddit, Instagram, FanFox, OnlyFinder, JuicySearch</li>
-              <li><code>SCRAPER_API_KEY</code> — (optional) scraperapi.com if you want paid proxy; otherwise AllOrigins fallback</li>
-              <li><code>ANTIGRAVITY_WEBHOOK_SECRET</code> — For ingest webhook and local scrape script (choose a random string)</li>
-            </ul>
-            <p style={{ marginTop: 8 }}>
-              <strong>If Vercel gets 403</strong> (Reddit/aggregators block cloud IPs), run scrapers locally:
+            <p className="muted">
+              The worker runs <strong>AI sample generation</strong> (for leads) and <strong>training/generation</strong> for customers. <strong>Scraping does not need the worker</strong> — you can click Run scrape anytime. Daily automation (cron) uses the worker to generate lead samples and process jobs.
             </p>
-            <pre style={{ margin: "8px 0", padding: 10, background: "var(--surface-soft)", borderRadius: 8, fontSize: 12, overflow: "auto" }}>
-{`BASE_URL=https://your-app.vercel.app WEBHOOK_SECRET=<ANTIGRAVITY_WEBHOOK_SECRET> npm run scrape:local`}
-            </pre>
+            {workerConfig?.configured ? (
+              <p style={{ marginTop: 8 }}>
+                <strong>Worker is configured.</strong> Endpoint: <code>{workerConfig.endpointId ?? "—"}</code>
+                {workerConfig.source ? <span className="muted" style={{ marginLeft: 8 }}>(from {workerConfig.source})</span> : null}
+              </p>
+            ) : (
+              <>
+                <p style={{ marginTop: 8 }}><strong>Why &quot;Worker not configured&quot;?</strong> RunPod credentials are missing. Set them below (saved in the app) or in Vercel as <code>RUNPOD_API_KEY</code> and <code>RUNPOD_ENDPOINT_ID</code>, then redeploy.</p>
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10, maxWidth: 420 }}>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span className="muted" style={{ fontSize: 12 }}>RunPod API key</span>
+                    <input
+                      className="input"
+                      type="password"
+                      placeholder="Your RunPod API key"
+                      value={workerApiKey}
+                      onChange={(e) => setWorkerApiKey(e.target.value)}
+                      autoComplete="off"
+                    />
+                  </label>
+                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span className="muted" style={{ fontSize: 12 }}>RunPod endpoint ID (serverless)</span>
+                    <input
+                      className="input"
+                      type="text"
+                      placeholder="e.g. xxxxxxx"
+                      value={workerEndpointId}
+                      onChange={(e) => setWorkerEndpointId(e.target.value)}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => void saveWorkerConfig()}
+                    disabled={workerSaving || !workerApiKey.trim() || !workerEndpointId.trim()}
+                  >
+                    {workerSaving ? "Saving…" : "Save worker credentials"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </details>
 
-        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginTop: 12 }}>
+        <p className="muted" style={{ marginTop: 12, fontSize: 13 }}>
+          Scraping runs immediately when you click below and does not require the worker. It may take 30–60 seconds. Daily scrape also runs automatically at 8:00 UTC (Vercel cron).
+        </p>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
           <button
             className="btn btn-primary"
             onClick={() => void triggerScrape()}
             disabled={triggeringScrape}
             type="button"
-            title="Runs the scrape now and imports leads"
+            title="Runs the scrape now and imports/updates leads, then queues qualified leads for AI sample generation"
           >
             {triggeringScrape ? "Triggering…" : "Run scrape"}
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => void enqueueSamples()}
+            disabled={enqueueingSamples}
+            type="button"
+            title="Queue qualified leads (3+ images) for AI sample generation. Requires worker configured."
+          >
+            {enqueueingSamples ? "Enqueueing…" : "Enqueue samples"}
           </button>
           <button
             className="btn btn-ghost"
@@ -530,34 +684,6 @@ export default function AdminLeadsClient() {
             </div>
           </div>
         ) : null}
-
-        <details className="card" style={{ marginTop: 12, padding: 12 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 800 }}>Ingest webhook (Antigravity)</summary>
-          <p className="muted" style={{ marginTop: 10 }}>
-            Configure the bot to POST to this URL with <code>Authorization: Bearer &lt;ANTIGRAVITY_WEBHOOK_SECRET&gt;</code>
-          </p>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <code
-              style={{
-                flex: 1,
-                minWidth: 200,
-                padding: 8,
-                background: "var(--surface-soft)",
-                borderRadius: 8,
-                wordBreak: "break-all",
-                fontSize: 13,
-              }}
-            >
-              {ingestUrl}
-            </code>
-            <button className="btn btn-ghost" type="button" onClick={copyIngestUrl}>
-              Copy
-            </button>
-          </div>
-          <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-            Body: <code>{`{ "leads": [{ "handle": "@user", "platform": "instagram", "profileUrl": "...", "followerCount": 50000, "sampleUrls": ["https://..."] }] }`}</code>
-          </p>
-        </details>
 
         <div style={{ display: "flex", gap: 24, marginTop: 14, marginBottom: 8, flexWrap: "wrap" }}>
           <span>New Today: <strong>{summary.newToday}</strong></span>
@@ -696,7 +822,7 @@ export default function AdminLeadsClient() {
                       </td>
                       <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                         <button className="btn btn-ghost" onClick={() => void expand(row)} type="button">
-                          {isExpanded ? "Hide" : "Review"}
+                          {isExpanded ? "Hide" : (row.sample_paths?.length ? `Review (${row.sample_paths.length} photos)` : "Review")}
                         </button>
                       </td>
                     </tr>
@@ -706,11 +832,14 @@ export default function AdminLeadsClient() {
                           <div className="card" style={{ margin: "10px 0", padding: 14 }}>
                             <div className="split" style={{ gap: 20, alignItems: "start" }}>
                               <div>
-                                <h3 style={{ marginTop: 0, marginBottom: 8 }}>Scraped photos (3–5)</h3>
+                                <h3 style={{ marginTop: 0, marginBottom: 4 }}>Reference photos (downloaded)</h3>
+                                <p className="muted" style={{ marginTop: 0, marginBottom: 8, fontSize: 13 }}>
+                                  Sample images we downloaded from this lead’s profile; used for AI sample generation.
+                                </p>
                                 {!assets ? (
                                   <p className="muted">Loading...</p>
                                 ) : assets.samples.length === 0 ? (
-                                  <p className="muted">No scraped photos. Antigravity should include sampleUrls.</p>
+                                  <p className="muted">No reference photos yet. Scrape may not have found images for this lead.</p>
                                 ) : (
                                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                     {assets.samples.map((a) => (

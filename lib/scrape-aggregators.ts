@@ -339,7 +339,7 @@ export async function scrapeOnlyFinder(
     }
   }
 
-  const result = allLeads.slice(0, 500);
+  const result = allLeads.slice(0, 3000);
   if (opts?.withDiagnostics) {
     return { leads: result, diagnostics };
   }
@@ -432,7 +432,7 @@ export async function scrapeFanFox(
     }
   }
 
-  const result = allLeads.slice(0, 500);
+  const result = allLeads.slice(0, 3000);
   if (opts?.withDiagnostics) {
     return { leads: result, diagnostics };
   }
@@ -571,7 +571,7 @@ export async function scrapeJuicySearch(
     }
   }
 
-  const result = allLeads.slice(0, 500);
+  const result = allLeads.slice(0, 3000);
   if (opts?.withDiagnostics) {
     return { leads: result, diagnostics };
   }

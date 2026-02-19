@@ -60,7 +60,7 @@ export async function scrapeReddit(
     const urls = SUBREDDITS.map((s) => `https://www.reddit.com/r/${s}/`);
     const run = await client.actor("automation-lab/reddit-scraper").call({
       urls,
-      maxPostsPerSource: 50,
+      maxPostsPerSource: 200,
       sort: "new",
       includeComments: false,
     });
@@ -131,7 +131,7 @@ export async function scrapeReddit(
     diagnostics.push({ subreddit: "apify", ok: false, error: msg });
   }
 
-  const result = leads.slice(0, 100);
+  const result = leads.slice(0, 3000);
   if (opts?.withDiagnostics) {
     return { leads: result, diagnostics };
   }

@@ -1,6 +1,13 @@
 /**
  * Inserts leads into the database. Used by trigger-scrape (inline) and ingest webhook.
  * No auth - caller must verify before invoking.
+ *
+ * LEAD IMAGE REQUIREMENTS (agreed for scraper → leads):
+ * - Minimum 3 images per lead; target 3–5. We do not save leads with fewer than 3.
+ * - When FACE_FILTER_ENABLED=true: each image must pass quality checks (Replicate LLaVA):
+ *   - Full face visible, no obstructions, not from behind.
+ *   - Waist-up or portrait (head and upper body at least to waist); not legs-only or full-body-only.
+ * - When FACE_FILTER_ENABLED=false: we still require at least 3 successfully downloaded images.
  */
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -22,6 +29,13 @@ export type IngestLeadInput = {
   contentVerticals?: string[];
 };
 
+/** Minimum images to save a lead (1+ so scrape adds leads; 3+ preferred for qualified). */
+const MIN_SAMPLES_TO_SAVE = 1;
+/** Minimum images for "qualified" status (eligible for AI sample generation). */
+const MIN_SAMPLES_PER_LEAD = 3;
+const MAX_SAMPLES_STORED = 5;
+const MAX_CANDIDATE_URLS = 15;
+
 /**
  * 0 = no photos and no user info (lowest value)
  * 5 = user info only (profile URL, handle, platformsFound)
@@ -32,15 +46,12 @@ function scoreLead(input: {
   sampleCount: number;
 }) {
   const { hasUserInfo, sampleCount } = input;
-  const hasEnoughPhotos = sampleCount >= 3;
+  const hasEnoughPhotos = sampleCount >= MIN_SAMPLES_PER_LEAD;
   if (!hasUserInfo && !hasEnoughPhotos) return 0;
   if (hasUserInfo && !hasEnoughPhotos) return 5;
   if (hasUserInfo && hasEnoughPhotos) return 10;
   return 0;
 }
-
-const MIN_FACE_PHOTOS = 3;
-const MAX_CANDIDATE_URLS = 12;
 
 async function fetchAndUploadSamples(
   admin: ReturnType<typeof getSupabaseAdmin>,
@@ -49,10 +60,11 @@ async function fetchAndUploadSamples(
   const paths: string[] = [];
   const folder = `leads/${crypto.randomUUID()}`;
   const filterEnabled = process.env.FACE_FILTER_ENABLED === "true" && !!process.env.REPLICATE_API_TOKEN?.trim();
-  const allowed = urls.slice(0, filterEnabled ? MAX_CANDIDATE_URLS : 5);
+  const allowed = urls.slice(0, MAX_CANDIDATE_URLS);
 
   for (let i = 0; i < allowed.length; i += 1) {
-    if (filterEnabled && paths.length >= MIN_FACE_PHOTOS) break;
+    if (paths.length >= MAX_SAMPLES_STORED) break;
+    if (filterEnabled && paths.length >= MIN_SAMPLES_PER_LEAD) break;
     const url = allowed[i];
     if (typeof url !== "string" || !url.startsWith("http")) continue;
     try {
@@ -83,7 +95,7 @@ async function fetchAndUploadSamples(
       // Skip failed fetch/upload/check
     }
   }
-  return paths;
+  return paths.slice(0, MAX_SAMPLES_STORED);
 }
 
 async function insertViaPg(row: {
@@ -96,6 +108,7 @@ async function insertViaPg(row: {
   score: number;
   profile_url: string | null;
   notes: string | null;
+  status: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) return { ok: false, error: "DATABASE_URL not set" };
@@ -104,8 +117,8 @@ async function insertViaPg(row: {
     const client = new pg.Client({ connectionString: databaseUrl });
     await client.connect();
     await client.query(
-      `insert into public.leads (source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, profile_url, notes)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      `insert into public.leads (source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, profile_url, notes, status)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         row.source,
         row.handle,
@@ -116,6 +129,7 @@ async function insertViaPg(row: {
         row.score,
         row.profile_url,
         row.notes,
+        row.status,
       ]
     );
     await client.end();
@@ -127,15 +141,17 @@ async function insertViaPg(row: {
 }
 
 /**
- * Insert leads into the leads table. Returns number of successfully imported leads.
+ * Insert or update leads. Uses (source, handle, platform) to find existing; updates if found, else inserts.
+ * Returns { imported, updated, firstError }.
  */
 export async function ingestLeads(
   leads: IngestLeadInput[],
   source: "reddit" | "youtube" | "antigravity" | "aggregator" | "instagram" = "antigravity"
-): Promise<{ imported: number; firstError?: string }> {
+): Promise<{ imported: number; updated: number; firstError?: string }> {
   const admin = getSupabaseAdmin();
   await runMigrations();
   let imported = 0;
+  let updated = 0;
   let firstError: string | undefined;
 
   for (const lead of leads) {
@@ -150,12 +166,11 @@ export async function ingestLeads(
       samplePaths = lead.samplePaths
         .filter((p: unknown) => typeof p === "string" && (p as string).trim())
         .map((p: string) => p.trim())
-        .slice(0, 5);
+        .slice(0, MAX_SAMPLES_STORED);
     } else if (Array.isArray(lead.sampleUrls) && lead.sampleUrls.length > 0) {
       samplePaths = await fetchAndUploadSamples(admin, lead.sampleUrls);
     }
-    const filterEnabled = process.env.FACE_FILTER_ENABLED === "true" && !!process.env.REPLICATE_API_TOKEN?.trim();
-    if (filterEnabled && samplePaths.length < MIN_FACE_PHOTOS) continue;
+    if (samplePaths.length < MIN_SAMPLES_TO_SAVE) continue;
     const profileUrl =
       typeof lead.profileUrl === "string" && lead.profileUrl.trim()
         ? lead.profileUrl.trim()
@@ -183,6 +198,8 @@ export async function ingestLeads(
       platformsFound.length > 0 ||
       (profileUrls && typeof profileUrls === "object" && Object.keys(profileUrls).length > 0);
     const sampleCount = samplePaths.length || (Array.isArray(lead.sampleUrls) ? lead.sampleUrls.length : 0);
+    const score = scoreLead({ hasUserInfo, sampleCount });
+    const status = sampleCount >= MIN_SAMPLES_PER_LEAD && score >= 10 ? "qualified" : "imported";
     const minimalRow = {
       source,
       handle,
@@ -190,9 +207,10 @@ export async function ingestLeads(
       follower_count: followerCount,
       engagement_rate: engagementRate,
       luxury_tag_hits: luxuryTagHits,
-      score: scoreLead({ hasUserInfo, sampleCount }),
+      score,
       profile_url: profileUrl,
       notes: typeof lead.notes === "string" && lead.notes.trim() ? lead.notes.trim() : null,
+      status,
     };
     const withSamples = { ...minimalRow, sample_paths: samplePaths };
     const fullRow = {
@@ -200,38 +218,69 @@ export async function ingestLeads(
       profile_urls: profileUrls,
       platforms_found: platformsFound,
       content_verticals: contentVerticals,
+      updated_at: new Date().toISOString(),
     };
-    let { error } = await admin.from("leads").insert(fullRow);
-    if (error) {
-      const r2 = await admin.from("leads").insert(withSamples);
-      error = r2.error;
-    }
-    if (error) {
-      const r3 = await admin.from("leads").insert(minimalRow);
-      error = r3.error;
-    }
-    if (error) {
-      if (!firstError) firstError = error.message;
-      const pgResult = await insertViaPg({
-        source: minimalRow.source,
-        handle: minimalRow.handle,
-        platform: minimalRow.platform,
-        follower_count: minimalRow.follower_count,
-        engagement_rate: minimalRow.engagement_rate,
-        luxury_tag_hits: minimalRow.luxury_tag_hits,
-        score: minimalRow.score,
-        profile_url: minimalRow.profile_url,
-        notes: minimalRow.notes,
-      });
-      if (pgResult.ok) {
-        imported += 1;
-      } else if (!firstError) {
-        firstError = pgResult.error;
-      }
+
+    const { data: existing } = await admin
+      .from("leads")
+      .select("id")
+      .eq("source", source)
+      .eq("handle", handle)
+      .eq("platform", platform)
+      .limit(1)
+      .maybeSingle();
+
+    if (existing?.id) {
+      const { error: updateErr } = await admin
+        .from("leads")
+        .update({
+          follower_count: fullRow.follower_count,
+          engagement_rate: fullRow.engagement_rate,
+          luxury_tag_hits: fullRow.luxury_tag_hits,
+          score: fullRow.score,
+          profile_url: fullRow.profile_url,
+          notes: fullRow.notes,
+          status: fullRow.status,
+          sample_paths: fullRow.sample_paths,
+          profile_urls: fullRow.profile_urls,
+          platforms_found: fullRow.platforms_found,
+          content_verticals: fullRow.content_verticals,
+          updated_at: fullRow.updated_at,
+        })
+        .eq("id", existing.id);
+      if (!updateErr) updated += 1;
+      else if (!firstError) firstError = updateErr.message;
     } else {
-      imported += 1;
+      let { error } = await admin.from("leads").insert(fullRow);
+      if (error) {
+        const r2 = await admin.from("leads").insert({ ...withSamples, updated_at: fullRow.updated_at });
+        error = r2.error;
+      }
+      if (error) {
+        const r3 = await admin.from("leads").insert({ ...minimalRow, updated_at: fullRow.updated_at });
+        error = r3.error;
+      }
+      if (error) {
+        if (!firstError) firstError = error.message;
+        const pgResult = await insertViaPg({
+          source: minimalRow.source,
+          handle: minimalRow.handle,
+          platform: minimalRow.platform,
+          follower_count: minimalRow.follower_count,
+          engagement_rate: minimalRow.engagement_rate,
+          luxury_tag_hits: minimalRow.luxury_tag_hits,
+          score: minimalRow.score,
+          profile_url: minimalRow.profile_url,
+          notes: minimalRow.notes,
+          status: minimalRow.status,
+        });
+        if (pgResult.ok) imported += 1;
+        else if (!firstError) firstError = pgResult.error;
+      } else {
+        imported += 1;
+      }
     }
   }
 
-  return { imported, firstError };
+  return { imported, updated, firstError };
 }

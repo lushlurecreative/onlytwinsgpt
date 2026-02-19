@@ -202,7 +202,7 @@ export async function scrapeInstagram(opts?: {
       }
     }
 
-    const leads = Array.from(leadMap.values()).slice(0, 200);
+    const leads = Array.from(leadMap.values()).slice(0, 3000);
     if (opts?.withDiagnostics) {
       return { leads, diagnostics };
     }
