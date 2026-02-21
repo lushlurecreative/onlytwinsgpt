@@ -106,7 +106,7 @@ export async function POST(request: Request) {
       }
       const isOneTime = body.plan === "single_batch";
       const redirectPath = `/onboarding/creator?payment=success&method=stripe&plan=${body.plan}`;
-      const successUrl = body.successUrl ?? `${baseUrl}/login?redirectTo=${encodeURIComponent(redirectPath)}`;
+      const successUrl = body.successUrl ?? `${baseUrl}${redirectPath}`;
       const cancelUrl = body.cancelUrl ?? `${baseUrl}/pricing?payment=cancel&method=stripe&plan=${body.plan}`;
       const serviceCreatorId = getServiceCreatorId();
       const metadata: Record<string, string> = {
@@ -163,13 +163,21 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ url: session.url }, { status: 200 });
-  } catch (error) {
+  } catch (error: unknown) {
     logError("billing_checkout_unhandled_error", error);
+    const errMessage =
+      error instanceof Error
+        ? error.message
+        : typeof error === "object" && error !== null && "message" in error
+          ? String((error as { message: unknown }).message)
+          : typeof error === "string"
+            ? error
+            : "Unexpected checkout error";
     await sendAlert("billing_checkout_unhandled_error", {
       route: "/api/billing/checkout",
-      message: error instanceof Error ? error.message : String(error),
+      message: errMessage,
     });
-    return NextResponse.json({ error: "Unexpected checkout error" }, { status: 500 });
+    return NextResponse.json({ error: errMessage }, { status: 500 });
   }
 }
 

@@ -24,10 +24,16 @@ export default function CheckoutNowButton({ plan, className, children }: Checkou
         body: JSON.stringify({ plan }),
       });
       const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (res.status === 401) {
+        setLoading(false);
+        window.location.href = "/login?redirectTo=" + encodeURIComponent("/pricing");
+        return;
+      }
       if (!res.ok || !data.url) throw new Error(data.error ?? "Checkout failed");
       window.location.href = data.url;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Checkout failed");
+    } finally {
       setLoading(false);
     }
   }
