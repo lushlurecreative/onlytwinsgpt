@@ -12,7 +12,7 @@ import {
 } from "@/lib/package-plans";
 import { getServiceCreatorId } from "@/lib/service-creator";
 import { isUserSuspended } from "@/lib/suspend";
-import { getBypassUser, isAuthBypassed } from "@/lib/auth-bypass";
+import { getBypassUserId, isAuthBypassed } from "@/lib/auth-bypass";
 import type { Stripe } from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -81,16 +81,19 @@ export async function POST(request: Request) {
     const supabase = await createClient();
     const stripe = getStripe();
     const {
-      data: { user: authUser },
+      data: { user },
       error: userError,
     } = await supabase.auth.getUser();
 
-    // When auth is disabled for testing, allow checkout without a real session (use bypass user).
-    const user =
-      authUser ?? (isAuthBypassed() ? getBypassUser() as { id: string; email?: string | null } : null);
-
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    // Require a real account for checkout; do not allow bypass user so payment is always tied to a real user.
+    if (isAuthBypassed() && user.id === getBypassUserId()) {
+      return NextResponse.json(
+        { error: "Create an account or sign in to subscribe." },
+        { status: 401 }
+      );
     }
     const admin = getSupabaseAdmin();
     if (await isUserSuspended(admin, user.id)) {
