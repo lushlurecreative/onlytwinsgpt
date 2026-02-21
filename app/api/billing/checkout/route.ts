@@ -8,6 +8,7 @@ import { RATE_LIMITS } from "@/lib/security-config";
 import { PRICE_ID_ENV_BY_PLAN, type PlanKey } from "@/lib/package-plans";
 import { getServiceCreatorId } from "@/lib/service-creator";
 import { isUserSuspended } from "@/lib/suspend";
+import { getBypassUser, isAuthBypassed } from "@/lib/auth-bypass";
 
 type CheckoutBody = {
   creatorId?: string;
@@ -42,9 +43,13 @@ export async function POST(request: Request) {
     const supabase = await createClient();
     const stripe = getStripe();
     const {
-      data: { user },
+      data: { user: authUser },
       error: userError,
     } = await supabase.auth.getUser();
+
+    // When auth is disabled for testing, allow checkout without a real session (use bypass user).
+    const user =
+      authUser ?? (isAuthBypassed() ? getBypassUser() as { id: string; email?: string | null } : null);
 
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
