@@ -115,11 +115,9 @@ export async function POST(request: Request) {
 
     let session;
     if (body.plan) {
-      const envName = PRICE_ID_ENV_BY_PLAN[body.plan];
-      let planPriceId = (process.env[envName] ?? "").trim() || (process.env.STRIPE_PRICE_ID ?? "").trim();
-      if (!planPriceId) {
-        planPriceId = await getOrCreatePriceIdForPlan(stripe, admin, body.plan);
-      }
+      // Always use a price we create/store in the current Stripe account. Do not use env price IDs
+      // here so we never send a price from another account and never get "No such price".
+      const planPriceId = await getOrCreatePriceIdForPlan(stripe, admin, body.plan);
       const isOneTime = body.plan === "single_batch";
       const redirectPath = `/thank-you?payment=success&method=stripe&plan=${body.plan}`;
       const successUrl = body.successUrl ?? `${baseUrl}${redirectPath}`;
@@ -132,47 +130,21 @@ export async function POST(request: Request) {
       };
       if (body.leadId?.trim()) metadata.lead_id = body.leadId.trim();
 
-      try {
-        session = await stripe.checkout.sessions.create({
-          mode: isOneTime ? "payment" : "subscription",
-          customer_email: customerEmail,
-          line_items: [{ price: planPriceId, quantity: 1 }],
-          success_url: successUrl,
-          cancel_url: cancelUrl,
-          metadata,
-          ...(isOneTime
-            ? {}
-            : {
-                subscription_data: {
-                  metadata: { ...metadata },
-                },
-              }),
-        });
-      } catch (planErr: unknown) {
-        const msg = planErr instanceof Error ? planErr.message : String(planErr);
-        const useFallback =
-          msg.includes("No such price") || msg.includes("resource_missing");
-        if (useFallback) {
-          const fallbackPriceId = await getOrCreatePriceIdForPlan(stripe, admin, body.plan);
-          session = await stripe.checkout.sessions.create({
-            mode: isOneTime ? "payment" : "subscription",
-            customer_email: customerEmail,
-            line_items: [{ price: fallbackPriceId, quantity: 1 }],
-            success_url: successUrl,
-            cancel_url: cancelUrl,
-            metadata,
-            ...(isOneTime
-              ? {}
-              : {
-                  subscription_data: {
-                    metadata: { ...metadata },
-                  },
-                }),
-          });
-        } else {
-          throw planErr;
-        }
-      }
+      session = await stripe.checkout.sessions.create({
+        mode: isOneTime ? "payment" : "subscription",
+        customer_email: customerEmail,
+        line_items: [{ price: planPriceId, quantity: 1 }],
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        metadata,
+        ...(isOneTime
+          ? {}
+          : {
+              subscription_data: {
+                metadata: { ...metadata },
+              },
+            }),
+      });
     } else {
       const priceId = process.env.STRIPE_PRICE_ID;
       if (!priceId) {
