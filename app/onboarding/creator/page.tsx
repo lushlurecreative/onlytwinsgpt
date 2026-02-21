@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
+import { getUserRole, isSuspended } from "@/lib/roles";
+import { getBypassUserId, isAuthBypassed } from "@/lib/auth-bypass";
+import BecomeCreatorClient from "./BecomeCreatorClient";
 
 export default async function CreatorOnboardingPage() {
   const supabase = await createClient();
@@ -11,7 +14,20 @@ export default async function CreatorOnboardingPage() {
     redirect("/login?redirectTo=/onboarding/creator");
   }
 
-  // Legacy route kept for compatibility. Primary onboarding is now /vault.
-  redirect("/vault");
+  if (await isSuspended(supabase, user.id)) {
+    redirect("/suspended");
+  }
+
+  // When auth is disabled for testing, do not send bypass user to vault (they would see wrong data).
+  if (isAuthBypassed() && user.id === getBypassUserId()) {
+    redirect("/thank-you");
+  }
+
+  const role = await getUserRole(supabase, user.id);
+  if (role === "creator") {
+    redirect("/vault");
+  }
+
+  return <BecomeCreatorClient />;
 }
 

@@ -118,7 +118,7 @@ export async function POST(request: Request) {
         planPriceId = await getOrCreatePriceIdForPlan(stripe, admin, body.plan);
       }
       const isOneTime = body.plan === "single_batch";
-      const redirectPath = `/onboarding/creator?payment=success&method=stripe&plan=${body.plan}`;
+      const redirectPath = `/thank-you?payment=success&method=stripe&plan=${body.plan}`;
       const successUrl = body.successUrl ?? `${baseUrl}${redirectPath}`;
       const cancelUrl = body.cancelUrl ?? `${baseUrl}/pricing?payment=cancel&method=stripe&plan=${body.plan}`;
       const serviceCreatorId = getServiceCreatorId();
