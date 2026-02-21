@@ -62,49 +62,7 @@ export async function POST(request: Request) {
     }
 
     const creatorId = body.creatorId?.trim();
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("stripe_customer_id")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError) {
-      return NextResponse.json({ error: profileError.message }, { status: 400 });
-    }
-
-    let stripeCustomerId = profile?.stripe_customer_id ?? null;
-
-    // If we have a stored customer ID, verify it exists in the current Stripe account (e.g. after switching accounts).
-    if (stripeCustomerId) {
-      try {
-        const existing = await stripe.customers.retrieve(stripeCustomerId);
-        if (existing.deleted) stripeCustomerId = null;
-      } catch {
-        stripeCustomerId = null;
-        await supabase
-          .from("profiles")
-          .update({ stripe_customer_id: null })
-          .eq("id", user.id);
-      }
-    }
-
-    if (!stripeCustomerId) {
-      const customer = await stripe.customers.create({
-        email: user.email ?? undefined,
-        metadata: { subscriber_id: user.id },
-      });
-      stripeCustomerId = customer.id;
-
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ stripe_customer_id: stripeCustomerId })
-        .eq("id", user.id);
-
-      if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 400 });
-      }
-    }
+    const customerEmail = user.email ?? undefined;
 
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin ?? "http://localhost:3000";
@@ -132,7 +90,7 @@ export async function POST(request: Request) {
       if (body.leadId?.trim()) metadata.lead_id = body.leadId.trim();
       session = await stripe.checkout.sessions.create({
         mode: isOneTime ? "payment" : "subscription",
-        customer: stripeCustomerId,
+        customer_email: customerEmail,
         line_items: [{ price: planPriceId, quantity: 1 }],
         success_url: successUrl,
         cancel_url: cancelUrl,
@@ -160,7 +118,7 @@ export async function POST(request: Request) {
       const cancelUrl = body.cancelUrl ?? `${baseUrl}/feed/creator/${creatorId}`;
       session = await stripe.checkout.sessions.create({
         mode: "subscription",
-        customer: stripeCustomerId,
+        customer_email: customerEmail,
         line_items: [{ price: priceId, quantity: 1 }],
         success_url: successUrl,
         cancel_url: cancelUrl,
