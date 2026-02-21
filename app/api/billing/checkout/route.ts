@@ -74,6 +74,21 @@ export async function POST(request: Request) {
     }
 
     let stripeCustomerId = profile?.stripe_customer_id ?? null;
+
+    // If we have a stored customer ID, verify it exists in the current Stripe account (e.g. after switching accounts).
+    if (stripeCustomerId) {
+      try {
+        const existing = await stripe.customers.retrieve(stripeCustomerId);
+        if (existing.deleted) stripeCustomerId = null;
+      } catch {
+        stripeCustomerId = null;
+        await supabase
+          .from("profiles")
+          .update({ stripe_customer_id: null })
+          .eq("id", user.id);
+      }
+    }
+
     if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
