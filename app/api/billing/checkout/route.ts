@@ -75,10 +75,10 @@ export async function POST(request: Request) {
     let session;
     if (body.plan) {
       const envName = PRICE_ID_ENV_BY_PLAN[body.plan];
-      const planPriceId = process.env[envName];
+      let planPriceId = (process.env[envName] ?? "").trim() || process.env.STRIPE_PRICE_ID ?? "";
       if (!planPriceId) {
         return NextResponse.json(
-          { error: `Missing environment variable ${envName} for selected plan` },
+          { error: `Missing environment variable ${envName} or STRIPE_PRICE_ID for selected plan` },
           { status: 500 }
         );
       }
@@ -93,21 +93,50 @@ export async function POST(request: Request) {
         subscriber_id: user.id,
       };
       if (body.leadId?.trim()) metadata.lead_id = body.leadId.trim();
-      session = await stripe.checkout.sessions.create({
-        mode: isOneTime ? "payment" : "subscription",
-        customer_email: customerEmail,
-        line_items: [{ price: planPriceId, quantity: 1 }],
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-        metadata,
-        ...(isOneTime
-          ? {}
-          : {
-              subscription_data: {
-                metadata: { ...metadata },
-              },
-            }),
-      });
+
+      try {
+        session = await stripe.checkout.sessions.create({
+          mode: isOneTime ? "payment" : "subscription",
+          customer_email: customerEmail,
+          line_items: [{ price: planPriceId, quantity: 1 }],
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          metadata,
+          ...(isOneTime
+            ? {}
+            : {
+                subscription_data: {
+                  metadata: { ...metadata },
+                },
+              }),
+        });
+      } catch (planErr: unknown) {
+        const msg = planErr instanceof Error ? planErr.message : String(planErr);
+        const fallbackPriceId = (process.env.STRIPE_PRICE_ID ?? "").trim();
+        if (
+          (msg.includes("No such price") || msg.includes("resource_missing")) &&
+          fallbackPriceId &&
+          fallbackPriceId !== planPriceId
+        ) {
+          session = await stripe.checkout.sessions.create({
+            mode: isOneTime ? "payment" : "subscription",
+            customer_email: customerEmail,
+            line_items: [{ price: fallbackPriceId, quantity: 1 }],
+            success_url: successUrl,
+            cancel_url: cancelUrl,
+            metadata,
+            ...(isOneTime
+              ? {}
+              : {
+                  subscription_data: {
+                    metadata: { ...metadata },
+                  },
+                }),
+          });
+        } else {
+          throw planErr;
+        }
+      }
     } else {
       const priceId = process.env.STRIPE_PRICE_ID;
       if (!priceId) {
