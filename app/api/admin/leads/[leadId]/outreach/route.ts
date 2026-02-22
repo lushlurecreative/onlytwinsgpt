@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { isAdminUser } from "@/lib/admin";
 import { sendOutreach, type LeadForOutreach } from "@/lib/outreach";
+import type { LeadStatus } from "@/lib/db-enums";
 
 type Params = { params: Promise<{ leadId: string }> };
 
@@ -38,8 +39,8 @@ export async function POST(_request: Request, { params }: Params) {
     return NextResponse.json({ error: leadError?.message ?? "Lead not found" }, { status: 404 });
   }
 
-  const allowedStatuses = ["approved", "sample_done"];
-  if (!allowedStatuses.includes(lead.status)) {
+  const allowedStatuses: LeadStatus[] = ["approved", "sample_done"];
+  if (!allowedStatuses.includes(lead.status as LeadStatus)) {
     return NextResponse.json(
       { error: `Lead must be approved or sample_done before outreach. Current: ${lead.status}` },
       { status: 400 }

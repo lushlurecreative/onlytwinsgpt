@@ -8,6 +8,7 @@ import { RATE_LIMITS } from "@/lib/security-config";
 import { getServiceCreatorId } from "@/lib/service-creator";
 import { PACKAGE_PLANS } from "@/lib/package-plans";
 import { getPlanKeyForStripePriceId } from "@/lib/plan-entitlements";
+import type { LeadStatus } from "@/lib/db-enums";
 
 export const runtime = "nodejs";
 
@@ -226,7 +227,7 @@ export async function POST(request: Request) {
         if (status === "active" || status === "trialing") {
           await supabaseAdmin
             .from("leads")
-            .update({ status: "converted", updated_at: new Date().toISOString() })
+            .update({ status: "converted" as LeadStatus, updated_at: new Date().toISOString() })
             .eq("id", leadId);
           await supabaseAdmin.from("automation_events").insert({
             event_type: "converted",

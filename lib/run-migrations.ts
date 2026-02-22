@@ -145,6 +145,11 @@ const MIGRATIONS = [
   `create index if not exists gpu_usage_job_type_idx on public.gpu_usage(job_type);`,
   `create index if not exists gpu_usage_created_at_idx on public.gpu_usage(created_at desc);`,
 
+  // leads/generation_jobs status as PostgreSQL enums (create types then alter columns)
+  `do $$ begin if not exists (select 1 from pg_type where typname = 'lead_status_enum') then create type public.lead_status_enum as enum ('imported', 'approved', 'messaged', 'rejected', 'qualified', 'sample_queued', 'sample_done', 'outreach_sent', 'replied', 'converted', 'dead'); end if; if not exists (select 1 from pg_type where typname = 'generation_job_status_enum') then create type public.generation_job_status_enum as enum ('pending', 'running', 'upscaling', 'watermarking', 'completed', 'failed'); end if; end $$;`,
+  `alter table public.leads drop constraint if exists leads_status_check; alter table public.leads alter column status type public.lead_status_enum using status::text::public.lead_status_enum; alter table public.leads alter column status set default 'imported'::public.lead_status_enum;`,
+  `alter table public.generation_jobs drop constraint if exists generation_jobs_status_check; alter table public.generation_jobs alter column status type public.generation_job_status_enum using status::text::public.generation_job_status_enum; alter table public.generation_jobs alter column status set default 'pending'::public.generation_job_status_enum;`,
+
   // Seed app_settings for automation (upsert so safe to run repeatedly)
   `insert into public.app_settings (key, value, updated_at) values ('lead_scrape_handles', '', timezone('utc', now())), ('lead_sample_max_per_run', '10', timezone('utc', now())), ('lead_sample_daily_budget_usd', '0', timezone('utc', now())), ('outreach_max_attempts', '3', timezone('utc', now())), ('outreach_cron_max_per_run', '20', timezone('utc', now())) on conflict (key) do update set value = excluded.value, updated_at = timezone('utc', now());`,
 

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import type { LeadStatus } from "@/lib/db-enums";
+import type { GenerationJobStatus } from "@/lib/db-enums";
 
 /**
  * RunPod Serverless webhook: RunPod POSTs here when a job completes/fails.
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
     }
     await admin
       .from("generation_jobs")
-      .update({ status: "failed" })
+      .update({ status: "failed" as GenerationJobStatus })
       .eq("runpod_job_id", runpodId);
     return NextResponse.json({ ok: true, updated: "generation_job" });
   }
@@ -63,10 +65,10 @@ export async function POST(request: Request) {
     if (gen?.id) {
       const out = body.output && typeof body.output === "object" ? (body.output as { output_path?: string }) : null;
       const outputPath = out?.output_path ?? (gen.output_path as string | null) ?? null;
-      if (outputPath && gen.status !== "completed") {
+      if (outputPath && (gen.status as GenerationJobStatus) !== "completed") {
         await admin
           .from("generation_jobs")
-          .update({ status: "completed", output_path: outputPath })
+          .update({ status: "completed" as GenerationJobStatus, output_path: outputPath })
           .eq("id", gen.id);
       }
       const leadId = (gen as { lead_id?: string | null }).lead_id;
@@ -75,7 +77,7 @@ export async function POST(request: Request) {
           .from("leads")
           .update({
             sample_asset_path: outputPath,
-            status: "sample_done",
+            status: "sample_done" as LeadStatus,
             updated_at: new Date().toISOString(),
           })
           .eq("id", leadId);
@@ -86,7 +88,7 @@ export async function POST(request: Request) {
           payload_json: { generation_job_id: gen.id, output_path: outputPath },
         });
       }
-      if (gen.status !== "completed" || leadId) {
+      if ((gen.status as GenerationJobStatus) !== "completed" || leadId) {
         return NextResponse.json({ ok: true, updated: "generation_job" });
       }
     }

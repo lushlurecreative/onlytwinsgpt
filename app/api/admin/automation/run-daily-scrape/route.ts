@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { isAdminUser } from "@/lib/admin";
 import { runActorAndGetItems } from "@/lib/apify";
+import type { LeadStatus } from "@/lib/db-enums";
 
 const INSTAGRAM_ACTOR_ID = process.env.APIFY_INSTAGRAM_ACTOR_ID || "apify/instagram-profile-scraper";
 
@@ -19,19 +20,20 @@ async function upsertLead(admin: ReturnType<typeof getSupabaseAdmin>, item: Reco
   const imageUrlsJson = Array.isArray(item.images) ? item.images : imageUrls;
   const { data: existing } = await admin.from("leads").select("id").eq("platform", platform).eq("handle", handle).maybeSingle();
   const now = new Date().toISOString();
+  const status: LeadStatus = "imported";
   const row = {
     platform, handle, source: "apify_cron", profile_url: profileUrl || null, display_name: displayName || null,
     bio: bio || null, follower_count: followerCount, photo_count: photoCount, image_urls_json: imageUrlsJson,
-    last_seen_at: now, is_new: !existing, status: "imported", updated_at: now,
+    last_seen_at: now, is_new: !existing, status, updated_at: now,
   };
   if (existing) await admin.from("leads").update(row).eq("id", existing.id);
   else await admin.from("leads").insert({ ...row, created_at: now, engagement_rate: 0, luxury_tag_hits: 0, score: 0 });
 }
 
 async function qualifyLeads(admin: ReturnType<typeof getSupabaseAdmin>) {
-  const { data: rows } = await admin.from("leads").select("id").eq("status", "imported").gte("photo_count", 3);
+  const { data: rows } = await admin.from("leads").select("id").eq("status", "imported" as LeadStatus).gte("photo_count", 3);
   if (!rows?.length) return;
-  await admin.from("leads").update({ status: "qualified", updated_at: new Date().toISOString() }).in("id", rows.map((r) => r.id));
+  await admin.from("leads").update({ status: "qualified" as LeadStatus, updated_at: new Date().toISOString() }).in("id", rows.map((r) => r.id));
 }
 
 /** POST: Admin trigger for daily lead scrape (same as cron). */

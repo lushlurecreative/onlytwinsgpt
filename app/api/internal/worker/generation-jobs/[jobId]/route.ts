@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireWorkerSecret } from "@/lib/worker-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import type { GenerationJobStatus } from "@/lib/db-enums";
 
 type Params = { params: Promise<{ jobId: string }> };
 
@@ -14,7 +15,7 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const { jobId } = await params;
-  let body: { status?: string; output_path?: string; logs?: string } = {};
+  let body: { status?: GenerationJobStatus; output_path?: string; logs?: string } = {};
   try {
     body = await request.json();
   } catch {

@@ -5,6 +5,8 @@
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getPresetIdBySceneKey, createGenerationJob } from "@/lib/generation-jobs";
+import type { LeadStatus } from "@/lib/db-enums";
+import type { GenerationJobStatus } from "@/lib/db-enums";
 
 const DEFAULT_MAX_PER_RUN = 10;
 
@@ -38,7 +40,7 @@ export async function runEnqueueLeadSamples(admin: Awaited<ReturnType<typeof get
   const { data: candidates } = await admin
     .from("leads")
     .select("id, image_urls_json, sample_paths")
-    .in("status", ["qualified", "imported"])
+    .in("status", ["qualified", "imported"] as LeadStatus[])
     .order("updated_at", { ascending: true })
     .limit(maxPerRun * 3);
 
@@ -62,7 +64,7 @@ export async function runEnqueueLeadSamples(admin: Awaited<ReturnType<typeof get
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (lastJob?.status !== "failed") continue;
+      if ((lastJob?.status as GenerationJobStatus | undefined) !== "failed") continue;
       await admin.from("idempotency_keys").delete().eq("key", key);
     }
     const urls = lead.image_urls_json;
@@ -85,7 +87,7 @@ export async function runEnqueueLeadSamples(admin: Awaited<ReturnType<typeof get
     });
     if (!jobId) continue;
 
-    await admin.from("leads").update({ status: "sample_queued", updated_at: new Date().toISOString() }).eq("id", lead.id);
+    await admin.from("leads").update({ status: "sample_queued" as LeadStatus, updated_at: new Date().toISOString() }).eq("id", lead.id);
     await admin.from("idempotency_keys").insert({ key });
     await admin.from("automation_events").insert({
       event_type: "job_enqueued",

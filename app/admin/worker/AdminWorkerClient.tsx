@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { GenerationJobStatus } from "@/lib/db-enums";
 
 type ConfigState = {
   configured: boolean;
@@ -24,7 +25,7 @@ type GenerationJob = {
   id: string;
   subject_id: string | null;
   preset_id: string;
-  status: string;
+  status: GenerationJobStatus;
   output_path: string | null;
   runpod_job_id: string | null;
   created_at: string;

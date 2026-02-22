@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { runActorAndGetItems } from "@/lib/apify";
+import type { LeadStatus } from "@/lib/db-enums";
 
 const INSTAGRAM_ACTOR_ID = process.env.APIFY_INSTAGRAM_ACTOR_ID || "apify/instagram-profile-scraper";
 
@@ -63,12 +64,12 @@ async function qualifyLeads(admin: ReturnType<typeof getSupabaseAdmin>) {
   const { data: rows } = await admin
     .from("leads")
     .select("id")
-    .eq("status", "imported")
+    .eq("status", "imported" as LeadStatus)
     .gte("photo_count", 3);
   if (!rows?.length) return;
   await admin
     .from("leads")
-    .update({ status: "qualified", updated_at: new Date().toISOString() })
+    .update({ status: "qualified" as LeadStatus, updated_at: new Date().toISOString() })
     .in("id", rows.map((r) => r.id));
 }
 

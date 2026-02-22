@@ -4,6 +4,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { Fragment, useEffect, useState } from "react";
+import type { LeadStatus } from "@/lib/db-enums";
 
 type LeadRow = {
   id: string;
@@ -14,7 +15,7 @@ type LeadRow = {
   engagement_rate: number;
   luxury_tag_hits: number;
   score: number;
-  status: string;
+  status: LeadStatus;
   profile_url: string | null;
   profile_urls?: Record<string, string>;
   platforms_found?: string[];
@@ -42,7 +43,7 @@ export default function AdminLeadsClient() {
   const [rows, setRows] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
   const [query, setQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [assetsById, setAssetsById] = useState<Record<string, LeadAssets>>({});
@@ -231,7 +232,7 @@ export default function AdminLeadsClient() {
     }
     setMessage(approved ? "Approved." : "Rejected.");
     setRows((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: approved ? "approved" : "rejected" } : r))
+      prev.map((r) => (r.id === id ? { ...r, status: (approved ? "approved" : "rejected") as LeadStatus } : r))
     );
     void load();
   }
@@ -703,7 +704,7 @@ export default function AdminLeadsClient() {
               ["messaged", "Messaged"],
               ["outreach_sent", "Outreach sent"],
               ["converted", "Converted"],
-            ] as const
+            ] as [LeadStatus | "all", string][]
           ).map(([key, label]) => {
             const n = key === "all" ? counts.total : counts.byStatus[key] ?? 0;
             const active = statusFilter === key;

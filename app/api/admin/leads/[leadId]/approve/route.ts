@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { isAdminUser } from "@/lib/admin";
+import type { LeadStatus } from "@/lib/db-enums";
 
 type Params = {
   params: Promise<{ leadId: string }>;
@@ -34,10 +35,11 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const approved = body.approved !== false;
   const admin = getSupabaseAdmin();
+  const newStatus: LeadStatus = approved ? "approved" : "rejected";
   const { data, error } = await admin
     .from("leads")
     .update({
-      status: approved ? "approved" : "rejected",
+      status: newStatus,
       approved_at: approved ? new Date().toISOString() : null,
       approved_by: approved ? user.id : null,
     })

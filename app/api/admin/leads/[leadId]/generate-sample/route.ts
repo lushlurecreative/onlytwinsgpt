@@ -6,6 +6,7 @@ import {
   getPresetIdBySceneKey,
   createGenerationJob,
 } from "@/lib/generation-jobs";
+import type { LeadStatus } from "@/lib/db-enums";
 
 type Params = { params: Promise<{ leadId: string }> };
 
@@ -70,9 +71,10 @@ export async function POST(_request: Request, { params }: Params) {
     );
   }
 
+  const sampleQueued: LeadStatus = "sample_queued";
   await admin
     .from("leads")
-    .update({ status: "sample_queued", updated_at: new Date().toISOString() })
+    .update({ status: sampleQueued, updated_at: new Date().toISOString() })
     .eq("id", leadId);
 
   const jobId = await createGenerationJob({
@@ -86,9 +88,10 @@ export async function POST(_request: Request, { params }: Params) {
   });
 
   if (!jobId) {
+    const qualified: LeadStatus = "qualified";
     await admin
       .from("leads")
-      .update({ status: "qualified", updated_at: new Date().toISOString() })
+      .update({ status: qualified, updated_at: new Date().toISOString() })
       .eq("id", leadId);
     return NextResponse.json({ error: "Failed to create generation job (RunPod may be unconfigured)." }, { status: 500 });
   }

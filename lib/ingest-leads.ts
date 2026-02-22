@@ -13,6 +13,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { runMigrations } from "@/lib/run-migrations";
 import { passesFaceAndWaistUp } from "@/lib/image-quality";
+import type { LeadStatus } from "@/lib/db-enums";
 
 export type IngestLeadInput = {
   handle: string;
@@ -108,7 +109,7 @@ async function insertViaPg(row: {
   score: number;
   profile_url: string | null;
   notes: string | null;
-  status: string;
+  status: LeadStatus;
 }): Promise<{ ok: boolean; error?: string }> {
   const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) return { ok: false, error: "DATABASE_URL not set" };
@@ -199,7 +200,7 @@ export async function ingestLeads(
       (profileUrls && typeof profileUrls === "object" && Object.keys(profileUrls).length > 0);
     const sampleCount = samplePaths.length || (Array.isArray(lead.sampleUrls) ? lead.sampleUrls.length : 0);
     const score = scoreLead({ hasUserInfo, sampleCount });
-    const status = sampleCount >= MIN_SAMPLES_PER_LEAD && score >= 10 ? "qualified" : "imported";
+    const status: LeadStatus = sampleCount >= MIN_SAMPLES_PER_LEAD && score >= 10 ? "qualified" : "imported";
     const minimalRow = {
       source,
       handle,

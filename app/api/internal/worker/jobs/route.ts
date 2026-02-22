@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireWorkerSecret } from "@/lib/worker-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import type { GenerationJobStatus } from "@/lib/db-enums";
 
 /**
  * GET: List pending training_jobs and generation_jobs for the worker.
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
     reference_image_path: string;
     lora_model_reference: string | null;
     controlnet_input_path: string | null;
-    status: string;
+    status: GenerationJobStatus;
     job_type: string;
     lead_id: string | null;
   }>;

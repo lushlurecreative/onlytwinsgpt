@@ -6,6 +6,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getScenePresetByKey } from "@/lib/scene-presets";
 import { dispatchGenerationJobToRunPod } from "@/lib/runpod";
+import type { GenerationJobStatus } from "@/lib/db-enums";
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 300_000; // 5 min per job
@@ -75,7 +76,7 @@ export async function createGenerationJob(input: CreateGenerationJobInput): Prom
       generation_request_id: input.generation_request_id ?? null,
       job_type: jobType,
       lead_id: input.lead_id ?? null,
-      status: "pending",
+      status: "pending" as GenerationJobStatus,
     })
     .select("id")
     .single();
@@ -101,7 +102,7 @@ export async function createGenerationJob(input: CreateGenerationJobInput): Prom
 
 export async function getGenerationJobStatus(
   jobId: string
-): Promise<{ status: string; output_path: string | null } | null> {
+): Promise<{ status: GenerationJobStatus; output_path: string | null } | null> {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
     .from("generation_jobs")
@@ -109,7 +110,7 @@ export async function getGenerationJobStatus(
     .eq("id", jobId)
     .single();
   if (error || !data) return null;
-  return { status: data.status as string, output_path: (data.output_path as string) ?? null };
+  return { status: data.status as GenerationJobStatus, output_path: (data.output_path as string) ?? null };
 }
 
 export async function pollGenerationJobUntilDone(jobId: string): Promise<{
