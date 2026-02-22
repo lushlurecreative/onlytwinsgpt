@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-type Subject = {
+export type SubjectRow = {
   id: string;
   user_id: string;
   label: string | null;
@@ -13,9 +13,9 @@ type Subject = {
   updated_at: string;
 };
 
-type AdminSubjectsClientProps = { initialSubjects: Subject[] };
+type Props = { initialSubjects: SubjectRow[] };
 
-export default function AdminSubjectsClient({ initialSubjects }: AdminSubjectsClientProps) {
+export default function AdminSubjectsSection({ initialSubjects }: Props) {
   const [subjects, setSubjects] = useState(initialSubjects);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -56,13 +56,16 @@ export default function AdminSubjectsClient({ initialSubjects }: AdminSubjectsCl
   }
 
   return (
-    <div style={{ marginTop: 24 }}>
+    <div>
+      <h3 style={{ marginTop: 0, marginBottom: 8 }}>Subject (Vault / consent)</h3>
+      <p className="muted" style={{ marginBottom: 12 }}>
+        Approve or revoke consent for this customer&apos;s subject (twin).
+      </p>
       {error && <p style={{ color: "red", marginBottom: 16 }}>{error}</p>}
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ textAlign: "left", borderBottom: "2px solid #eee" }}>
             <th style={{ padding: 8 }}>ID</th>
-            <th style={{ padding: 8 }}>User</th>
             <th style={{ padding: 8 }}>Label</th>
             <th style={{ padding: 8 }}>Consent</th>
             <th style={{ padding: 8 }}>Signed</th>
@@ -73,7 +76,6 @@ export default function AdminSubjectsClient({ initialSubjects }: AdminSubjectsCl
           {subjects.map((s) => (
             <tr key={s.id} style={{ borderBottom: "1px solid #eee" }}>
               <td style={{ padding: 8, fontSize: 12 }}>{s.id.slice(0, 8)}…</td>
-              <td style={{ padding: 8, fontSize: 12 }}>{s.user_id.slice(0, 8)}…</td>
               <td style={{ padding: 8 }}>{s.label || "—"}</td>
               <td style={{ padding: 8 }}><code>{s.consent_status}</code></td>
               <td style={{ padding: 8, fontSize: 12 }}>
@@ -106,7 +108,7 @@ export default function AdminSubjectsClient({ initialSubjects }: AdminSubjectsCl
           ))}
         </tbody>
       </table>
-      {subjects.length === 0 && <p className="muted">No subjects.</p>}
+      {subjects.length === 0 && <p className="muted">No subject for this customer.</p>}
     </div>
   );
 }

@@ -46,7 +46,6 @@ function LoginPageInner() {
       <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>
         <BrandName /> Login
       </h1>
-      <p>Redirect after login: <code>{redirectTo}</code></p>
 
       <label style={{ display: "block", marginBottom: 8 }}>Email</label>
       <input

@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: '.',
-  testMatch: 'test-upload-e2e.spec.ts',
+  testMatch: ['test-upload-e2e.spec.ts', 'test-feed-gating.spec.ts'],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 0,

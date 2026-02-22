@@ -26,7 +26,9 @@ type RequestRow = {
 type SignedAsset = { path: string; signedUrl: string | null; error?: string };
 type AssetsResponse = { requestId: string; samples: SignedAsset[]; outputs: SignedAsset[] };
 
-export default function AdminGenerationRequestsClient() {
+type Props = { workspaceId: string };
+
+export default function AdminGenerationRequestsSection({ workspaceId }: Props) {
   const [rows, setRows] = useState<RequestRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -50,7 +52,7 @@ export default function AdminGenerationRequestsClient() {
   >({});
 
   async function load() {
-    const res = await fetch("/api/admin/generation-requests");
+    const res = await fetch(`/api/admin/generation-requests?user_id=${encodeURIComponent(workspaceId)}`);
     const json = (await res.json().catch(() => ({}))) as { requests?: RequestRow[]; error?: string };
     if (!res.ok) {
       setMessage(json.error ?? "Failed to load requests");
@@ -63,7 +65,7 @@ export default function AdminGenerationRequestsClient() {
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [workspaceId]);
 
   useEffect(() => {
     const needsPolling = rows.some((r) => r.status === "generating");
@@ -227,8 +229,8 @@ export default function AdminGenerationRequestsClient() {
   return (
     <div>
       <div className="card">
-        <h2 style={{ marginTop: 0 }}>Generation Requests</h2>
-        <p className="muted">This is your primary admin workflow: review samples, approve, generate.</p>
+        <h3 style={{ marginTop: 0 }}>Generation requests</h3>
+        <p className="muted">Review samples, approve, and generate for this customer.</p>
         <div className="tabs" style={{ marginTop: 10 }}>
           {(
             [
@@ -259,10 +261,10 @@ export default function AdminGenerationRequestsClient() {
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 12 }}>
           <input
             className="input"
-            placeholder="Search by user id, request id, scene, status..."
+            placeholder="Search by request id, scene, status..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            style={{ maxWidth: 520 }}
+            style={{ maxWidth: 400 }}
           />
           <button className="btn btn-ghost" onClick={() => void load()} type="button">
             Refresh
@@ -273,7 +275,7 @@ export default function AdminGenerationRequestsClient() {
         </div>
         {message ? <p>{message}</p> : null}
         {loading ? <p>Loading...</p> : null}
-        {!loading && rows.length === 0 ? <p>No requests yet.</p> : null}
+        {!loading && rows.length === 0 ? <p className="muted">No generation requests for this customer.</p> : null}
       </div>
 
       {!loading && rows.length > 0 ? (
@@ -284,7 +286,6 @@ export default function AdminGenerationRequestsClient() {
                 <th>Images</th>
                 <th>Status</th>
                 <th>Progress</th>
-                <th>User</th>
                 <th>Scene</th>
                 <th>Mode</th>
                 <th>Created</th>
@@ -305,9 +306,6 @@ export default function AdminGenerationRequestsClient() {
                       </td>
                       <td>
                         {row.progress_done}/{row.progress_total}
-                      </td>
-                      <td>
-                        <code>{row.user_id}</code>
                       </td>
                       <td>{row.scene_preset}</td>
                       <td>{(row.content_mode ?? "sfw").toUpperCase()}</td>
@@ -551,4 +549,3 @@ export default function AdminGenerationRequestsClient() {
     </div>
   );
 }
-

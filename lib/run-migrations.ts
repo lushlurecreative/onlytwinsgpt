@@ -96,6 +96,10 @@ const MIGRATIONS = [
   `do $$ begin if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'generation_requests') then alter table public.generation_jobs add constraint generation_jobs_generation_request_id_fkey foreign key (generation_request_id) references public.generation_requests(id) on delete set null; end if; exception when duplicate_object then null; end $$;`,
 
   `create table if not exists public.app_settings ( key text primary key, value text not null default '', updated_at timestamptz not null default timezone('utc', now()) );`,
+  `alter table public.profiles add column if not exists role text not null default 'consumer' check (role in ('creator', 'consumer'));`,
+  `alter table public.profiles add column if not exists suspended_at timestamptz null;`,
+  `create table if not exists public.consent_records ( id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, subject_id uuid null references public.subjects(id) on delete set null, document_type text null, storage_path text null, signed_at timestamptz null, created_at timestamptz not null default timezone('utc', now()), updated_at timestamptz not null default timezone('utc', now()) );`,
+  `create index if not exists consent_records_user_id_idx on public.consent_records(user_id);`,
   `alter table public.training_jobs add column if not exists runpod_job_id text null;`,
   `alter table public.generation_jobs add column if not exists runpod_job_id text null;`,
   `create index if not exists training_jobs_runpod_job_id_idx on public.training_jobs(runpod_job_id) where runpod_job_id is not null;`,

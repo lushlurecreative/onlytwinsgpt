@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
+import { getUserRole, isSuspended } from "@/lib/roles";
 import VaultClient from "./VaultClient";
 
 export default async function VaultPage() {
@@ -10,6 +11,15 @@ export default async function VaultPage() {
 
   if (!user) {
     redirect("/login?redirectTo=/vault");
+  }
+
+  if (await isSuspended(supabase, user.id)) {
+    redirect("/suspended");
+  }
+
+  const role = await getUserRole(supabase, user.id);
+  if (role !== "creator") {
+    redirect("/onboarding/creator?from=vault");
   }
 
   return (

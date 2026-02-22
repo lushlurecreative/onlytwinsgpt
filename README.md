@@ -1,24 +1,8 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a [Next.js](https://nextjs.org) project for ONLYTWINS.
 
-## Getting Started
+## How this app runs
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**The app runs on Vercel only.** You do not run it on your computer. Set environment variables in Vercel (see [SETUP.md](SETUP.md)), push to `main` (or deploy from the Vercel dashboard), and use your live URL. No local run is required.
 
 ## Learn More
 
@@ -44,7 +28,7 @@ Image generation uses a **RunPod worker** (FLUX + LoRA + IP-Adapter + ControlNet
 
 - **App env:** Set `WORKER_SECRET` (shared secret). The worker calls internal APIs with `Authorization: Bearer {WORKER_SECRET}` or `X-Worker-Secret`.
 - **Worker env:** See [worker/README.md](worker/README.md). Required: `WORKER_SECRET`, `APP_URL`, `SUPABASE_SERVICE_ROLE_KEY`, Supabase URL. Optional: `DATABASE_URL` for direct Postgres.
-- **Supabase:** Ensure the **model_artifacts** bucket exists (private). After deploy, call `POST /api/internal/setup/storage` with `Authorization: Bearer {WORKER_SECRET}`, or run `WORKER_SECRET=... APP_URL=... npx tsx scripts/ensure-model-artifacts-bucket.ts`. See [worker/README.md](worker/README.md) runbook for full steps.
+- **Supabase:** Ensure the **model_artifacts** bucket exists (private). After deploy, call `POST /api/internal/setup/storage` with `Authorization: Bearer {WORKER_SECRET}` from your deployment. See [worker/README.md](worker/README.md) runbook for full steps.
 
 Without the worker running and `WORKER_SECRET` set, lead generate-sample and generation-requests image generation will time out or fail.
 

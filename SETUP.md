@@ -1,6 +1,8 @@
 # ONLYTWINS – Setup (do this once)
 
-Set these so **scrape**, **ingest**, and **AI sample generation** work. The app cannot set your accounts for you; follow the steps below.
+**This app runs entirely on Vercel.** You do not need to run anything on your computer. Set environment variables in Vercel, push (or deploy), and use the live site.
+
+Set the items below so **scrape**, **ingest**, and **AI sample generation** work. The app cannot set your accounts for you; follow the steps below.
 
 ---
 

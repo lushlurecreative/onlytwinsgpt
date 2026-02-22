@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import AdminGenerationRequestsSection from "./AdminGenerationRequestsSection";
+import AdminSubjectsSection, { type SubjectRow } from "./AdminSubjectsSection";
 
 type Subscription = {
   status: string;
@@ -30,25 +32,79 @@ type FailureRow = {
   lastError?: string;
 };
 
+type PostRow = {
+  id: string;
+  caption: string | null;
+  is_published: boolean;
+  visibility: string;
+  created_at: string;
+};
+
 type Props = {
   workspaceId: string;
+  subjectId: string | null;
   subscription: Subscription;
   training: TrainingInfo;
   generations: GenerationRow[];
   assets: { path: string; createdAt: string; requestId?: string }[];
   failures: FailureRow[];
+  suspendedAt: string | null;
+  posts: PostRow[];
+  subjectsForVault: SubjectRow[];
 };
 
 export default function AdminCustomerDetailClient({
   workspaceId,
+  subjectId,
   subscription,
   training,
   generations,
   assets,
   failures,
+  suspendedAt,
+  posts,
+  subjectsForVault,
 }: Props) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
+  const [suspended, setSuspended] = useState(!!suspendedAt);
+  const [postList, setPostList] = useState(posts);
+
+  async function toggleSuspend() {
+    setMessage("");
+    try {
+      const res = await fetch(`/api/admin/users/${workspaceId}/suspend`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ suspended: !suspended }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok) {
+        setMessage(data.error ?? "Failed");
+        return;
+      }
+      setSuspended(!suspended);
+      setMessage(suspended ? "User unsuspended." : "User suspended.");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Failed");
+    }
+  }
+
+  async function unpublishPost(postId: string) {
+    setMessage("");
+    try {
+      const res = await fetch(`/api/admin/posts/${postId}`, { method: "DELETE" });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok) {
+        setMessage(data.error ?? "Failed to unpublish");
+        return;
+      }
+      setPostList((prev) => prev.map((p) => (p.id === postId ? { ...p, is_published: false } : p)));
+      setMessage("Post unpublished.");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Failed");
+    }
+  }
 
   async function retryJob(type: "training" | "generation", id: string) {
     setLoading(id);
@@ -86,6 +142,41 @@ export default function AdminCustomerDetailClient({
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       {message ? <p style={{ margin: 0, color: "var(--color-muted)" }}>{message}</p> : null}
 
+      {/* Moderation */}
+      <div>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Moderation</h3>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            type="button"
+            className={suspended ? "btn btn-ghost" : "btn"}
+            style={suspended ? undefined : { color: "var(--error, #e5534b)" }}
+            onClick={() => void toggleSuspend()}
+          >
+            {suspended ? "Unsuspend user" : "Suspend user"}
+          </button>
+          {suspended ? <span className="muted">User is suspended and cannot access creator areas.</span> : null}
+        </div>
+        {postList.length > 0 ? (
+          <div style={{ marginTop: 12 }}>
+            <h4 style={{ marginBottom: 8 }}>Posts (content removal)</h4>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {postList.map((p) => (
+                <li key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span className="muted" style={{ fontSize: 13 }}>
+                    {p.created_at.slice(0, 10)} · {p.visibility} · {p.is_published ? "Published" : "Unpublished"}
+                  </span>
+                  {p.is_published ? (
+                    <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => void unpublishPost(p.id)}>
+                      Unpublish
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+
       {/* Section A: Subscription */}
       <div>
         <h3 style={{ marginTop: 0, marginBottom: 8 }}>Subscription</h3>
@@ -110,6 +201,39 @@ export default function AdminCustomerDetailClient({
           </tbody>
         </table>
       </div>
+
+      {/* Subject (Vault) / consent */}
+      <div>
+        <AdminSubjectsSection initialSubjects={subjectsForVault} />
+      </div>
+
+      {/* Identity verification (Phase D) */}
+      {subjectId ? (
+        <div>
+          <h3 style={{ marginTop: 0, marginBottom: 8 }}>Identity verification</h3>
+          <p className="muted" style={{ marginBottom: 8 }}>Approve identity for this subject so training can proceed.</p>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={async () => {
+              setMessage("");
+              try {
+                const res = await fetch(`/api/admin/subjects/${subjectId}/verify-identity`, { method: "POST" });
+                const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+                if (!res.ok) {
+                  setMessage(data.error ?? "Failed");
+                  return;
+                }
+                setMessage("Identity approved.");
+              } catch (e) {
+                setMessage(e instanceof Error ? e.message : "Failed");
+              }
+            }}
+          >
+            Approve identity
+          </button>
+        </div>
+      ) : null}
 
       {/* Section B: Dataset + Training */}
       <div>
@@ -150,9 +274,9 @@ export default function AdminCustomerDetailClient({
         )}
       </div>
 
-      {/* Section C: Generations */}
+      {/* Section C: Generations (summary) + full generation requests section */}
       <div>
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Generations</h3>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Generations (summary)</h3>
         {generations.length === 0 ? (
           <p className="muted">No generation jobs.</p>
         ) : (
@@ -196,6 +320,10 @@ export default function AdminCustomerDetailClient({
             </table>
           </div>
         )}
+      </div>
+
+      <div>
+        <AdminGenerationRequestsSection workspaceId={workspaceId} />
       </div>
 
       {/* Section D: Assets (Vault) */}

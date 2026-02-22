@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
+import { getUserRole, isSuspended } from "@/lib/roles";
 
 export default async function CreatorDashboardPage() {
   const supabase = await createClient();
@@ -12,6 +13,15 @@ export default async function CreatorDashboardPage() {
 
   if (!user) {
     redirect("/login?redirectTo=/creator");
+  }
+
+  if (await isSuspended(supabase, user.id)) {
+    redirect("/suspended");
+  }
+
+  const role = await getUserRole(supabase, user.id);
+  if (role !== "creator") {
+    redirect("/onboarding/creator?from=creator");
   }
 
   const [{ count: totalPosts }, { count: publishedPosts }, { count: subscriberOnlyPosts }] =
@@ -120,10 +130,12 @@ export default async function CreatorDashboardPage() {
         </article>
       </div>
 
-      <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Link href="/upload">Open Upload Workspace</Link>
+      <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+        <Link href="/vault">Open Vault (uploads &amp; generation)</Link>
         <Link href={`/feed/creator/${user.id}`}>Open Creator Feed View</Link>
-        <Link href="/onboarding/creator">Open Onboarding Checklist</Link>
+        <Link href="/billing">Billing &amp; subscribers</Link>
+        <Link href="/start">My subscriptions</Link>
+        <Link href="/onboarding/creator">Onboarding checklist</Link>
         <Link href="/feed">Open Public Feed</Link>
       </div>
 

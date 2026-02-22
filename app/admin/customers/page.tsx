@@ -126,6 +126,9 @@ export default async function AdminCustomersPage() {
   return (
     <section>
       <h2 style={{ marginTop: 0 }}>Customers</h2>
+      <p className="muted" style={{ marginTop: 0, marginBottom: 12 }}>
+        New subscribers appear here after Stripe sends a successful webhook. If they don&apos;t show, check Stripe → Developers → Webhooks → your endpoint → Recent deliveries.
+      </p>
       <div style={{ display: "flex", gap: 24, marginBottom: 16, flexWrap: "wrap" }}>
         <span>Active Customers: <strong>{summary.activeCustomers}</strong></span>
         <span>New This Week: <strong>{summary.newThisWeek}</strong></span>

@@ -30,6 +30,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
     profileRes,
     subjectRes,
     genReqsRes,
+    postsRes,
   ] = await Promise.all([
     supabase
       .from("subscriptions")
@@ -37,20 +38,23 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
       .eq("creator_id", serviceCreatorId)
       .eq("subscriber_id", workspaceId)
       .maybeSingle(),
-    supabase.from("profiles").select("id, full_name").eq("id", workspaceId).maybeSingle(),
-    supabase.from("subjects").select("id").eq("user_id", workspaceId).maybeSingle(),
+    supabase.from("profiles").select("id, full_name, suspended_at").eq("id", workspaceId).maybeSingle(),
+    supabase.from("subjects").select("id, user_id, label, consent_status, consent_signed_at, identity_verified_at, created_at, updated_at").eq("user_id", workspaceId),
     supabase
       .from("generation_requests")
       .select("id, scene_preset, status, created_at, output_paths")
       .eq("user_id", workspaceId)
       .order("created_at", { ascending: false })
       .limit(100),
+    supabase.from("posts").select("id, caption, is_published, visibility, created_at").eq("creator_id", workspaceId).order("created_at", { ascending: false }).limit(50),
   ]);
 
   const sub = subRes.data as { status: string; stripe_price_id: string | null; current_period_end: string | null } | null;
-  const profile = profileRes.data as { full_name?: string | null } | null;
-  const subject = subjectRes.data as { id: string } | null;
+  const profile = profileRes.data as { full_name?: string | null; suspended_at?: string | null } | null;
+  const subjectsList = (subjectRes.data ?? []) as { id: string; user_id: string; label: string | null; consent_status: string; consent_signed_at: string | null; identity_verified_at: string | null; created_at: string; updated_at: string }[];
+  const subject = subjectsList[0] ?? null;
   const genReqs = (genReqsRes.data ?? []) as { id: string; scene_preset: string; status: string; created_at: string; output_paths: string[] }[];
+  const posts = (postsRes.data ?? []) as { id: string; caption: string | null; is_published: boolean; visibility: string; created_at: string }[];
 
   let datasetStatus = "not_ready";
   let trainingStatus = "Not Trained";
@@ -108,6 +112,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
       </p>
       <AdminCustomerDetailClient
         workspaceId={workspaceId}
+        subjectId={subject?.id ?? null}
         subscription={sub ? { status: sub.status, stripe_price_id: sub.stripe_price_id, current_period_end: sub.current_period_end } : null}
         training={{
           datasetStatus,
@@ -118,6 +123,9 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
         generations={generations}
         assets={assets}
         failures={failures}
+        suspendedAt={profile?.suspended_at ?? null}
+        posts={posts}
+        subjectsForVault={subjectsList}
       />
     </section>
   );

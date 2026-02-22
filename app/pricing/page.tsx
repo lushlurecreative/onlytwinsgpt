@@ -1,9 +1,17 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase-server";
 import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BrandName from "@/app/components/BrandName";
 import CheckoutNowButton from "./CheckoutNowButton";
 import BitcoinCheckoutButton from "./BitcoinCheckoutButton";
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/login?redirectTo=/pricing");
+  }
+
   return (
     <div>
       <section className="hero">
