@@ -2,7 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { checkRateLimit, getClientIpFromHeaders } from "@/lib/rate-limit";
 import { RATE_LIMITS } from "@/lib/security-config";
-import { isAuthBypassed } from "@/lib/auth-bypass";
 
 const PROTECTED_ROUTES = ["/upload", "/admin"];
 
@@ -26,10 +25,6 @@ export async function proxy(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const ip = getClientIpFromHeaders(request.headers);
-
-  if (isAuthBypassed()) {
-    return response;
-  }
 
   if (pathname === "/login") {
     const rl = checkRateLimit(

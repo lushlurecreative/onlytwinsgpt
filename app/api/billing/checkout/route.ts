@@ -12,7 +12,6 @@ import {
 } from "@/lib/package-plans";
 import { getServiceCreatorId } from "@/lib/service-creator";
 import { isUserSuspended } from "@/lib/suspend";
-import { getBypassUserId, isAuthBypassed } from "@/lib/auth-bypass";
 import type { Stripe } from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -97,8 +96,7 @@ export async function POST(request: Request) {
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin ?? "http://localhost:3000";
 
-    const isBypassUser = isAuthBypassed() && user?.id === getBypassUserId();
-    const isGuestCheckout = !!body.plan && (userError || !user || isBypassUser);
+    const isGuestCheckout = !!body.plan && (userError || !user);
     if (!isGuestCheckout) {
       if (userError || !user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

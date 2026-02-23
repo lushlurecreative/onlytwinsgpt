@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function PricingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  // Do not redirect: show pricing to everyone; checkout API will return 401 if not signed in, then button sends to login.
+  // Pricing is public; guest checkout allowed (no login required before Stripe).
 
   return (
     <div>
