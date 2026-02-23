@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin ?? "http://localhost:3000";
 
-    const isGuestCheckout = !!body.plan && !!body.leadId?.trim() && (userError || !user);
+    const isGuestCheckout = !!body.plan && (userError || !user);
     if (!isGuestCheckout) {
       if (userError || !user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

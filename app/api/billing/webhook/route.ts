@@ -200,7 +200,7 @@ export async function POST(request: Request) {
           });
           return NextResponse.json({ error: rpcError.message }, { status: 500 });
         }
-      } else if (leadId && creatorId && !subscriberId) {
+      } else if (creatorId && !subscriberId) {
         const customerEmail = (session.customer_email ?? session.customer_details?.email) as string | undefined;
         const stripeCustomerId = typeof session.customer === "string" ? session.customer : null;
         if (customerEmail?.trim()) {
@@ -220,23 +220,24 @@ export async function POST(request: Request) {
                   { id: existing.id, stripe_customer_id: stripeCustomerId, onboarding_pending: true },
                   { onConflict: "id" }
                 );
-                const { error: rpcErr } = await supabaseAdmin.rpc("convert_lead_to_customer", {
-                  p_lead_id: leadId,
-                  p_subscriber_id: existing.id,
-                  p_creator_id: creatorId,
-                  p_stripe_subscription_id: stripeSubscriptionId,
-                  p_plan: plan,
-                });
-                if (rpcErr) {
-                  logError("billing_webhook_convert_lead_rpc_failed", rpcErr, { stripeEventId: event.id, leadId });
-                  return NextResponse.json({ error: rpcErr.message }, { status: 500 });
+                if (leadId) {
+                  const { error: rpcErr } = await supabaseAdmin.rpc("convert_lead_to_customer", {
+                    p_lead_id: leadId,
+                    p_subscriber_id: existing.id,
+                    p_creator_id: creatorId,
+                    p_stripe_subscription_id: stripeSubscriptionId,
+                    p_plan: plan,
+                  });
+                  if (rpcErr) {
+                    logError("billing_webhook_convert_lead_rpc_failed", rpcErr, { stripeEventId: event.id, leadId });
+                    return NextResponse.json({ error: rpcErr.message }, { status: 500 });
+                  }
                 }
               }
             } else {
-              logError("billing_webhook_create_user_failed", createError, { stripeEventId: event.id, leadId });
+              logError("billing_webhook_create_user_failed", createError, { stripeEventId: event.id });
               await sendAlert("billing_webhook_create_user_failed", {
                 stripeEventId: event.id,
-                leadId,
                 message: (createError as { message?: string }).message ?? "Unknown",
               });
               return NextResponse.json({ error: (createError as { message?: string }).message ?? "Create user failed" }, { status: 500 });
@@ -246,21 +247,23 @@ export async function POST(request: Request) {
               { id: newUser.user.id, stripe_customer_id: stripeCustomerId, onboarding_pending: true },
               { onConflict: "id" }
             );
-            const { error: rpcErr } = await supabaseAdmin.rpc("convert_lead_to_customer", {
-              p_lead_id: leadId,
-              p_subscriber_id: newUser.user.id,
-              p_creator_id: creatorId,
-              p_stripe_subscription_id: stripeSubscriptionId,
-              p_plan: plan,
-            });
-            if (rpcErr) {
-              logError("billing_webhook_convert_lead_rpc_failed", rpcErr, { stripeEventId: event.id, leadId });
-              await sendAlert("billing_webhook_convert_lead_rpc_failed", {
-                stripeEventId: event.id,
-                leadId,
-                message: rpcErr.message,
+            if (leadId) {
+              const { error: rpcErr } = await supabaseAdmin.rpc("convert_lead_to_customer", {
+                p_lead_id: leadId,
+                p_subscriber_id: newUser.user.id,
+                p_creator_id: creatorId,
+                p_stripe_subscription_id: stripeSubscriptionId,
+                p_plan: plan,
               });
-              return NextResponse.json({ error: rpcErr.message }, { status: 500 });
+              if (rpcErr) {
+                logError("billing_webhook_convert_lead_rpc_failed", rpcErr, { stripeEventId: event.id, leadId });
+                await sendAlert("billing_webhook_convert_lead_rpc_failed", {
+                  stripeEventId: event.id,
+                  leadId,
+                  message: rpcErr.message,
+                });
+                return NextResponse.json({ error: rpcErr.message }, { status: 500 });
+              }
             }
           }
         }
