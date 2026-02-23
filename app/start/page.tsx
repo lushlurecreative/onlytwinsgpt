@@ -63,16 +63,6 @@ export default async function StartPage() {
           Open Training Vault
         </Link>
       </section>
-
-      <section style={{ marginTop: 24 }}>
-        <h2 style={{ marginBottom: 8 }}>If you are an Admin</h2>
-        <p style={{ marginBottom: 12 }}>
-          Review leads and run generation.
-        </p>
-        <Link href="/admin/leads" className="btn btn-secondary" style={{ display: "inline-block" }}>
-          Open Admin
-        </Link>
-      </section>
     </main>
   );
 }
