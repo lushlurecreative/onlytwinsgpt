@@ -97,16 +97,11 @@ export async function POST(request: Request) {
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin ?? "http://localhost:3000";
 
-    const isGuestCheckout = !!body.plan && (userError || !user);
+    const isBypassUser = isAuthBypassed() && user?.id === getBypassUserId();
+    const isGuestCheckout = !!body.plan && (userError || !user || isBypassUser);
     if (!isGuestCheckout) {
       if (userError || !user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      if (isAuthBypassed() && user.id === getBypassUserId()) {
-        return NextResponse.json(
-          { error: "Create an account or sign in to subscribe." },
-          { status: 401 }
-        );
       }
       if (await isUserSuspended(admin, user.id)) {
         return NextResponse.json({ error: "Account access is suspended." }, { status: 403 });
