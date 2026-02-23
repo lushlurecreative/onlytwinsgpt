@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { getServiceCreatorId } from "@/lib/service-creator";
 
 export async function POST(request: Request) {
   try {
@@ -55,8 +54,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const sessionSubscriberId = (session.metadata?.subscriber_id as string)?.trim() || null;
-
     const supabaseAdmin = getSupabaseAdmin();
     const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
     const authUser = listData?.users?.find(
@@ -66,41 +63,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "No account found for this email" },
         { status: 400 }
-      );
-    }
-
-    const serviceCreatorId = getServiceCreatorId();
-    const { data: sub } = await supabaseAdmin
-      .from("subscriptions")
-      .select("id")
-      .eq("subscriber_id", authUser.id)
-      .eq("creator_id", serviceCreatorId)
-      .maybeSingle();
-
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .select("id, stripe_customer_id, full_name")
-      .eq("id", authUser.id)
-      .maybeSingle();
-
-    if (profileError && !sub) {
-      return NextResponse.json(
-        { error: "Could not verify account state" },
-        { status: 500 }
-      );
-    }
-
-    const p = profile as { stripe_customer_id?: string } | null;
-    const hasStripeCustomerId = !!p?.stripe_customer_id;
-    const isSessionForThisUser = sessionSubscriberId === authUser.id;
-    const allowed =
-      hasStripeCustomerId ||
-      !!sub ||
-      isSessionForThisUser;
-    if (!allowed) {
-      return NextResponse.json(
-        { error: "This account is not eligible for onboarding" },
-        { status: 403 }
       );
     }
 
