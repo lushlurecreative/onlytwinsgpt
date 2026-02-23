@@ -69,22 +69,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .select("id, stripe_customer_id, onboarding_pending, full_name")
-      .eq("id", authUser.id)
-      .maybeSingle();
-
-    if (profileError) {
-      return NextResponse.json(
-        { error: "Could not verify account state" },
-        { status: 500 }
-      );
-    }
-
-    const p = profile as { stripe_customer_id?: string; onboarding_pending?: boolean } | null;
-    const hasStripeCustomerId = !!p?.stripe_customer_id;
-    const onboardingPending = p?.onboarding_pending === true;
     const serviceCreatorId = getServiceCreatorId();
     const { data: sub } = await supabaseAdmin
       .from("subscriptions")
@@ -93,9 +77,24 @@ export async function POST(request: Request) {
       .eq("creator_id", serviceCreatorId)
       .maybeSingle();
 
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("id, stripe_customer_id, full_name")
+      .eq("id", authUser.id)
+      .maybeSingle();
+
+    if (profileError && !sub) {
+      return NextResponse.json(
+        { error: "Could not verify account state" },
+        { status: 500 }
+      );
+    }
+
+    const p = profile as { stripe_customer_id?: string } | null;
+    const hasStripeCustomerId = !!p?.stripe_customer_id;
     const isSessionForThisUser = sessionSubscriberId === authUser.id;
     const allowed =
-      (hasStripeCustomerId && onboardingPending) ||
+      hasStripeCustomerId ||
       !!sub ||
       isSessionForThisUser;
     if (!allowed) {
@@ -109,12 +108,11 @@ export async function POST(request: Request) {
       password,
     });
 
-    const updates: { full_name?: string | null; onboarding_pending?: boolean } = {
-      onboarding_pending: false,
-    };
+    const updates: { full_name?: string | null } = {};
     if (displayName !== null) updates.full_name = displayName || null;
-
-    await supabaseAdmin.from("profiles").update(updates).eq("id", authUser.id);
+    if (Object.keys(updates).length > 0) {
+      await supabaseAdmin.from("profiles").update(updates).eq("id", authUser.id);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
