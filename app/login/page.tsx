@@ -13,15 +13,24 @@ function LoginPageInner() {
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<string>("");
 
+  function doRedirect() {
+    const url = redirectTo + (redirectTo.includes("?") ? "&" : "?") + "_=" + Date.now();
+    window.location.replace(url);
+  }
+
   async function signUp() {
     setMsg("Working...");
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) {
       setMsg(`❌ ${error.message}`);
       return;
     }
     setMsg("✅ Signup OK.");
-    window.location.href = redirectTo;
+    if (data.session) {
+      setTimeout(doRedirect, 400);
+    } else {
+      setMsg("✅ Check your email to confirm, then sign in.");
+    }
   }
 
   async function signIn() {
@@ -32,7 +41,7 @@ function LoginPageInner() {
       return;
     }
     setMsg("✅ Signed in.");
-    window.location.href = redirectTo;
+    setTimeout(doRedirect, 400);
   }
 
   async function signOut() {

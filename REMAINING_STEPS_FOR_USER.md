@@ -6,6 +6,20 @@ These tasks require **you** to perform actions in a browser, in Stripe, or with 
 
 ---
 
+## What's left for 100% (plain English)
+
+Only **three** things must be done on your side:
+
+| # | What | Where to do it |
+|---|------|----------------|
+| **A** | Fix "presets does not exist" (if you ever see that error) | Supabase: paste the SQL from **Section 6** below into the SQL Editor and run it once. |
+| **B** | Tell the website how to talk to RunPod | Vercel: add two variables (`RUNPOD_API_KEY`, `RUNPOD_ENDPOINT_ID`). See **Section 3** for click-by-click. |
+| **C** | Make sure payments create customers in the app | Stripe: webhook URL and secret correct; then do one test checkout and confirm the customer appears in Admin → Customers. See **Section 1** and the Stripe checklist. |
+
+After A (if needed), B, and C are done, the site can run end-to-end: scrape → qualify → samples → outreach → payment → customer in the app.
+
+---
+
 ## 1. Run one live Stripe checkout and confirm webhook + entitlement
 
 **Why:** Ensures real payments and webhooks work in your environment.
@@ -35,15 +49,20 @@ These tasks require **you** to perform actions in a browser, in Stripe, or with 
 
 ## 3. RunPod: endpoint and env vars (click-by-click)
 
-**Why:** Image generation runs on RunPod; the app needs the endpoint and key.
+**Why:** The site sends image and training jobs to RunPod. Without these two values in Vercel, the app cannot talk to your pod.
 
-If you **already have a pod** (e.g. onlytwins-worker), skip creating a new one and use these steps:
+**If you already have a pod (e.g. onlytwins-worker):**
 
-1. In RunPod, open **Pods** and click your pod (e.g. onlytwins-worker).
-2. Copy the **Pod ID** (e.g. from the pod name row or details; the ID may look like `vzinvqqhcrvuzq`). For RunPod Serverless, use the **Endpoint ID** from the Endpoints list instead.
-3. In RunPod go to **Settings** (or your profile) → **API Keys** → create or copy your API key.
-4. In Vercel → project → **Settings** → **Environment Variables**, add `RUNPOD_API_KEY` and `RUNPOD_ENDPOINT_ID` (use the Pod ID or Endpoint ID from step 2).
-5. Save and redeploy.
+1. Open **runpod.io** in your browser and log in.
+2. Click **Pods** in the left sidebar.
+3. Click your pod name (e.g. **onlytwins-worker**).
+4. On the pod page, find the **Pod ID** (it looks like `vzinvqqhcrvuzq` — under the name or in the URL). Copy it.
+5. In RunPod, click **Settings** (gear or profile, top right) → **API Keys**. Copy your API key (or create one and copy it).
+6. Open **vercel.com** in a new tab → your OnlyTwins project.
+7. Click **Settings** → **Environment Variables**.
+8. Click **Add**. Key: `RUNPOD_API_KEY`. Value: paste the API key. Environment: Production. Save.
+9. Click **Add** again. Key: `RUNPOD_ENDPOINT_ID`. Value: paste the Pod ID from step 4. Environment: Production. Save.
+10. Click **Deployments** → **⋯** on the latest deployment → **Redeploy**.
 
 **If you need to create a new endpoint:**
 
@@ -184,11 +203,11 @@ where (select count(*) from public.presets) = 0;
 
 | Step | You do |
 |------|--------|
-| 1 | One live Stripe checkout + check webhook + subscription in app |
-| 2 | Check subscriber vs non-subscriber view of creator feed |
-| 3 | RunPod endpoint + set `RUNPOD_*` in Vercel and redeploy |
-| 4 | Add mind map/layout spec to repo or chat |
+| A | (If you see "presets does not exist") Run the SQL in Section 6 in Supabase SQL Editor once |
+| B | RunPod: add `RUNPOD_API_KEY` and `RUNPOD_ENDPOINT_ID` in Vercel (Section 3), then redeploy |
+| C | Stripe: one test checkout; confirm webhook 200 and customer in Admin → Customers (Section 1) |
+| 2 | (Optional) Check subscriber vs non-subscriber view of creator feed |
+| 4 | (Optional) Mind map is already in repo at docs/ONLYTWINS_MIND_MAP.md |
 | 5 | (Optional) Rotate any exposed secrets and update Vercel |
-| 6 | (If needed) Run presets SQL in Supabase when you see "presets does not exist" |
 
 For Stripe verification details, see [docs/STRIPE_VERIFICATION_CHECKLIST.md](docs/STRIPE_VERIFICATION_CHECKLIST.md).

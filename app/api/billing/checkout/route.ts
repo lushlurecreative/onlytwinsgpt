@@ -80,25 +80,11 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
     const stripe = getStripe();
+    const admin = getSupabaseAdmin();
     const {
       data: { user },
       error: userError,
     } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    // Require a real account for checkout; do not allow bypass user so payment is always tied to a real user.
-    if (isAuthBypassed() && user.id === getBypassUserId()) {
-      return NextResponse.json(
-        { error: "Create an account or sign in to subscribe." },
-        { status: 401 }
-      );
-    }
-    const admin = getSupabaseAdmin();
-    if (await isUserSuspended(admin, user.id)) {
-      return NextResponse.json({ error: "Account access is suspended." }, { status: 403 });
-    }
 
     let body: CheckoutBody = {};
     try {
@@ -108,31 +94,44 @@ export async function POST(request: Request) {
     }
 
     const creatorId = body.creatorId?.trim();
-    const customerEmail = user.email ?? undefined;
-
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin ?? "http://localhost:3000";
 
+    const isGuestCheckout = !!body.plan && !!body.leadId?.trim() && (userError || !user);
+    if (!isGuestCheckout) {
+      if (userError || !user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      if (isAuthBypassed() && user.id === getBypassUserId()) {
+        return NextResponse.json(
+          { error: "Create an account or sign in to subscribe." },
+          { status: 401 }
+        );
+      }
+      if (await isUserSuspended(admin, user.id)) {
+        return NextResponse.json({ error: "Account access is suspended." }, { status: 403 });
+      }
+    }
+
+    const customerEmail = user?.email ?? undefined;
+
     let session;
     if (body.plan) {
-      // Always use a price we create/store in the current Stripe account. Do not use env price IDs
-      // here so we never send a price from another account and never get "No such price".
       const planPriceId = await getOrCreatePriceIdForPlan(stripe, admin, body.plan);
       const isOneTime = body.plan === "single_batch";
-      const redirectPath = `/thank-you?payment=success&method=stripe&plan=${body.plan}`;
-      const successUrl = body.successUrl ?? `${baseUrl}${redirectPath}`;
+      const successUrl = body.successUrl ?? `${baseUrl}/welcome?session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = body.cancelUrl ?? `${baseUrl}/pricing?payment=cancel&method=stripe&plan=${body.plan}`;
       const serviceCreatorId = getServiceCreatorId();
       const metadata: Record<string, string> = {
         plan: body.plan,
         creator_id: serviceCreatorId,
-        subscriber_id: user.id,
       };
+      if (!isGuestCheckout && user) metadata.subscriber_id = user.id;
       if (body.leadId?.trim()) metadata.lead_id = body.leadId.trim();
 
       session = await stripe.checkout.sessions.create({
         mode: isOneTime ? "payment" : "subscription",
-        customer_email: customerEmail,
+        customer_email: isGuestCheckout ? undefined : customerEmail,
         line_items: [{ price: planPriceId, quantity: 1 }],
         success_url: successUrl,
         cancel_url: cancelUrl,
@@ -146,6 +145,9 @@ export async function POST(request: Request) {
             }),
       });
     } else {
+      if (!user) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
       const priceId = process.env.STRIPE_PRICE_ID;
       if (!priceId) {
         return NextResponse.json({ error: "STRIPE_PRICE_ID is not set" }, { status: 500 });

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 type HealthState = {
   status: "green" | "yellow" | "red";
   reason: string;
-  lastUpdated: string;
+  timestamp: string;
 };
 
 export default function AdminGlobalHealth() {
@@ -16,55 +16,39 @@ export default function AdminGlobalHealth() {
 
     async function load() {
       try {
-        const [workerRes, webhookRes] = await Promise.all([
-          fetch("/api/admin/worker/config"),
-          fetch("/api/admin/webhook-health"),
-        ]);
-
+        const res = await fetch("/api/admin/health");
         if (cancelled) return;
 
-        const worker = workerRes.ok ? await workerRes.json().catch(() => null) : null;
-        const webhook = webhookRes.ok ? await webhookRes.json().catch(() => null) : null;
+        if (!res.ok) {
+          setHealth({
+            status: "red",
+            reason: "Health check failed",
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
 
-        const workerOk = worker?.health?.ok !== false && !worker?.health?.error;
-        const workerConfigured = worker?.configured === true;
-        const stalePending = webhook?.summary?.stalePendingOver10m ?? 0;
-        const pending = webhook?.summary?.pending ?? 0;
-        const webhookWarning = webhook?.warning;
-
-        const critical: string[] = [];
-        const warning: string[] = [];
-
-        if (!workerOk && workerConfigured) critical.push("Worker unhealthy");
-        if (stalePending > 0) critical.push("Stripe webhook backlog");
-        if (webhookWarning && String(webhookWarning).toLowerCase().includes("missing"))
-          warning.push("Webhook table missing");
-
-        if (!workerConfigured) warning.push("Worker not configured");
-        if (pending > 0 && stalePending === 0) warning.push("Webhook events pending");
-
-        let status: "green" | "yellow" | "red" = "green";
-        let reason = "All systems OK";
-
-        if (critical.length > 0) {
-          status = "red";
-          reason = critical.join("; ");
-        } else if (warning.length > 0) {
-          status = "yellow";
-          reason = warning.join("; ");
+        const data = await res.json().catch(() => null);
+        if (!data || typeof data.status !== "string") {
+          setHealth({
+            status: "red",
+            reason: "Invalid health response",
+            timestamp: new Date().toISOString(),
+          });
+          return;
         }
 
         setHealth({
-          status,
-          reason,
-          lastUpdated: new Date().toISOString(),
+          status: data.status,
+          reason: typeof data.reason === "string" ? data.reason : "Unknown",
+          timestamp: typeof data.timestamp === "string" ? data.timestamp : new Date().toISOString(),
         });
       } catch {
         if (!cancelled) {
           setHealth({
             status: "red",
             reason: "Health check failed",
-            lastUpdated: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           });
         }
       }
@@ -72,7 +56,9 @@ export default function AdminGlobalHealth() {
 
     void load();
     const t = setInterval(load, 30 * 1000);
-    const onRefresh = () => { if (!cancelled) void load(); };
+    const onRefresh = () => {
+      if (!cancelled) void load();
+    };
     window.addEventListener("admin-health-refresh", onRefresh);
     return () => {
       cancelled = true;

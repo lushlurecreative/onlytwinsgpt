@@ -15,6 +15,13 @@ export async function GET(request: Request) {
 
   const admin = getSupabaseAdmin();
 
+  // Record worker heartbeat for global health (ignore errors if table missing)
+  try {
+    await admin.from("system_events").insert({ event_type: "worker_heartbeat", payload: {} });
+  } catch {
+    // Ignore (e.g. system_events table not yet migrated)
+  }
+
   // Only return jobs not yet dispatched to RunPod Serverless (runpod_job_id is null)
   const [trainingRes, generationRes] = await Promise.all([
     admin

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
 import { getServiceCreatorId } from "@/lib/service-creator";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 type SubRow = {
   id: string;
@@ -102,6 +103,7 @@ export default async function AdminCustomersPage() {
   const now = Date.now();
   const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
   const activeStatuses = ["active", "trialing", "past_due"];
+  const subscriberIdSet = new Set(subscriberIds);
   const summary = {
     activeCustomers: rows.filter((r) => activeStatuses.includes(r.status)).length,
     newThisWeek: rows.filter((r) => new Date(r.created_at).getTime() >= oneWeekAgo).length,
@@ -109,6 +111,21 @@ export default async function AdminCustomersPage() {
       (r) => r.canceled_at && new Date(r.canceled_at).getTime() >= oneWeekAgo
     ).length,
   };
+
+  let recentAccounts: { id: string; email: string | null; created_at: string; isSubscriber: boolean }[] = [];
+  try {
+    const admin = getSupabaseAdmin();
+    const { data: authData } = await admin.auth.admin.listUsers({ perPage: 100 });
+    const users = authData?.users ?? [];
+    recentAccounts = users.map((u) => ({
+      id: u.id,
+      email: u.email ?? null,
+      created_at: u.created_at ?? new Date().toISOString(),
+      isSubscriber: subscriberIdSet.has(u.id),
+    })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  } catch {
+    // If service role is missing or auth admin fails, show only subscribers
+  }
 
   const statusLabel = (s: string) =>
     s === "trialing"
@@ -127,15 +144,47 @@ export default async function AdminCustomersPage() {
     <section>
       <h2 style={{ marginTop: 0 }}>Customers</h2>
       <p className="muted" style={{ marginTop: 0, marginBottom: 12 }}>
-        New subscribers appear here after Stripe sends a successful webhook. If they don&apos;t show, check Stripe → Developers → Webhooks → your endpoint → Recent deliveries.
+        Subscribers (below) appear after Stripe webhook. Recent sign-ups appear in the list above; they show as &quot;Not yet subscribed&quot; until they complete checkout.
       </p>
       <div style={{ display: "flex", gap: 24, marginBottom: 16, flexWrap: "wrap" }}>
         <span>Active Customers: <strong>{summary.activeCustomers}</strong></span>
         <span>New This Week: <strong>{summary.newThisWeek}</strong></span>
         <span>Canceled This Week: <strong>{summary.canceledThisWeek}</strong></span>
       </div>
+
+      {recentAccounts.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 24, marginBottom: 8 }}>Recent accounts</h3>
+          <div style={{ overflowX: "auto", marginBottom: 24 }}>
+            <table style={{ borderCollapse: "collapse", minWidth: 520, width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Signed up</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Status</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentAccounts.map((a) => (
+                  <tr key={a.id}>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{a.email ?? a.id.slice(0, 8) + "…"}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{new Date(a.created_at).toLocaleString()}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{a.isSubscriber ? "Subscriber" : "Not yet subscribed"}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
+                      <Link href={`/admin/customers/${a.id}`}>View</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      <h3 style={{ marginTop: 0, marginBottom: 8 }}>Subscribers</h3>
       {rows.length === 0 ? (
-        <p>No customers yet.</p>
+        <p>No subscribers yet.</p>
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table style={{ borderCollapse: "collapse", minWidth: 860, width: "100%" }}>
