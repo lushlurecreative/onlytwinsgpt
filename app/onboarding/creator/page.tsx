@@ -20,7 +20,7 @@ export default async function CreatorOnboardingPage() {
 
   // When auth is disabled for testing, do not send bypass user to vault (they would see wrong data).
   if (isAuthBypassed() && user.id === getBypassUserId()) {
-    redirect("/thank-you");
+    redirect("/start");
   }
 
   const role = await getUserRole(supabase, user.id);
