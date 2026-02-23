@@ -88,9 +88,11 @@ function LoginPageInner() {
 
       <p>{msg}</p>
 
-      <p style={{ marginTop: 18, opacity: 0.8 }}>
-        After signing in, go to <code>/start</code>
-      </p>
+      {redirectTo !== "/start" ? (
+        <p style={{ marginTop: 18, opacity: 0.8 }}>
+          You will be taken to your destination after signing in.
+        </p>
+      ) : null}
     </main>
   );
 }

@@ -39,9 +39,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   Contact
                 </Link>
               </nav>
-              <a href={MARKETING_MESSAGE_MAP.cta.primaryHref} className="btn btn-primary">
+              <Link href={MARKETING_MESSAGE_MAP.cta.primaryHref} className="btn btn-primary">
                 {MARKETING_MESSAGE_MAP.cta.primaryLabel}
-              </a>
+              </Link>
             </div>
           </header>
 

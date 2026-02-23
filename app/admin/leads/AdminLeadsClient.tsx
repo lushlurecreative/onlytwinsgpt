@@ -461,7 +461,7 @@ export default function AdminLeadsClient() {
             </span>
           ) : null}
           <span className="muted" style={{ fontSize: 13 }}>
-            Runs YouTube, Reddit, OnlyFinder, FanFox, JuicySearch. Add API keys above if scraping returns 0 leads.
+            Runs YouTube, Reddit, OnlyFinder, FanFox, JuicySearch.
           </span>
         </div>
 
