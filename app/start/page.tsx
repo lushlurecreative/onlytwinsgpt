@@ -49,23 +49,29 @@ export default async function StartPage() {
         </article>
       </section>
 
-      <section style={{ marginTop: 18 }}>
-        <h2 style={{ marginBottom: 8 }}>Your next steps</h2>
-        <ol>
+      <section style={{ marginTop: 24 }}>
+        <h2 style={{ marginBottom: 12 }}>Your next steps</h2>
+        <ol style={{ marginBottom: 16 }}>
           <li>
-            Complete the <Link href="/vault">Training Vault</Link> (brief + training photos + request).
+            Complete the Training Vault (brief + training photos + request).
           </li>
           <li>
             After approval, we generate and deliver your assets. Come back here or reopen the Training Vault for status.
           </li>
         </ol>
+        <Link href="/vault" className="btn btn-primary" style={{ display: "inline-block" }}>
+          Open Training Vault
+        </Link>
       </section>
 
-      <section style={{ marginTop: 14 }}>
+      <section style={{ marginTop: 24 }}>
         <h2 style={{ marginBottom: 8 }}>If you are an Admin</h2>
-        <p>
-          Open <Link href="/admin/leads">Admin</Link> to review leads and run generation.
+        <p style={{ marginBottom: 12 }}>
+          Review leads and run generation.
         </p>
+        <Link href="/admin/leads" className="btn btn-secondary" style={{ display: "inline-block" }}>
+          Open Admin
+        </Link>
       </section>
     </main>
   );
