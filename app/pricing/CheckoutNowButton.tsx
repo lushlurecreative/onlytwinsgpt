@@ -21,6 +21,7 @@ export default function CheckoutNowButton({ plan, className, children }: Checkou
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ plan }),
       });
       const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
