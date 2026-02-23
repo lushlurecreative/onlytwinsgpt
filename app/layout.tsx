@@ -38,6 +38,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Link href="/contact" className="nav-link">
                   Contact
                 </Link>
+                <Link href="/login" className="nav-link">
+                  Log in
+                </Link>
               </nav>
               <Link href={MARKETING_MESSAGE_MAP.cta.primaryHref} className="btn btn-primary">
                 {MARKETING_MESSAGE_MAP.cta.primaryLabel}
