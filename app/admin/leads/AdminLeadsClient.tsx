@@ -60,24 +60,7 @@ export default function AdminLeadsClient() {
     platforms: ["instagram", "twitter", "reddit"],
     activityMode: "active",
   });
-  const [workerConfig, setWorkerConfig] = useState<{
-    configured: boolean;
-    endpointId?: string | null;
-    hasApiKey?: boolean;
-    source?: string;
-  } | null>(null);
-  const [workerSaving, setWorkerSaving] = useState(false);
-  const [workerApiKey, setWorkerApiKey] = useState("");
-  const [workerEndpointId, setWorkerEndpointId] = useState("");
   const [enqueueingSamples, setEnqueueingSamples] = useState(false);
-  const [setupStatus, setSetupStatus] = useState<{
-    database?: boolean;
-    supabase?: boolean;
-    runpod?: boolean;
-    workerSecret?: boolean;
-    appUrl?: boolean;
-    scrape?: { youtube?: boolean; reddit?: boolean; apify?: boolean };
-  } | null>(null);
 
   async function load() {
     const res = await fetch("/api/admin/leads");
@@ -93,32 +76,6 @@ export default function AdminLeadsClient() {
 
   useEffect(() => {
     void load();
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/admin/worker/config")
-      .then((r) => r.json())
-      .then((data) => {
-        if (!cancelled) setWorkerConfig(data as { configured: boolean; endpointId?: string | null; hasApiKey?: boolean; source?: string });
-      })
-      .catch(() => {
-        if (!cancelled) setWorkerConfig({ configured: false });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [workerSaving]);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/admin/setup-status")
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
-        if (!cancelled && data) setSetupStatus(data);
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -324,39 +281,6 @@ export default function AdminLeadsClient() {
     }));
   }
 
-  async function saveWorkerConfig() {
-    if (!workerApiKey.trim() || !workerEndpointId.trim()) {
-      setMessage("Enter both RunPod API key and endpoint ID.");
-      return;
-    }
-    setWorkerSaving(true);
-    setMessage("");
-    try {
-      const res = await fetch("/api/admin/worker/config", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          runpod_api_key: workerApiKey.trim(),
-          runpod_endpoint_id: workerEndpointId.trim(),
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-      if (!res.ok) {
-        setMessage(data.error ?? "Failed to save worker config");
-        return;
-      }
-      setMessage("Worker credentials saved.");
-      setWorkerApiKey("");
-      setWorkerEndpointId("");
-      setWorkerConfig({ configured: true, endpointId: workerEndpointId.trim(), source: "db" });
-      window.dispatchEvent(new Event("admin-health-refresh"));
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setWorkerSaving(false);
-    }
-  }
-
   async function triggerScrape() {
     setTriggeringScrape(true);
     setMessage("Running scrape...");
@@ -501,73 +425,6 @@ export default function AdminLeadsClient() {
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Lead Pipeline</h2>
         <p className="muted">Click Run scrape to fetch leads from YouTube, Reddit, and aggregators. Review, approve, generate AI samples, and send outreach.</p>
-
-        {setupStatus ? (
-          <details className="card" style={{ marginTop: 12, padding: 12 }}>
-            <summary style={{ cursor: "pointer", fontWeight: 600 }}>Setup checklist</summary>
-            <div style={{ marginTop: 10, fontSize: 13 }}>
-              <p className="muted" style={{ marginBottom: 8 }}>Set missing items in Vercel → Settings → Environment Variables, or in the Worker section below. See SETUP.md in the repo.</p>
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
-                <li>{setupStatus.database ? "✓" : "✗"} DATABASE_URL</li>
-                <li>{setupStatus.supabase ? "✓" : "✗"} Supabase (URL + service role key)</li>
-                <li>{setupStatus.runpod ? "✓" : "✗"} RunPod (API key + endpoint ID)</li>
-                <li>{setupStatus.workerSecret ? "✓" : "✗"} WORKER_SECRET</li>
-                <li>{setupStatus.appUrl ? "✓" : "✗"} APP_URL</li>
-                <li>{setupStatus.scrape?.youtube ? "✓" : "✗"} YOUTUBE_API_KEY (optional)</li>
-                <li>{setupStatus.scrape?.apify ? "✓" : "✗"} APIFY_TOKEN (optional, for Reddit/Instagram)</li>
-              </ul>
-            </div>
-          </details>
-        ) : null}
-        <details className="card" style={{ marginTop: 12, padding: 12 }}>
-          <summary style={{ cursor: "pointer", fontWeight: 600 }}>Worker (RunPod) — for AI samples &amp; training</summary>
-          <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.6 }}>
-            <p className="muted">
-              The worker runs <strong>AI sample generation</strong> (for leads) and <strong>training/generation</strong> for customers. <strong>Scraping does not need the worker</strong> — you can click Run scrape anytime. Daily automation (cron) uses the worker to generate lead samples and process jobs.
-            </p>
-            {workerConfig?.configured ? (
-              <p style={{ marginTop: 8 }}>
-                <strong>Worker is configured.</strong> Endpoint: <code>{workerConfig.endpointId ?? "—"}</code>
-                {workerConfig.source ? <span className="muted" style={{ marginLeft: 8 }}>(from {workerConfig.source})</span> : null}
-              </p>
-            ) : (
-              <>
-                <p style={{ marginTop: 8 }}><strong>Why &quot;Worker not configured&quot;?</strong> RunPod credentials are missing. Set them below (saved in the app) or in Vercel as <code>RUNPOD_API_KEY</code> and <code>RUNPOD_ENDPOINT_ID</code>, then redeploy.</p>
-                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10, maxWidth: 420 }}>
-                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span className="muted" style={{ fontSize: 12 }}>RunPod API key</span>
-                    <input
-                      className="input"
-                      type="password"
-                      placeholder="Your RunPod API key"
-                      value={workerApiKey}
-                      onChange={(e) => setWorkerApiKey(e.target.value)}
-                      autoComplete="off"
-                    />
-                  </label>
-                  <label style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <span className="muted" style={{ fontSize: 12 }}>RunPod endpoint ID (serverless)</span>
-                    <input
-                      className="input"
-                      type="text"
-                      placeholder="e.g. xxxxxxx"
-                      value={workerEndpointId}
-                      onChange={(e) => setWorkerEndpointId(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={() => void saveWorkerConfig()}
-                    disabled={workerSaving || !workerApiKey.trim() || !workerEndpointId.trim()}
-                  >
-                    {workerSaving ? "Saving…" : "Save worker credentials"}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </details>
 
         <p className="muted" style={{ marginTop: 12, fontSize: 13 }}>
           Scraping runs immediately when you click below and does not require the worker. It may take 30–60 seconds. Daily scrape also runs automatically at 8:00 UTC (Vercel cron).
