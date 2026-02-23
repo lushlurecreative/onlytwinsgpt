@@ -217,7 +217,7 @@ export async function POST(request: Request) {
               const existing = list?.users?.find((u) => u.email?.toLowerCase() === customerEmail.trim().toLowerCase());
               if (existing) {
                 await supabaseAdmin.from("profiles").upsert(
-                  { id: existing.id, stripe_customer_id: stripeCustomerId, onboarding_pending: true },
+                  { id: existing.id, stripe_customer_id: stripeCustomerId, onboarding_pending: true, role: "creator" },
                   { onConflict: "id" }
                 );
                 if (leadId) {
@@ -244,7 +244,7 @@ export async function POST(request: Request) {
             }
           } else if (newUser?.user?.id) {
             await supabaseAdmin.from("profiles").upsert(
-              { id: newUser.user.id, stripe_customer_id: stripeCustomerId, onboarding_pending: true },
+              { id: newUser.user.id, stripe_customer_id: stripeCustomerId, onboarding_pending: true, role: "creator" },
               { onConflict: "id" }
             );
             if (leadId) {

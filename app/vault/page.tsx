@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
-import { getUserRole, isSuspended } from "@/lib/roles";
+import { getUserRole, isSuspended, setUserRole } from "@/lib/roles";
 import VaultClient from "./VaultClient";
 
 export default async function VaultPage() {
@@ -17,7 +17,19 @@ export default async function VaultPage() {
     redirect("/suspended");
   }
 
-  const role = await getUserRole(supabase, user.id);
+  let role = await getUserRole(supabase, user.id);
+  if (role !== "creator") {
+    // Allow subscribers with an active subscription to use the vault (set them as creator).
+    const { count } = await supabase
+      .from("subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("subscriber_id", user.id)
+      .in("status", ["active", "trialing", "past_due"]);
+    if ((count ?? 0) > 0) {
+      await setUserRole(supabase, user.id, "creator");
+      role = "creator";
+    }
+  }
   if (role !== "creator") {
     redirect("/onboarding/creator?from=vault");
   }
