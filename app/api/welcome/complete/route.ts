@@ -53,7 +53,11 @@ export async function POST(request: Request) {
     const sessionEmail =
       (session.customer_details?.email ??
         session.customer_email ??
-        (session.customer && typeof session.customer === "object" ? session.customer.email : null) ??
+        (session.customer &&
+        typeof session.customer === "object" &&
+        "email" in session.customer
+          ? session.customer.email
+          : null) ??
         null)?.trim().toLowerCase() ?? null;
     if (!sessionEmail || sessionEmail !== email) {
       return NextResponse.json({ error: "Email does not match checkout session" }, { status: 400 });
