@@ -8,7 +8,7 @@ import BrandName from "@/app/components/BrandName";
 
 function WelcomePageInner() {
   const searchParams = useSearchParams();
-  const emailFromUrl = searchParams.get("email")?.trim().toLowerCase() ?? "";
+  const sessionId = searchParams.get("session_id")?.trim() ?? "";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,43 +18,63 @@ function WelcomePageInner() {
   const [error, setError] = useState("");
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [sessionInvalid, setSessionInvalid] = useState(false);
+  const [isProvisioning, setIsProvisioning] = useState(false);
 
   useEffect(() => {
-    if (!emailFromUrl) {
+    if (!sessionId) {
       setSessionInvalid(true);
       setSessionLoaded(true);
       return;
     }
     let cancelled = false;
+    let pollCount = 0;
+    const maxPolls = 30;
+    const pollDelayMs = 2000;
     (async () => {
-      try {
-        const res = await fetch(
-          `/api/welcome/session?email=${encodeURIComponent(emailFromUrl)}`
-        );
-        const data = (await res.json().catch(() => ({}))) as {
-          email?: string;
-          error?: string;
-        };
-        if (cancelled) return;
-        if (!res.ok) {
-          setSessionInvalid(true);
-          setError(data.error ?? "Invalid or expired session");
-        } else if (data.email) {
-          setEmail(data.email);
+      while (!cancelled && pollCount < maxPolls) {
+        try {
+          const res = await fetch(
+            `/api/welcome/session?session_id=${encodeURIComponent(sessionId)}`
+          );
+          const data = (await res.json().catch(() => ({}))) as {
+            ready?: boolean;
+            email?: string;
+            error?: string;
+          };
+          if (cancelled) return;
+          if (!res.ok) {
+            setSessionInvalid(true);
+            setError(data.error ?? "Invalid or expired session");
+            return;
+          }
+          if (data.ready && data.email) {
+            setEmail(data.email);
+            setIsProvisioning(false);
+            return;
+          }
+          setIsProvisioning(true);
+          pollCount += 1;
+          await new Promise((resolve) => setTimeout(resolve, pollDelayMs));
+        } catch {
+          if (!cancelled) {
+            setSessionInvalid(true);
+            setError("Failed to load session");
+            return;
+          }
         }
-      } catch {
-        if (!cancelled) {
-          setSessionInvalid(true);
-          setError("Failed to load session");
-        }
-      } finally {
-        if (!cancelled) setSessionLoaded(true);
       }
-    })();
+      if (!cancelled) {
+        setSessionInvalid(true);
+        setError("Account setup timed out. Please refresh this page.");
+      }
+    })()
+      .finally(() => {
+        if (!cancelled) setSessionLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
-  }, [emailFromUrl]);
+  }, [sessionId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -73,8 +93,10 @@ function WelcomePageInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          session_id: sessionId,
           email,
           password,
+          confirm_password: confirmPassword,
           displayName: displayName.trim() || null,
         }),
       });
@@ -128,7 +150,7 @@ function WelcomePageInner() {
         <BrandName /> Set up your account
       </h1>
       <p className="muted" style={{ marginBottom: 20 }}>
-        Choose a password and display name to finish.
+        {isProvisioning ? "Setting up your account..." : "Choose a password and display name to finish."}
       </p>
 
       <form onSubmit={handleSubmit}>

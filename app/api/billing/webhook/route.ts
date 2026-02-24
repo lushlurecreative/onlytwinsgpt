@@ -181,38 +181,58 @@ export async function POST(request: Request) {
       }
 
       // Canonical onboarding flow: pricing checkout -> webhook provisioning -> welcome.
-      if (source === "pricing" && isKnownPlan && !subscriberId) {
-        const customerEmail = (session.customer_email ?? session.customer_details?.email) as string | undefined;
-        const stripeCustomerId = typeof session.customer === "string" ? session.customer : null;
-        if (!customerEmail?.trim()) {
-          return NextResponse.json({ error: "Missing customer email for onboarding flow" }, { status: 400 });
+      if (source === "pricing" && isKnownPlan) {
+        const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
+          expand: ["customer", "subscription"],
+        });
+        const customerEmail = (
+          fullSession.customer_details?.email ??
+          fullSession.customer_email ??
+          (fullSession.customer &&
+          typeof fullSession.customer === "object" &&
+          "email" in fullSession.customer
+            ? fullSession.customer.email
+            : null) ??
+          null
+        )?.trim();
+        const stripeCustomerId = typeof fullSession.customer === "string" ? fullSession.customer : null;
+        if (!customerEmail || !stripeCustomerId) {
+          return NextResponse.json(
+            { error: "Missing customer email or customer id for onboarding flow" },
+            { status: 400 }
+          );
         }
 
-        const tempPassword = randomTempPassword();
-        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          email: customerEmail.trim(),
-          password: tempPassword,
-          email_confirm: true,
-        });
+        if (!subscriberId) {
+          const tempPassword = randomTempPassword();
+          const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+            email: customerEmail,
+            password: tempPassword,
+            email_confirm: true,
+          });
 
-        if (createError) {
-          if ((createError as { message?: string }).message?.includes("already been registered")) {
-            const { data: list } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
-            const existing = list?.users?.find((u) => u.email?.toLowerCase() === customerEmail.trim().toLowerCase());
-            if (!existing?.id) {
-              return NextResponse.json({ error: "Unable to resolve existing user" }, { status: 400 });
+          if (createError) {
+            if ((createError as { message?: string }).message?.includes("already been registered")) {
+              const { data: list } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
+              const existing = list?.users?.find((u) => u.email?.toLowerCase() === customerEmail.toLowerCase());
+              if (!existing?.id) {
+                return NextResponse.json({ error: "Unable to resolve existing user" }, { status: 400 });
+              }
+              subscriberId = existing.id;
+            } else {
+              logError("billing_webhook_create_user_failed", createError, { stripeEventId: event.id });
+              await sendAlert("billing_webhook_create_user_failed", {
+                stripeEventId: event.id,
+                message: (createError as { message?: string }).message ?? "Unknown",
+              });
+              return NextResponse.json(
+                { error: (createError as { message?: string }).message ?? "Create user failed" },
+                { status: 500 }
+              );
             }
-            subscriberId = existing.id;
-          } else {
-            logError("billing_webhook_create_user_failed", createError, { stripeEventId: event.id });
-            await sendAlert("billing_webhook_create_user_failed", {
-              stripeEventId: event.id,
-              message: (createError as { message?: string }).message ?? "Unknown",
-            });
-            return NextResponse.json({ error: (createError as { message?: string }).message ?? "Create user failed" }, { status: 500 });
+          } else if (newUser?.user?.id) {
+            subscriberId = newUser.user.id;
           }
-        } else if (newUser?.user?.id) {
-          subscriberId = newUser.user.id;
         }
 
         if (!subscriberId) {
@@ -220,7 +240,12 @@ export async function POST(request: Request) {
         }
 
         await supabaseAdmin.from("profiles").upsert(
-          { id: subscriberId, stripe_customer_id: stripeCustomerId, onboarding_pending: true, role: "creator" },
+          {
+            id: subscriberId,
+            stripe_customer_id: stripeCustomerId,
+            onboarding_pending: true,
+            role: "creator",
+          },
           { onConflict: "id" }
         );
       }

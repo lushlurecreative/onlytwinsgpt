@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     if (body.plan) {
       const planPriceId = await getOrCreatePriceIdForPlan(stripe, admin, body.plan);
       const isOneTime = body.plan === "single_batch";
-      const successUrl = `${baseUrl}/welcome?email={CHECKOUT_SESSION_CUSTOMER_EMAIL}`;
+      const successUrl = `${baseUrl}/welcome?session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = body.cancelUrl ?? `${baseUrl}/pricing?payment=cancel&method=stripe&plan=${body.plan}`;
       const serviceCreatorId = getServiceCreatorId();
       const metadata: Record<string, string> = {
@@ -124,11 +124,11 @@ export async function POST(request: Request) {
 
       session = await stripe.checkout.sessions.create({
         mode: isOneTime ? "payment" : "subscription",
-        customer_email: isGuestCheckout ? undefined : customerEmail,
         line_items: [{ price: planPriceId, quantity: 1 }],
         success_url: successUrl,
         cancel_url: cancelUrl,
         metadata,
+        ...(isOneTime ? { customer_creation: "always" as const } : {}),
         ...(isOneTime
           ? {}
           : {
