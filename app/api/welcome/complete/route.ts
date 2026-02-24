@@ -1,24 +1,23 @@
 import { NextResponse } from "next/server";
-import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { getWelcomeEligibilityByEmail } from "@/lib/welcome-eligibility";
 
 export async function POST(request: Request) {
   try {
-    let body: { session_id?: string; email?: string; password?: string; displayName?: string };
+    let body: { email?: string; password?: string; displayName?: string };
     try {
       body = await request.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
 
-    const sessionId = body.session_id?.trim();
     const email = body.email?.trim();
     const password = body.password;
     const displayName = body.displayName?.trim() ?? null;
 
-    if (!sessionId || !email) {
+    if (!email) {
       return NextResponse.json(
-        { error: "session_id and email are required" },
+        { error: "email is required" },
         { status: 400 }
       );
     }
@@ -29,52 +28,24 @@ export async function POST(request: Request) {
       );
     }
 
-    const stripe = getStripe();
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    const paid =
-      session.payment_status === "paid" || session.subscription != null;
-    if (!paid) {
-      return NextResponse.json(
-        { error: "Session not paid or invalid" },
-        { status: 400 }
-      );
-    }
-
-    const sessionEmail =
-      (session.customer_email ?? session.customer_details?.email) as
-        | string
-        | undefined;
-    if (
-      !sessionEmail ||
-      sessionEmail.trim().toLowerCase() !== email.toLowerCase()
-    ) {
-      return NextResponse.json(
-        { error: "Email does not match checkout session" },
-        { status: 400 }
-      );
-    }
-
     const supabaseAdmin = getSupabaseAdmin();
-    const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
-    const authUser = listData?.users?.find(
-      (u) => u.email?.toLowerCase() === email.toLowerCase()
-    );
-    if (!authUser?.id) {
+    const eligibility = await getWelcomeEligibilityByEmail(supabaseAdmin, email);
+    if (!eligibility.userId || !eligibility.canAccessWelcome) {
       return NextResponse.json(
-        { error: "No account found for this email" },
-        { status: 400 }
+        { error: "Welcome link is invalid or expired" },
+        { status: 403 }
       );
     }
 
-    await supabaseAdmin.auth.admin.updateUserById(authUser.id, {
+    await supabaseAdmin.auth.admin.updateUserById(eligibility.userId, {
       password,
     });
 
-    const updates: { full_name?: string | null } = {};
+    const updates: { full_name?: string | null; onboarding_pending?: boolean } = {
+      onboarding_pending: false,
+    };
     if (displayName !== null) updates.full_name = displayName || null;
-    if (Object.keys(updates).length > 0) {
-      await supabaseAdmin.from("profiles").update(updates).eq("id", authUser.id);
-    }
+    await supabaseAdmin.from("profiles").update(updates).eq("id", eligibility.userId);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

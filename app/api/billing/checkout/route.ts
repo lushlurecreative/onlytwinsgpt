@@ -6,7 +6,6 @@ import { checkRateLimit, getClientIpFromHeaders } from "@/lib/rate-limit";
 import { logError, sendAlert } from "@/lib/observability";
 import { RATE_LIMITS } from "@/lib/security-config";
 import {
-  PRICE_ID_ENV_BY_PLAN,
   PACKAGE_PLANS,
   type PlanKey,
 } from "@/lib/package-plans";
@@ -112,10 +111,11 @@ export async function POST(request: Request) {
     if (body.plan) {
       const planPriceId = await getOrCreatePriceIdForPlan(stripe, admin, body.plan);
       const isOneTime = body.plan === "single_batch";
-      const successUrl = body.successUrl ?? `${baseUrl}/welcome?session_id={CHECKOUT_SESSION_ID}`;
+      const successUrl = `${baseUrl}/welcome?email={CHECKOUT_SESSION_CUSTOMER_EMAIL}`;
       const cancelUrl = body.cancelUrl ?? `${baseUrl}/pricing?payment=cancel&method=stripe&plan=${body.plan}`;
       const serviceCreatorId = getServiceCreatorId();
       const metadata: Record<string, string> = {
+        source: "pricing",
         plan: body.plan,
         creator_id: serviceCreatorId,
       };

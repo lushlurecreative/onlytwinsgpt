@@ -9,7 +9,6 @@ import { RATE_LIMITS } from "@/lib/security-config";
 import { getServiceCreatorId } from "@/lib/service-creator";
 import { PACKAGE_PLANS } from "@/lib/package-plans";
 import { getPlanKeyForStripePriceId } from "@/lib/plan-entitlements";
-import type { LeadStatus } from "@/lib/db-enums";
 
 export const runtime = "nodejs";
 
@@ -96,9 +95,8 @@ async function lockStripeEvent(event: Stripe.Event) {
   }
 
   if (code === "42P01") {
-    // Migration not applied yet; continue processing so existing behavior still works.
-    logWarn("billing_webhook_events_table_missing", { message: error.message });
-    return { duplicate: false, missingTable: true };
+    // Idempotency is mandatory for billing writes.
+    throw new Error("stripe_webhook_events table missing; idempotency cannot be guaranteed");
   }
 
   throw error;
@@ -166,11 +164,14 @@ export async function POST(request: Request) {
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
+      const source = (session.metadata?.source as string)?.trim() ?? "";
       const leadId = (session.metadata?.lead_id as string)?.trim();
-      const subscriberId = (session.metadata?.subscriber_id as string)?.trim();
+      let subscriberId = (session.metadata?.subscriber_id as string)?.trim() ?? null;
       const creatorId =
         (session.metadata?.creator_id as string)?.trim() || getServiceCreatorId();
       const plan = (session.metadata?.plan as string)?.trim() || null;
+      const isKnownPlan =
+        !!plan && Object.prototype.hasOwnProperty.call(PACKAGE_PLANS, plan);
 
       let stripeSubscriptionId: string | null = null;
       if (typeof session.subscription === "string") {
@@ -179,7 +180,52 @@ export async function POST(request: Request) {
         stripeSubscriptionId = (session.subscription as { id: string }).id;
       }
 
-      if (leadId && subscriberId && creatorId) {
+      // Canonical onboarding flow: pricing checkout -> webhook provisioning -> welcome.
+      if (source === "pricing" && isKnownPlan && !subscriberId) {
+        const customerEmail = (session.customer_email ?? session.customer_details?.email) as string | undefined;
+        const stripeCustomerId = typeof session.customer === "string" ? session.customer : null;
+        if (!customerEmail?.trim()) {
+          return NextResponse.json({ error: "Missing customer email for onboarding flow" }, { status: 400 });
+        }
+
+        const tempPassword = randomTempPassword();
+        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email: customerEmail.trim(),
+          password: tempPassword,
+          email_confirm: true,
+        });
+
+        if (createError) {
+          if ((createError as { message?: string }).message?.includes("already been registered")) {
+            const { data: list } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
+            const existing = list?.users?.find((u) => u.email?.toLowerCase() === customerEmail.trim().toLowerCase());
+            if (!existing?.id) {
+              return NextResponse.json({ error: "Unable to resolve existing user" }, { status: 400 });
+            }
+            subscriberId = existing.id;
+          } else {
+            logError("billing_webhook_create_user_failed", createError, { stripeEventId: event.id });
+            await sendAlert("billing_webhook_create_user_failed", {
+              stripeEventId: event.id,
+              message: (createError as { message?: string }).message ?? "Unknown",
+            });
+            return NextResponse.json({ error: (createError as { message?: string }).message ?? "Create user failed" }, { status: 500 });
+          }
+        } else if (newUser?.user?.id) {
+          subscriberId = newUser.user.id;
+        }
+
+        if (!subscriberId) {
+          return NextResponse.json({ error: "Unable to resolve subscriber for onboarding flow" }, { status: 400 });
+        }
+
+        await supabaseAdmin.from("profiles").upsert(
+          { id: subscriberId, stripe_customer_id: stripeCustomerId, onboarding_pending: true, role: "creator" },
+          { onConflict: "id" }
+        );
+      }
+
+      if (source === "pricing" && isKnownPlan && leadId && subscriberId && creatorId) {
         const { error: rpcError } = await supabaseAdmin.rpc("convert_lead_to_customer", {
           p_lead_id: leadId,
           p_subscriber_id: subscriberId,
@@ -199,73 +245,6 @@ export async function POST(request: Request) {
             message: rpcError.message,
           });
           return NextResponse.json({ error: rpcError.message }, { status: 500 });
-        }
-      } else if (creatorId && !subscriberId) {
-        const customerEmail = (session.customer_email ?? session.customer_details?.email) as string | undefined;
-        const stripeCustomerId = typeof session.customer === "string" ? session.customer : null;
-        if (customerEmail?.trim()) {
-          const tempPassword = randomTempPassword();
-          const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-            email: customerEmail.trim(),
-            password: tempPassword,
-            email_confirm: true,
-          });
-
-          if (createError) {
-            if ((createError as { message?: string }).message?.includes("already been registered")) {
-              const { data: list } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
-              const existing = list?.users?.find((u) => u.email?.toLowerCase() === customerEmail.trim().toLowerCase());
-              if (existing) {
-                await supabaseAdmin.from("profiles").upsert(
-                  { id: existing.id, stripe_customer_id: stripeCustomerId, onboarding_pending: true, role: "creator" },
-                  { onConflict: "id" }
-                );
-                if (leadId) {
-                  const { error: rpcErr } = await supabaseAdmin.rpc("convert_lead_to_customer", {
-                    p_lead_id: leadId,
-                    p_subscriber_id: existing.id,
-                    p_creator_id: creatorId,
-                    p_stripe_subscription_id: stripeSubscriptionId,
-                    p_plan: plan,
-                  });
-                  if (rpcErr) {
-                    logError("billing_webhook_convert_lead_rpc_failed", rpcErr, { stripeEventId: event.id, leadId });
-                    return NextResponse.json({ error: rpcErr.message }, { status: 500 });
-                  }
-                }
-              }
-            } else {
-              logError("billing_webhook_create_user_failed", createError, { stripeEventId: event.id });
-              await sendAlert("billing_webhook_create_user_failed", {
-                stripeEventId: event.id,
-                message: (createError as { message?: string }).message ?? "Unknown",
-              });
-              return NextResponse.json({ error: (createError as { message?: string }).message ?? "Create user failed" }, { status: 500 });
-            }
-          } else if (newUser?.user?.id) {
-            await supabaseAdmin.from("profiles").upsert(
-              { id: newUser.user.id, stripe_customer_id: stripeCustomerId, onboarding_pending: true, role: "creator" },
-              { onConflict: "id" }
-            );
-            if (leadId) {
-              const { error: rpcErr } = await supabaseAdmin.rpc("convert_lead_to_customer", {
-                p_lead_id: leadId,
-                p_subscriber_id: newUser.user.id,
-                p_creator_id: creatorId,
-                p_stripe_subscription_id: stripeSubscriptionId,
-                p_plan: plan,
-              });
-              if (rpcErr) {
-                logError("billing_webhook_convert_lead_rpc_failed", rpcErr, { stripeEventId: event.id, leadId });
-                await sendAlert("billing_webhook_convert_lead_rpc_failed", {
-                  stripeEventId: event.id,
-                  leadId,
-                  message: rpcErr.message,
-                });
-                return NextResponse.json({ error: rpcErr.message }, { status: 500 });
-              }
-            }
-          }
         }
       }
     }
@@ -331,22 +310,6 @@ export async function POST(request: Request) {
           stripe_event_id: event.id,
           plan_key: planKey,
         });
-      }
-      const leadId = (subscription.metadata?.lead_id as string)?.trim();
-      if (leadId && (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated")) {
-        const status = mapStripeStatus(subscription.status);
-        if (status === "active" || status === "trialing") {
-          await supabaseAdmin
-            .from("leads")
-            .update({ status: "converted" as LeadStatus, updated_at: new Date().toISOString() })
-            .eq("id", leadId);
-          await supabaseAdmin.from("automation_events").insert({
-            event_type: "converted",
-            entity_type: "lead",
-            entity_id: leadId,
-            payload_json: { stripe_subscription_id: subscription.id, subscriber_id: subscriberId },
-          });
-        }
       }
     }
 

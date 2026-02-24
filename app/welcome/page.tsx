@@ -8,7 +8,7 @@ import BrandName from "@/app/components/BrandName";
 
 function WelcomePageInner() {
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id")?.trim() ?? "";
+  const emailFromUrl = searchParams.get("email")?.trim().toLowerCase() ?? "";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +20,7 @@ function WelcomePageInner() {
   const [sessionInvalid, setSessionInvalid] = useState(false);
 
   useEffect(() => {
-    if (!sessionId) {
+    if (!emailFromUrl) {
       setSessionInvalid(true);
       setSessionLoaded(true);
       return;
@@ -29,7 +29,7 @@ function WelcomePageInner() {
     (async () => {
       try {
         const res = await fetch(
-          `/api/welcome/session?session_id=${encodeURIComponent(sessionId)}`
+          `/api/welcome/session?email=${encodeURIComponent(emailFromUrl)}`
         );
         const data = (await res.json().catch(() => ({}))) as {
           email?: string;
@@ -54,7 +54,7 @@ function WelcomePageInner() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [emailFromUrl]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -73,7 +73,6 @@ function WelcomePageInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          session_id: sessionId,
           email,
           password,
           displayName: displayName.trim() || null,
