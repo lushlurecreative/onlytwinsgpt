@@ -24,7 +24,11 @@ export async function GET(request: Request) {
     const email =
       (session.customer_details?.email ??
         session.customer_email ??
-        (session.customer && typeof session.customer === "object" ? session.customer.email : null) ??
+        (session.customer &&
+        typeof session.customer === "object" &&
+        "email" in session.customer
+          ? session.customer.email
+          : null) ??
         null)?.trim().toLowerCase() ?? null;
     if (!email) {
       return NextResponse.json({ error: "Missing checkout email" }, { status: 400 });
