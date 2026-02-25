@@ -20,115 +20,69 @@ Middleware route protection
 Cursor Agent managing code edits
 
 CURRENT COMPLETED STATE
-Authentication
+Core Product
 
-Signup/login working
+Public marketing pages, pricing, creator feed, and authenticated dashboard routes are live.
 
-Email confirmation configured
+Creator/consumer role model, subscriptions, leads pipeline, generation requests, and admin customers/leads/revenue views exist.
 
-/login works
+Billing + Onboarding
 
-/me works
+Stripe checkout route is live and currently uses:
+`/welcome?session_id={CHECKOUT_SESSION_ID}` for plan checkout success redirect.
 
-Middleware protects private routes
+Webhook idempotency is implemented using `stripe_webhook_events` insert-first lock behavior.
 
-Database
+`checkout.session.completed` provisioning path exists (Auth user create/reuse, profile upsert, optional lead conversion RPC path).
 
-profiles table exists
+Welcome flow exists:
+`/api/welcome/session` (session_id validation + readiness),
+`/api/welcome/complete` (password/profile finalize),
+`/welcome` page (poll + submit + sign in + redirect `/start`).
 
-RLS enabled
+Admin
 
-Auto-trigger creates profile row on signup
+Admin primary UX is focused on Leads, Customers, Revenue.
 
-Storage
+Customer detail includes generation/vault-related operational sections.
 
-Private bucket: uploads
+Health API and global health indicator components exist.
 
-RLS policies enforce per-user folder isolation
+WHAT STILL NEEDS VERIFICATION (LIVE)
 
-Upload Route
+End-to-end guest checkout in production:
+Pricing -> Stripe -> `/welcome?session_id=...` -> password set -> auto sign-in -> `/start`.
 
-/upload route exists
+Webhook delivery health:
+`checkout.session.completed` and `customer.subscription.*` returning 2xx in Stripe dashboard.
 
-Upload client component exists
+RunPod execution path:
+worker heartbeat healthy, jobs enqueue/process successfully.
 
-Middleware protects route
+WHAT IS STILL OPEN (OPERATIONS / POLISH)
 
-WHAT STILL NEEDS VERIFICATION
+Final launch hardening (alerting, retry visibility, abuse/rate controls).
 
-Confirm upload success
+Automation quality targets (lead volume and content quality constraints) need ongoing tuning.
 
-Confirm file appears in Supabase
+Documentation cleanup to keep runbooks aligned with current flow.
 
-Confirm signed URL works
+PHASE STRUCTURE (ACTIVE)
+Phase A – Revenue Reliability (Current)
 
-Confirm file renders
+Stabilize checkout, webhook provisioning, onboarding, and entitlement transitions in production.
 
-WHAT IS NOT BUILT YET
-Roles System
+Phase B – Entitlement and Access Hardening
 
-Creator vs Consumer distinction
+Verify all paid/private boundaries and cancellation/expiry behavior.
 
-Role-based access logic
+Phase C – Creator + Ops UX Refinement
 
-Content Engine
+Improve dashboard/admin ergonomics without changing core flow.
 
-posts table
+Phase D – Scale + Monitoring
 
-Content linking to storage files
-
-Feed rendering
-
-Access gating logic
-
-Monetization
-
-Stripe integration
-
-Subscription tiers
-
-Webhooks
-
-Payment verification
-
-Content entitlement checks
-
-Creator Dashboard
-
-Post creation UI
-
-Media management
-
-Revenue display
-
-Admin Tools
-
-Moderation tools
-
-User suspension
-
-Content removal
-
-PHASE STRUCTURE
-Phase 1 – Infrastructure (Current)
-
-Finish upload verification.
-
-Phase 2 – Content Engine
-
-Build posts table + feed + signed rendering.
-
-Phase 3 – Monetization
-
-Integrate Stripe + subscriptions + gating.
-
-Phase 4 – Creator Tools
-
-Analytics + dashboard refinement.
-
-Phase 5 – Hardening & Scale
-
-Security review + optimization.
+Queue observability, alert routing, and incident response playbooks.
 
 AGENT DIRECTIVES
 
@@ -311,12 +265,9 @@ DMCA/IP tooling and evidence logs as later enhancements.
 
 CURRENT POSITION (UPDATED)
 
-We are currently between Phase A and Phase B:
+We are currently in Phase A (Revenue Reliability), moving into Phase B.
 
-Core upload/publish/visibility/feed flows are working.
+Core app + billing + onboarding architecture is implemented.
 
-Stripe scaffolding is implemented but final webhook/entitlement verification is still pending.
-
-Immediate next execution step:
-
-Finish Stripe end-to-end verification and confirm entitlement transitions in live flow.
+Immediate priority:
+Confirm stable production behavior for the full guest checkout -> webhook -> welcome -> start flow and keep webhook deliveries green.
