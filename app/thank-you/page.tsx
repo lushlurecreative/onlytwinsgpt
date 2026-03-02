@@ -21,11 +21,6 @@ export default function ThankYouPage() {
   const [email, setEmail] = useState("");
   const [magicEmail, setMagicEmail] = useState("");
   const [magicMsg, setMagicMsg] = useState("");
-  const [meta, setMeta] = useState<{
-    payment_status?: string | null;
-    stripe_customer_id?: string | null;
-    stripe_subscription_id?: string | null;
-  }>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -58,11 +53,6 @@ export default function ThankYouPage() {
         const data = (await res.json().catch(() => ({}))) as SessionResponse;
         if (cancelled) return;
 
-        setMeta({
-          payment_status: data.payment_status ?? null,
-          stripe_customer_id: data.stripe_customer_id ?? null,
-          stripe_subscription_id: data.stripe_subscription_id ?? null,
-        });
         if (data.email) {
           setEmail(data.email);
           setMagicEmail((prev) => prev || data.email || "");
@@ -173,12 +163,6 @@ export default function ThankYouPage() {
         </>
       ) : null}
 
-      <div style={{ marginTop: 20, fontSize: 12, opacity: 0.8 }}>
-        {email ? <div>Email: {email}</div> : null}
-        {meta.payment_status ? <div>Payment: {meta.payment_status}</div> : null}
-        {meta.stripe_customer_id ? <div>Customer: {meta.stripe_customer_id}</div> : null}
-        {meta.stripe_subscription_id ? <div>Subscription: {meta.stripe_subscription_id}</div> : null}
-      </div>
     </main>
   );
 }
