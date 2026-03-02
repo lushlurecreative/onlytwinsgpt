@@ -78,8 +78,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <div>
                 <h4>Legal</h4>
                 <div className="footer-links">
-                  <Link href="/legal">Terms</Link>
-                  <Link href="/legal">Privacy</Link>
+                  <Link href="/terms">Terms of Service</Link>
+                  <Link href="/privacy">Privacy Policy</Link>
                 </div>
               </div>
             </div>
