@@ -38,6 +38,28 @@ function toIsoOrNull(unixSeconds: number | null | undefined) {
   return new Date(unixSeconds * 1000).toISOString();
 }
 
+function extractStripeCustomerId(
+  customer: Stripe.Checkout.Session["customer"] | Stripe.Subscription["customer"] | null | undefined
+) {
+  if (!customer) return null;
+  if (typeof customer === "string") return customer;
+  if (typeof customer === "object" && "id" in customer && typeof customer.id === "string") {
+    return customer.id;
+  }
+  return null;
+}
+
+function extractStripeSubscriptionId(
+  subscription: Stripe.Checkout.Session["subscription"] | null | undefined
+) {
+  if (!subscription) return null;
+  if (typeof subscription === "string") return subscription;
+  if (typeof subscription === "object" && "id" in subscription && typeof subscription.id === "string") {
+    return subscription.id;
+  }
+  return null;
+}
+
 async function resolveSubscriptionParties(subscription: Stripe.Subscription) {
   const supabaseAdmin = getSupabaseAdmin();
   let creatorId: string | null = subscription.metadata?.creator_id ?? null;
@@ -174,11 +196,7 @@ export async function POST(request: Request) {
         !!plan && Object.prototype.hasOwnProperty.call(PACKAGE_PLANS, plan);
 
       let stripeSubscriptionId: string | null = null;
-      if (typeof session.subscription === "string") {
-        stripeSubscriptionId = session.subscription;
-      } else if (session.subscription && typeof session.subscription === "object" && "id" in session.subscription) {
-        stripeSubscriptionId = (session.subscription as { id: string }).id;
-      }
+      stripeSubscriptionId = extractStripeSubscriptionId(session.subscription);
 
       // Canonical onboarding flow: pricing checkout -> webhook provisioning -> welcome.
       if (source === "pricing" && isKnownPlan) {
@@ -195,10 +213,24 @@ export async function POST(request: Request) {
             : null) ??
           null
         )?.trim();
-        const stripeCustomerId = typeof fullSession.customer === "string" ? fullSession.customer : null;
+        stripeSubscriptionId =
+          extractStripeSubscriptionId(fullSession.subscription) ?? stripeSubscriptionId;
+        let stripeCustomerId = extractStripeCustomerId(fullSession.customer);
+        let resolvedSubscription: Stripe.Subscription | null = null;
+        if (!stripeCustomerId && stripeSubscriptionId) {
+          resolvedSubscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+          stripeCustomerId = extractStripeCustomerId(resolvedSubscription.customer);
+        }
         if (!customerEmail || !stripeCustomerId) {
           return NextResponse.json(
-            { error: "Missing customer email or customer id for onboarding flow" },
+            {
+              error: "Missing customer email or customer id for onboarding flow",
+              diagnostics: {
+                session_id: fullSession.id,
+                session_customer_type: typeof fullSession.customer,
+                stripe_subscription_id: stripeSubscriptionId,
+              },
+            },
             { status: 400 }
           );
         }
@@ -248,6 +280,32 @@ export async function POST(request: Request) {
           },
           { onConflict: "id" }
         );
+
+        if (stripeSubscriptionId && creatorId && subscriberId) {
+          const subscription =
+            resolvedSubscription ?? (await stripe.subscriptions.retrieve(stripeSubscriptionId));
+          const item = subscription.items.data[0];
+          const subscriptionsTable = supabaseAdmin.from("subscriptions");
+          const { error: subUpsertError } = await subscriptionsTable.upsert(
+            {
+              creator_id: creatorId,
+              subscriber_id: subscriberId,
+              status: mapStripeStatus(subscription.status),
+              current_period_end: toIsoOrNull(item?.current_period_end ?? null),
+              canceled_at: toIsoOrNull(subscription.canceled_at),
+              stripe_subscription_id: stripeSubscriptionId,
+              stripe_price_id: item?.price?.id ?? null,
+            },
+            { onConflict: "stripe_subscription_id" }
+          );
+          if (subUpsertError) {
+            logError("billing_webhook_checkout_subscription_upsert_failed", subUpsertError, {
+              stripeEventId: event.id,
+              stripeSubscriptionId,
+              subscriberId,
+            });
+          }
+        }
       }
 
       if (source === "pricing" && isKnownPlan && leadId && subscriberId && creatorId) {

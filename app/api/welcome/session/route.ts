@@ -1,7 +1,51 @@
 import { NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { logError, logInfo, logWarn } from "@/lib/observability";
+import { getServiceCreatorId } from "@/lib/service-creator";
+
+function extractStripeCustomerId(
+  customer: Stripe.Checkout.Session["customer"] | Stripe.Subscription["customer"] | null | undefined
+) {
+  if (!customer) return null;
+  if (typeof customer === "string") return customer;
+  if (typeof customer === "object" && "id" in customer && typeof customer.id === "string") {
+    return customer.id;
+  }
+  return null;
+}
+
+function extractStripeSubscriptionId(subscription: Stripe.Checkout.Session["subscription"] | null | undefined) {
+  if (!subscription) return null;
+  if (typeof subscription === "string") return subscription;
+  if (typeof subscription === "object" && "id" in subscription && typeof subscription.id === "string") {
+    return subscription.id;
+  }
+  return null;
+}
+
+function mapStripeStatus(status: Stripe.Subscription.Status) {
+  switch (status) {
+    case "active":
+      return "active";
+    case "trialing":
+      return "trialing";
+    case "past_due":
+      return "past_due";
+    case "unpaid":
+      return "past_due";
+    case "canceled":
+      return "canceled";
+    default:
+      return "expired";
+  }
+}
+
+function toIsoOrNull(unixSeconds: number | null | undefined) {
+  if (!unixSeconds) return null;
+  return new Date(unixSeconds * 1000).toISOString();
+}
 
 export async function GET(request: Request) {
   const requestId = crypto.randomUUID();
@@ -47,6 +91,51 @@ export async function GET(request: Request) {
         { status: 400 }
       );
     }
+    const stripeSubscriptionId = extractStripeSubscriptionId(session.subscription);
+    let stripeCustomerId = extractStripeCustomerId(session.customer);
+    let subscriptionForResolution: Stripe.Subscription | null = null;
+    if (!stripeCustomerId && stripeSubscriptionId) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+        subscriptionForResolution = sub;
+        stripeCustomerId = extractStripeCustomerId(sub.customer);
+      } catch (resolutionError) {
+        logWarn("welcome_session_subscription_lookup_failed", {
+          requestId,
+          sessionId,
+          stripe_subscription_id: stripeSubscriptionId,
+          message:
+            resolutionError instanceof Error
+              ? resolutionError.message
+              : String(resolutionError),
+        });
+      }
+    }
+    if (!stripeCustomerId) {
+      logWarn("welcome_session_customer_unresolvable", {
+        requestId,
+        sessionId,
+        session_customer_type: typeof session.customer,
+        stripe_subscription_id: stripeSubscriptionId,
+      });
+      return NextResponse.json(
+        {
+          state: "error",
+          error: "Could not resolve Stripe customer id for this session.",
+          request_id: requestId,
+          session_id: sessionId,
+          payment_status: session.payment_status ?? null,
+          stripe_customer_id: null,
+          stripe_subscription_id: stripeSubscriptionId,
+          reason: "stripe_customer_unresolvable",
+          diagnostics: {
+            session_customer_type: typeof session.customer,
+            has_subscription_id: !!stripeSubscriptionId,
+          },
+        },
+        { status: 400 }
+      );
+    }
     const email =
       (session.customer_details?.email ??
         session.customer_email ??
@@ -72,24 +161,16 @@ export async function GET(request: Request) {
         { status: 400 }
       );
     }
-    const stripeCustomerId = typeof session.customer === "string" ? session.customer : null;
-    const stripeSubscriptionId =
-      typeof session.subscription === "string"
-        ? session.subscription
-        : session.subscription && typeof session.subscription === "object" && "id" in session.subscription
-          ? session.subscription.id
-          : null;
 
     const admin = getSupabaseAdmin();
     const { data: userList } = await admin.auth.admin.listUsers({ perPage: 500 });
     const authUser = userList?.users?.find((u) => u.email?.toLowerCase() === email) ?? null;
 
-    if (!authUser?.id || !stripeCustomerId) {
+    if (!authUser?.id) {
       logInfo("welcome_session_processing_user_lookup", {
         requestId,
         sessionId,
         has_auth_user: !!authUser?.id,
-        has_customer_id: !!stripeCustomerId,
       });
       return NextResponse.json(
         {
@@ -101,31 +182,120 @@ export async function GET(request: Request) {
           payment_status: session.payment_status ?? null,
           stripe_customer_id: stripeCustomerId,
           stripe_subscription_id: stripeSubscriptionId,
-          reason: !authUser?.id ? "auth_user_not_ready" : "stripe_customer_missing",
+          reason: "auth_user_not_ready",
         },
         { status: 200 }
       );
     }
 
-    const { data: profile } = await admin
+    const { data: profile, error: profileError } = await admin
       .from("profiles")
       .select("id, onboarding_pending, stripe_customer_id")
       .eq("id", authUser.id)
       .maybeSingle();
+    if (profileError) {
+      logWarn("welcome_session_profile_fetch_failed", {
+        requestId,
+        sessionId,
+        user_id: authUser.id,
+        message: profileError.message,
+      });
+    }
     const profileRow = profile as
       | { id: string; onboarding_pending?: boolean | null; stripe_customer_id?: string | null }
       | null;
+    if (!profileRow) {
+      await admin.from("profiles").upsert(
+        {
+          id: authUser.id,
+          stripe_customer_id: stripeCustomerId,
+          onboarding_pending: true,
+          role: "creator",
+        },
+        { onConflict: "id" }
+      );
+    } else if (profileRow.stripe_customer_id !== stripeCustomerId) {
+      await admin
+        .from("profiles")
+        .update({ stripe_customer_id: stripeCustomerId, updated_at: new Date().toISOString() })
+        .eq("id", authUser.id);
+    }
+
+    if (stripeSubscriptionId) {
+      try {
+        const subscription =
+          subscriptionForResolution ??
+          (await stripe.subscriptions.retrieve(stripeSubscriptionId));
+        const creatorId =
+          ((session.metadata?.creator_id as string | undefined)?.trim() || "") ||
+          getServiceCreatorId();
+        const item = subscription.items.data[0];
+        await admin.from("subscriptions").upsert(
+          {
+            creator_id: creatorId,
+            subscriber_id: authUser.id,
+            status: mapStripeStatus(subscription.status),
+            current_period_end: toIsoOrNull(item?.current_period_end ?? null),
+            canceled_at: toIsoOrNull(subscription.canceled_at),
+            stripe_subscription_id: stripeSubscriptionId,
+            stripe_price_id: item?.price?.id ?? null,
+          },
+          { onConflict: "stripe_subscription_id" }
+        );
+      } catch (subscriptionSyncError) {
+        logWarn("welcome_session_subscription_sync_failed", {
+          requestId,
+          sessionId,
+          stripe_subscription_id: stripeSubscriptionId,
+          message:
+            subscriptionSyncError instanceof Error
+              ? subscriptionSyncError.message
+              : String(subscriptionSyncError),
+        });
+      }
+    }
+
+    const { data: profileAfter } = await admin
+      .from("profiles")
+      .select("id, onboarding_pending, stripe_customer_id")
+      .eq("id", authUser.id)
+      .maybeSingle();
+    const currentProfile = profileAfter as
+      | { id: string; onboarding_pending?: boolean | null; stripe_customer_id?: string | null }
+      | null;
+
+    if (currentProfile && currentProfile.onboarding_pending === false) {
+      logInfo("welcome_session_onboarding_already_completed", {
+        requestId,
+        sessionId,
+        user_id: authUser.id,
+      });
+      return NextResponse.json(
+        {
+          state: "error",
+          error: "Welcome setup is already complete. Please log in.",
+          request_id: requestId,
+          session_id: sessionId,
+          payment_status: session.payment_status ?? null,
+          stripe_customer_id: stripeCustomerId,
+          stripe_subscription_id: stripeSubscriptionId,
+          reason: "onboarding_already_completed",
+        },
+        { status: 409 }
+      );
+    }
+
     if (
-      !profileRow ||
-      profileRow.stripe_customer_id !== stripeCustomerId ||
-      !profileRow.onboarding_pending
+      !currentProfile ||
+      currentProfile.stripe_customer_id !== stripeCustomerId ||
+      !currentProfile.onboarding_pending
     ) {
       logInfo("welcome_session_processing_profile_not_ready", {
         requestId,
         sessionId,
-        has_profile: !!profileRow,
-        onboarding_pending: profileRow?.onboarding_pending ?? null,
-        profile_customer_matches: profileRow?.stripe_customer_id === stripeCustomerId,
+        has_profile: !!currentProfile,
+        onboarding_pending: currentProfile?.onboarding_pending ?? null,
+        profile_customer_matches: currentProfile?.stripe_customer_id === stripeCustomerId,
       });
       return NextResponse.json(
         {
