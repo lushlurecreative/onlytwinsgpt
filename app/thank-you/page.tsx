@@ -62,7 +62,7 @@ export default function ThankYouPage() {
     (async () => {
       while (!cancelled && pollCount < maxPolls) {
         try {
-          const res = await fetch("/api/welcome/session");
+          const res = await fetch("/api/thank-you/session");
           const data = (await res.json().catch(() => ({}))) as SessionResponse;
           if (cancelled) return;
 

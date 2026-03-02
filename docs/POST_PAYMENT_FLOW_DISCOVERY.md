@@ -8,7 +8,7 @@ Every file involved in the listed areas, with a short description of what it cur
 
 | File | What it does |
 |------|----------------|
-| **app/api/billing/checkout/route.ts** | POST handler. Rate-limits by IP; reads body (plan, optional creatorId, successUrl, cancelUrl, leadId). If `body.plan` and no auth → guest checkout. Resolves/create Stripe price via `getOrCreatePriceIdForPlan` (reads/writes app_settings). For plan checkout: builds success_url `{baseUrl}/welcome?session_id={CHECKOUT_SESSION_ID}`, cancel_url to pricing; metadata: plan, creator_id (service), optional subscriber_id (if logged in), optional lead_id. Creates Stripe checkout session (mode payment or subscription), returns `{ url: session.url }`. For creator subscription (no plan): requires auth, uses STRIPE_PRICE_ID and creatorId, success/cancel to feed/creator/{id}. |
+| **app/api/billing/checkout/route.ts** | POST handler. Rate-limits by IP; reads body (plan, optional creatorId, successUrl, cancelUrl, leadId). If `body.plan` and no auth → guest checkout. Resolves/create Stripe price via `getOrCreatePriceIdForPlan` (reads/writes app_settings). For plan checkout: builds success_url `https://onlytwins.dev/thank-you?sid={CHECKOUT_SESSION_ID}`, cancel_url to pricing; metadata: plan, creator_id (service), optional subscriber_id (if logged in), optional lead_id. Creates Stripe checkout session (mode payment or subscription), returns `{ url: session.url }`. For creator subscription (no plan): requires auth, uses STRIPE_PRICE_ID and creatorId, success/cancel to feed/creator/{id}. |
 | **app/pricing/CheckoutNowButton.tsx** | Client component. On click, POSTs to `/api/billing/checkout` with `{ plan }` (credentials: include). On 401 shows error; on success sets `window.location.href = data.url` to send user to Stripe Checkout. |
 | **app/pricing/page.tsx** | Server page. Renders pricing cards and uses CheckoutNowButton (and BitcoinCheckoutButton) per plan. No redirect logic; public page. |
 | **lib/package-plans.ts** | Defines PlanKey, PACKAGE_PLANS (name, mode, amountUsd), PRICE_ID_ENV_BY_PLAN. Used by checkout for price creation and by plan-entitlements. |
@@ -42,7 +42,7 @@ Every file involved in the listed areas, with a short description of what it cur
 | File | What it does |
 |------|----------------|
 | **app/api/billing/webhook/route.ts** | In checkout.session.completed when creatorId present and no subscriberId: gets customer email from session; calls supabaseAdmin.auth.admin.createUser(email, randomTempPassword(), email_confirm: true). On "already been registered" finds existing user by email and upserts profile instead. On success upserts profile (id, stripe_customer_id, onboarding_pending, role creator). No subscription row created here (that happens in customer.subscription.*). |
-| **app/api/welcome/complete/route.ts** | Does not create users. Finds existing Auth user by email (listUsers, find by email); updates password via supabaseAdmin.auth.admin.updateUserById(authUser.id, { password }). Assumes user already exists (created by webhook). |
+| **app/api/thank-you/session/route.ts** | Verifies Stripe checkout state from `sid` query or `ot_checkout_sid` cookie, resolves customer/subscription, and returns `state` (`processing`/`ready`/`error`) for thank-you auth gating. |
 
 ---
 
@@ -62,9 +62,9 @@ Every file involved in the listed areas, with a short description of what it cur
 |------|----------------|
 | **app/api/billing/checkout/route.ts** | No HTTP redirect. Returns JSON `{ url }`; client redirects to Stripe. success_url and cancel_url are Stripe session params (baseUrl from NEXT_PUBLIC_APP_URL or request origin). |
 | **app/pricing/CheckoutNowButton.tsx** | Client: on success `window.location.href = data.url` (Stripe Checkout). |
-| **app/welcome/page.tsx** | Client: after successful POST /api/welcome/complete and signInWithPassword, `window.location.replace("/start")`. |
+| **app/thank-you/page.tsx** | Client: polls `/api/thank-you/session`, shows processing/ready/error states, starts auth via Google OAuth or magic link, then redirects authenticated users to `/dashboard`. |
 | **app/login/page.tsx** | Client: reads redirectTo from search params (default "/start"); after sign-in/sign-up calls doRedirect() → window.location.replace(redirectTo + query). |
-| **app/thank-you/page.tsx** | Renders links only: “Continue to your dashboard” → /start if user, else /login?redirectTo=/start; “Back to OnlyTwins” → /. No automatic redirect. (This page is not the current success target; success_url points to /welcome.) |
+| **app/thank-you/page.tsx** | Primary post-checkout page and current success target; middleware strips `sid` query into `ot_checkout_sid` cookie and keeps clean `/thank-you` URL. |
 | **app/start/page.tsx** | Server: if !user redirect("/login?redirectTo=/start"). |
 | **app/vault/page.tsx** | Server: if !user redirect("/login?redirectTo=/vault"); if suspended redirect("/suspended"); if role not creator and no active subscription redirect("/onboarding/creator?from=vault"). |
 | **app/onboarding/creator/page.tsx** | Server: if !user redirect("/login?redirectTo=/onboarding/creator"); if suspended redirect("/suspended"); if role === creator redirect("/vault"). |
@@ -76,13 +76,12 @@ Every file involved in the listed areas, with a short description of what it cur
 
 ---
 
-## 7. /welcome page
+## 7. /thank-you page
 
 | File | What it does |
 |------|----------------|
-| **app/welcome/page.tsx** | Client component. Reads session_id from search params. On load fetches GET /api/welcome/session?session_id=…; if ok sets email in state; if !ok sets sessionInvalid and error. Renders form: email (read-only), password, confirm password, display name. Submit POST /api/welcome/complete with session_id, email, password, displayName; on success calls supabase.auth.signInWithPassword then window.location.replace("/start"). Shows “Loading…”, “Invalid or expired link” (with link to pricing), or the form. |
-| **app/api/welcome/session/route.ts** | GET. Requires session_id query. Retrieves Stripe checkout session (expand subscription). Requires payment_status === "paid" or subscription present; returns 400 otherwise. Returns JSON { email, customerId } from session. |
-| **app/api/welcome/complete/route.ts** | POST. Body: session_id, email, password, displayName. Retrieves Stripe session; requires paid; requires session email to match body email. Finds Auth user by email (admin listUsers); returns 400 if no user. Updates user password (admin.updateUserById) and profile full_name if provided. Returns { ok: true }. Does not clear onboarding_pending. |
+| **app/thank-you/page.tsx** | Client component. Uses clean `/thank-you` URL, polls `/api/thank-you/session`, displays stateful processing/ready/error UI, and provides Google + magic-link auth options. |
+| **app/api/thank-you/session/route.ts** | GET. Accepts `sid` query or `ot_checkout_sid` cookie fallback. Retrieves Stripe checkout session (expand subscription), verifies paid/ready conditions, and returns `state` plus email/customer/subscription diagnostics. |
 
 ---
 
@@ -115,10 +114,10 @@ Every file involved in the listed areas, with a short description of what it cur
 - **Stripe checkout session creation:** 6 files (route, button, pricing page, package-plans, service-creator, stripe, supabase-server, supabase-admin — 8 if counting libs).
 - **Stripe webhook handler:** 2 files (webhook route, plan-entitlements).
 - **Lead → customer (RPC):** 2 files (webhook route, convert_lead_to_customer migration).
-- **Supabase Auth user creation:** 2 files (webhook route, welcome/complete for password update only).
+- **Supabase Auth user creation:** webhook-driven in `app/api/billing/webhook/route.ts`.
 - **Workspace/customer creation:** webhook route + admin customer pages (read-only).
 - **Redirect logic:** 12+ files (checkout response, CheckoutNowButton, welcome page, login, thank-you, start, vault, onboarding/creator, BecomeCreatorClient, checkout page, admin layout and pages, bitcoin checkout).
-- **/welcome page:** 3 files (welcome/page.tsx, api/welcome/session, api/welcome/complete).
+- **/thank-you page:** 2 files (`app/thank-you/page.tsx`, `app/api/thank-you/session/route.ts`).
 - **Middleware (auth/redirect):** 1 file (proxy.ts; no middleware.ts).
 - **Dashboard redirects:** start, vault, login, thank-you, admin layout and admin pages.
 

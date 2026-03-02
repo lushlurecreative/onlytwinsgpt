@@ -29,16 +29,15 @@ Creator/consumer role model, subscriptions, leads pipeline, generation requests,
 Billing + Onboarding
 
 Stripe checkout route is live and currently uses:
-`/welcome?session_id={CHECKOUT_SESSION_ID}` for plan checkout success redirect.
+`/thank-you?sid={CHECKOUT_SESSION_ID}` for plan checkout success redirect.
 
 Webhook idempotency is implemented using `stripe_webhook_events` insert-first lock behavior.
 
 `checkout.session.completed` provisioning path exists (Auth user create/reuse, profile upsert, optional lead conversion RPC path).
 
-Welcome flow exists:
-`/api/welcome/session` (session_id validation + readiness),
-`/api/welcome/complete` (password/profile finalize),
-`/welcome` page (poll + submit + sign in + redirect `/start`).
+Thank-you flow exists:
+`/api/thank-you/session` (sid/cookie validation + readiness),
+`/thank-you` page (poll + auth + redirect `/dashboard` -> `/start`).
 
 Admin
 
@@ -51,7 +50,7 @@ Health API and global health indicator components exist.
 WHAT STILL NEEDS VERIFICATION (LIVE)
 
 End-to-end guest checkout in production:
-Pricing -> Stripe -> `/welcome?session_id=...` -> password set -> auto sign-in -> `/start`.
+Pricing -> Stripe -> `/thank-you?sid=...` -> clean `/thank-you` -> auth -> `/dashboard`.
 
 Webhook delivery health:
 `checkout.session.completed` and `customer.subscription.*` returning 2xx in Stripe dashboard.
@@ -270,4 +269,4 @@ We are currently in Phase A (Revenue Reliability), moving into Phase B.
 Core app + billing + onboarding architecture is implemented.
 
 Immediate priority:
-Confirm stable production behavior for the full guest checkout -> webhook -> welcome -> start flow and keep webhook deliveries green.
+Confirm stable production behavior for the full guest checkout -> webhook -> thank-you -> dashboard flow and keep webhook deliveries green.

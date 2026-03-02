@@ -24,16 +24,18 @@ Use this against the live deployment only.
 ## 1) Guest Checkout End-to-End Verification
 
 ### Goal
-`/pricing` -> Stripe Checkout -> `/welcome?session_id=...` -> password set -> auto sign-in -> `/start`.
+`/pricing` -> Stripe Checkout -> `/thank-you?sid=...` -> auth -> `/dashboard`.
 
 ### Steps
 1. Open production `/pricing` in an incognito window.
 2. Start plan checkout as a guest.
 3. Complete Stripe payment.
-4. After redirect, confirm URL includes:
-   - `/welcome?session_id=cs_...`
-5. Complete password form and submit.
-6. Confirm browser auto-redirects to `/start`.
+4. After redirect, confirm URL first includes:
+   - `/thank-you?sid=cs_...`
+5. Confirm middleware rewrites to clean URL:
+   - `/thank-you`
+6. Complete authentication (Google or magic link).
+7. Confirm browser redirects to `/dashboard` (then `/start` alias).
 
 ### Required Evidence (record all)
 - Stripe Checkout Session ID (`cs_...`)
@@ -47,8 +49,9 @@ Use this against the live deployment only.
   - `subscriptions` row created/updated (`status`, `stripe_subscription_id`, `stripe_price_id`)
 - URL/screenshot notes:
   - pricing page start
-  - welcome URL with session_id
-  - final `/start` page
+  - thank-you URL with sid
+  - clean `/thank-you` URL
+  - final `/dashboard` or `/start` page
 
 ### Suggested SQL checks
 ```sql

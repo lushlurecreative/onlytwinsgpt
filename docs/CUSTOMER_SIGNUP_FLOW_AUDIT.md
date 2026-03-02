@@ -10,16 +10,16 @@ This document traces the **new customer signup flow** (guest checkout: no accoun
 |------|--------|--------|-------------------|
 | 1 | Visitor | Lands on `/pricing` | Sees plans; not logged in. |
 | 2 | Visitor | Clicks e.g. "Start Subscription" (Starter) | `CheckoutNowButton` sends `POST /api/billing/checkout` with `{ plan: "starter" }`. No auth. |
-| 3 | Checkout API | Handles request | `isGuestCheckout = !!body.plan && (userError \|\| !user)` → true. Creates Stripe Checkout session with `success_url: {baseUrl}/welcome?session_id={CHECKOUT_SESSION_ID}`, `metadata: { plan, creator_id (service), no subscriber_id }`. Returns `session.url`. |
+| 3 | Checkout API | Handles request | `isGuestCheckout = !!body.plan && (userError \|\| !user)` → true. Creates Stripe Checkout session with `success_url: https://onlytwins.dev/thank-you?sid={CHECKOUT_SESSION_ID}`, `metadata: { plan, creator_id (service), no subscriber_id }`. Returns `session.url`. |
 | 4 | Browser | Redirects to Stripe Checkout | User enters payment and pays. |
-| 5 | Stripe | Redirects to app | `GET /welcome?session_id=cs_xxx`. |
+| 5 | Stripe | Redirects to app | `GET /thank-you?sid=cs_xxx` then middleware redirects to clean `/thank-you`. |
 | 6 | Stripe (async) | Sends webhooks | `checkout.session.completed` then `customer.subscription.created`. |
 | 7 | Webhook `checkout.session.completed` | Creates account | No `subscriber_id` in metadata (guest). Creates Auth user (or finds existing by email), upserts profile: `stripe_customer_id`, `onboarding_pending: true`, `role: "creator"`. Does **not** insert `subscriptions` row. |
 | 8 | Webhook `customer.subscription.created` | Links subscription | Resolves `subscriber_id` via `profiles.stripe_customer_id` (no `subscriber_id` in metadata). Upserts `subscriptions` with `creator_id`, `subscriber_id`, `stripe_subscription_id`, etc. |
-| 9 | User on `/welcome` | Page loads | Client calls `GET /api/welcome/session?session_id=...`. API retrieves Stripe session, checks paid, returns `email`. Form shows with email pre-filled. |
-| 10 | User | Submits password + optional display name | Client calls `POST /api/welcome/complete` with `session_id`, `email`, `password`, `displayName`. |
-| 11 | Welcome complete API | Validates and updates | Verifies session paid, email matches session, finds Auth user by email. Updates password via `supabaseAdmin.auth.admin.updateUserById`, updates `profiles.full_name` if displayName provided. Returns `{ ok: true }`. |
-| 12 | Client | Signs in and redirects | `supabase.auth.signInWithPassword({ email, password })` then `window.location.replace("/start")`. |
+| 9 | User on `/thank-you` | Page loads | Client calls `GET /api/thank-you/session`. API retrieves Stripe session, checks paid/readiness, and returns `state`. |
+| 10 | User | Authenticates | If state is `ready`, user authenticates via Google OAuth or magic link. |
+| 11 | Thank-you session API | Validates and reports state | Verifies session from `sid` query/cookie and returns `state` plus diagnostics. |
+| 12 | Client | Redirects | On authenticated session, client redirects to `/dashboard` (alias to `/start`). |
 | 13 | User on `/start` | Sees dashboard | Stats (posts, subscriptions) and "Open Training Vault" link. |
 | 14 | User | Clicks "Open Training Vault" | Navigates to `/vault`. |
 | 15 | Vault page | Checks access | User exists, not suspended. `getUserRole` → `"creator"` (set in webhook). Renders `VaultClient`. |
@@ -31,25 +31,24 @@ This document traces the **new customer signup flow** (guest checkout: no accoun
 | Step | File(s) |
 |------|--------|
 | 2–3 | `app/pricing/CheckoutNowButton.tsx`, `app/api/billing/checkout/route.ts` |
-| 5 | Stripe redirect URL from checkout (no app route; Next serves `/welcome`). |
+| 5 | Stripe redirect URL from checkout (Next serves `/thank-you`). |
 | 6–8 | `app/api/billing/webhook/route.ts` |
-| 9 | `app/welcome/page.tsx`, `app/api/welcome/session/route.ts` |
-| 10–12 | `app/welcome/page.tsx`, `app/api/welcome/complete/route.ts` |
+| 9 | `app/thank-you/page.tsx`, `app/api/thank-you/session/route.ts` |
+| 10–12 | `app/thank-you/page.tsx`, `app/dashboard/page.tsx` |
 | 13–15 | `app/start/page.tsx`, `app/vault/page.tsx`, `lib/roles.ts` |
 
 ---
 
 ## Gaps and bugs (why things “don’t work or get worse”)
 
-### 1. Race: Welcome before webhook (high impact)
+### 1. Race: Thank-you before webhook (high impact)
 
-**What happens:** User pays and is redirected to `/welcome?session_id=...` immediately. They can submit the form before `checkout.session.completed` has run. The complete API looks up the user by email; the user does not exist yet → **"No account found for this email"**.
+**What happens:** User pays and is redirected to `/thank-you?sid=...` immediately. The thank-you page can load before `checkout.session.completed` has run, so state remains `processing` until webhook provisioning is done.
 
-**Evidence:** `app/api/welcome/complete/route.ts` does `listUsers` and `find(u => email match)`. If webhook hasn’t created the user, `authUser` is undefined and the API returns 400.
+**Evidence:** `app/api/thank-you/session/route.ts` returns `processing` with reason `auth_user_not_ready` until webhook-created user/profile are present.
 
 **Fix:**  
-- Either: in welcome UI, after loading session email, poll or retry “Complete” with a short delay and user-friendly message (“Setting up your account…”) until the backend finds the user.  
-- Or: in complete API, if “No account found”, return a retryable error (e.g. 503) and have the client retry a few times with backoff.
+Keep polling state in thank-you UI until ready, and only expose auth actions once state is ready.
 
 ---
 
@@ -69,13 +68,13 @@ This document traces the **new customer signup flow** (guest checkout: no accoun
 
 ---
 
-### 3. `onboarding_pending` never cleared (medium / correctness)
+### 3. `onboarding_pending` lifecycle (medium / correctness)
 
-**What happens:** Webhook sets `onboarding_pending: true`. The migration comment says “clear after /welcome complete”. The welcome complete API does **not** set `onboarding_pending: false`.
+**What happens:** Webhook sets `onboarding_pending: true`; lifecycle clearing should happen as part of post-payment account setup completion.
 
-**Evidence:** `app/api/welcome/complete/route.ts` updates `profiles` only with `full_name`. No `onboarding_pending`.
+**Evidence:** `profiles.onboarding_pending` is populated by webhook provisioning and now gated through the thank-you readiness API.
 
-**Fix:** In welcome complete, after updating password and name, update profile: `onboarding_pending: false`.
+**Fix:** Keep readiness and profile lifecycle checks aligned in webhook/session flow.
 
 ---
 
@@ -91,7 +90,7 @@ This document traces the **new customer signup flow** (guest checkout: no accoun
 
 ### 5. `NEXT_PUBLIC_APP_URL` (configuration)
 
-**What happens:** Checkout builds `success_url` as `${baseUrl}/welcome?session_id=...` where `baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.url.origin ?? "http://localhost:3000"`. If `NEXT_PUBLIC_APP_URL` is wrong or missing in production, users can be sent to the wrong domain or path after payment.
+**What happens:** Checkout builds `success_url` as `https://onlytwins.dev/thank-you?sid={CHECKOUT_SESSION_ID}`. If domain configuration is wrong in production, users can be sent to the wrong host.
 
 **Fix:** Ensure production (e.g. Vercel) has `NEXT_PUBLIC_APP_URL` set to the canonical app URL (e.g. `https://onlytwins.dev`).
 
@@ -114,25 +113,23 @@ flowchart TD
   subgraph checkout [Checkout API]
     C --> D{User?}
     D -->|No| E[Guest checkout]
-    E --> F[Stripe session success_url=/welcome]
+    E --> F[Stripe session success_url=/thank-you?sid]
     F --> G[Return session.url]
   end
   G --> H[Stripe Checkout]
   H --> I[Pay]
-  I --> J[Redirect /welcome?session_id=...]
+  I --> J[Redirect /thank-you?sid=...]
   I --> K[Stripe webhooks]
   K --> L[checkout.session.completed]
   L --> M[Create user + profile role=creator]
   K --> N[customer.subscription.created]
   N --> O[Resolve subscriber_id via stripe_customer_id]
   O --> P[Upsert subscriptions]
-  J --> Q[GET /api/welcome/session]
-  Q --> R[Show form email]
-  R --> S[POST /api/welcome/complete]
-  S --> T{User exists?}
-  T -->|No race| U[Update password + profile]
-  T -->|Race| V[Error: No account found]
-  U --> W[Client signIn + redirect /start]
+  J --> Q[GET /api/thank-you/session]
+  Q --> R{State ready?}
+  R -->|No| V[Show processing]
+  R -->|Yes| S[Google or magic link auth]
+  S --> W[Client redirect /dashboard]
   W --> X[Start page]
   X --> Y[Click Open Training Vault]
   Y --> Z[/vault]
@@ -146,8 +143,8 @@ flowchart TD
 ## Recommended fix order
 
 1. **Plan key resolution** – Make `getPlanKeyForStripePriceId` (or a shared resolver) use app_settings when env vars are missing, so entitlements and revenue work for dynamically created prices.  
-2. **Welcome race** – Add retry or “setting up your account” handling so completing the form before the webhook doesn’t show a dead “No account found” error.  
-3. **Welcome complete** – Set `onboarding_pending: false` when the user completes the welcome step.  
+2. **Thank-you readiness race** – Keep state polling and diagnostics visible until webhook provisioning completes.  
+3. **Onboarding lifecycle** – Keep `onboarding_pending` semantics aligned with post-payment setup completion.  
 4. **Vault creator elevation** – Use admin client to set `profiles.role` to `creator` when allowing a subscriber into the vault, so RLS cannot block it.  
 5. **Config** – Document and verify `NEXT_PUBLIC_APP_URL` (and Stripe webhook URL) in production.
 
@@ -155,11 +152,11 @@ flowchart TD
 
 ## Summary
 
-The intended path (pricing → Stripe → welcome → start → vault) is implemented, but:
+The intended path (pricing → Stripe → thank-you → dashboard/start → vault) is implemented, but:
 
-- A **race** between redirect and webhook can make “Complete” fail with “No account found”.
+- A **race** between redirect and webhook can leave the page in processing until provisioning finishes.
 - **Plan resolution** uses only env vars while checkout stores price IDs in app_settings, so entitlements and revenue can be wrong or missing.
-- **onboarding_pending** is never cleared after welcome.
+- **onboarding_pending** lifecycle still needs explicit production verification against final setup completion semantics.
 - **Vault** may rely on a role update that RLS could block, causing inconsistent access.
 
 Fixing the four code items above (and checking config) should make the flow behave consistently and match how “every website” handles signup and first use.

@@ -58,14 +58,14 @@ export async function GET(request: Request) {
     const sidFromCookie = cookieStore.get("ot_checkout_sid")?.value?.trim() ?? "";
     const sessionId = sidFromQuery || sidFromCookie || sidLegacy;
     if (!sessionId) {
-      logWarn("welcome_session_missing_session_id", { requestId });
+      logWarn("thank_you_session_missing_session_id", { requestId });
       return NextResponse.json(
         { state: "error", error: "Missing checkout session id", reason: "sid_missing", request_id: requestId },
         { status: 400 }
       );
     }
 
-    logInfo("welcome_session_requested", { requestId, sessionId });
+    logInfo("thank_you_session_requested", { requestId, sessionId });
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ["customer", "subscription"],
@@ -75,7 +75,7 @@ export async function GET(request: Request) {
       session.status === "complete" ||
       session.subscription != null;
     if (!paid) {
-      logWarn("welcome_session_not_paid", {
+      logWarn("thank_you_session_not_paid", {
         requestId,
         sessionId,
         payment_status: session.payment_status ?? null,
@@ -102,7 +102,7 @@ export async function GET(request: Request) {
     }
     const stripeSubscriptionId = extractStripeSubscriptionId(session.subscription);
     if (session.mode === "subscription" && !stripeSubscriptionId) {
-      logWarn("welcome_session_subscription_missing", {
+      logWarn("thank_you_session_subscription_missing", {
         requestId,
         sessionId,
         session_mode: session.mode,
@@ -129,7 +129,7 @@ export async function GET(request: Request) {
         subscriptionForResolution = sub;
         stripeCustomerId = extractStripeCustomerId(sub.customer);
       } catch (resolutionError) {
-        logWarn("welcome_session_subscription_lookup_failed", {
+        logWarn("thank_you_session_subscription_lookup_failed", {
           requestId,
           sessionId,
           stripe_subscription_id: stripeSubscriptionId,
@@ -141,7 +141,7 @@ export async function GET(request: Request) {
       }
     }
     if (!stripeCustomerId) {
-      logWarn("welcome_session_customer_unresolvable", {
+      logWarn("thank_you_session_customer_unresolvable", {
         requestId,
         sessionId,
         session_customer_type: typeof session.customer,
@@ -182,7 +182,7 @@ export async function GET(request: Request) {
           : null) ??
         null)?.trim().toLowerCase() ?? null;
     if (!email) {
-      logWarn("welcome_session_missing_email", {
+      logWarn("thank_you_session_missing_email", {
         requestId,
         sessionId,
       });
@@ -203,7 +203,7 @@ export async function GET(request: Request) {
     const authUser = userList?.users?.find((u) => u.email?.toLowerCase() === email) ?? null;
 
     if (!authUser?.id) {
-      logInfo("welcome_session_processing_user_lookup", {
+      logInfo("thank_you_session_processing_user_lookup", {
         requestId,
         sessionId,
         has_auth_user: !!authUser?.id,
@@ -229,7 +229,7 @@ export async function GET(request: Request) {
       .eq("id", authUser.id)
       .maybeSingle();
     if (profileError) {
-      logWarn("welcome_session_profile_fetch_failed", {
+      logWarn("thank_you_session_profile_fetch_failed", {
         requestId,
         sessionId,
         user_id: authUser.id,
@@ -249,7 +249,7 @@ export async function GET(request: Request) {
         },
         { onConflict: "id" }
       );
-      logInfo("welcome_session_profile_self_healed_create", {
+      logInfo("thank_you_session_profile_self_healed_create", {
         requestId,
         sessionId,
         user_id: authUser.id,
@@ -259,7 +259,7 @@ export async function GET(request: Request) {
         .from("profiles")
         .update({ stripe_customer_id: stripeCustomerId, updated_at: new Date().toISOString() })
         .eq("id", authUser.id);
-      logInfo("welcome_session_profile_self_healed_customer", {
+      logInfo("thank_you_session_profile_self_healed_customer", {
         requestId,
         sessionId,
         user_id: authUser.id,
@@ -289,7 +289,7 @@ export async function GET(request: Request) {
           { onConflict: "stripe_subscription_id" }
         );
       } catch (subscriptionSyncError) {
-        logWarn("welcome_session_subscription_sync_failed", {
+        logWarn("thank_you_session_subscription_sync_failed", {
           requestId,
           sessionId,
           stripe_subscription_id: stripeSubscriptionId,
@@ -311,7 +311,7 @@ export async function GET(request: Request) {
       | null;
 
     if (!currentProfile || currentProfile.stripe_customer_id !== stripeCustomerId) {
-      logInfo("welcome_session_processing_profile_not_ready", {
+      logInfo("thank_you_session_processing_profile_not_ready", {
         requestId,
         sessionId,
         has_profile: !!currentProfile,
@@ -333,7 +333,7 @@ export async function GET(request: Request) {
       );
     }
 
-    logInfo("welcome_session_ready", {
+    logInfo("thank_you_session_ready", {
       requestId,
       sessionId,
       user_id: authUser.id,
@@ -350,8 +350,8 @@ export async function GET(request: Request) {
       stripe_subscription_id: stripeSubscriptionId,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to load welcome state";
-    logError("welcome_session_unhandled_error", err, { requestId });
+    const message = err instanceof Error ? err.message : "Failed to load thank-you state";
+    logError("thank_you_session_unhandled_error", err, { requestId });
     return NextResponse.json(
       {
         state: "error",
