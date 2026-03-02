@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import BrandName from "@/app/components/BrandName";
 import { supabase } from "@/lib/supabase";
 
 type ThankYouState = "processing" | "ready" | "error";
@@ -17,11 +16,10 @@ type SessionResponse = {
 };
 
 export default function ThankYouPage() {
-  const [state, setState] = useState<ThankYouState>("processing");
+  const [state, setState] = useState<ThankYouState>("ready");
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
   const [magicEmail, setMagicEmail] = useState("");
-  const [authLoading, setAuthLoading] = useState(true);
   const [magicMsg, setMagicMsg] = useState("");
   const [meta, setMeta] = useState<{
     payment_status?: string | null;
@@ -40,7 +38,6 @@ export default function ThankYouPage() {
         window.location.replace("/dashboard");
         return;
       }
-      setAuthLoading(false);
     }
 
     void checkAuth();
@@ -55,52 +52,37 @@ export default function ThankYouPage() {
 
   useEffect(() => {
     let cancelled = false;
-    let pollCount = 0;
-    const maxPolls = 40;
-    const pollDelayMs = 2000;
-
     (async () => {
-      while (!cancelled && pollCount < maxPolls) {
-        try {
-          const res = await fetch("/api/thank-you/session");
-          const data = (await res.json().catch(() => ({}))) as SessionResponse;
-          if (cancelled) return;
+      try {
+        const res = await fetch("/api/thank-you/session");
+        const data = (await res.json().catch(() => ({}))) as SessionResponse;
+        if (cancelled) return;
 
-          setMeta({
-            payment_status: data.payment_status ?? null,
-            stripe_customer_id: data.stripe_customer_id ?? null,
-            stripe_subscription_id: data.stripe_subscription_id ?? null,
-          });
-          if (data.email) {
-            setEmail(data.email);
-            setMagicEmail((prev) => prev || data.email || "");
-          }
+        setMeta({
+          payment_status: data.payment_status ?? null,
+          stripe_customer_id: data.stripe_customer_id ?? null,
+          stripe_subscription_id: data.stripe_subscription_id ?? null,
+        });
+        if (data.email) {
+          setEmail(data.email);
+          setMagicEmail((prev) => prev || data.email || "");
+        }
 
-          if (!res.ok || data.state === "error") {
-            setState("error");
-            setError(data.error ?? "We couldn't confirm payment. Contact support.");
-            return;
-          }
-          if (data.state === "ready") {
-            setState("ready");
-            return;
-          }
-
-          setState("processing");
-          pollCount += 1;
-          await new Promise((resolve) => setTimeout(resolve, pollDelayMs));
-        } catch {
+        if (!res.ok || data.state === "error") {
           setState("error");
-          setError("We couldn't confirm payment. Contact support.");
+          setError(data.error ?? "We couldn't confirm payment. Contact support.");
           return;
         }
-      }
-      if (!cancelled) {
-        setState("error");
-        setError("We couldn't confirm payment. Contact support.");
+
+        // Show spinner only when payment itself is not yet confirmed.
+        setState(data.state === "processing" ? "processing" : "ready");
+      } catch {
+        if (!cancelled) {
+          setState("error");
+          setError("We couldn't confirm payment. Contact support.");
+        }
       }
     })();
-
     return () => {
       cancelled = true;
     };
@@ -143,15 +125,15 @@ export default function ThankYouPage() {
   return (
     <main style={{ padding: 48, maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
       <h1 style={{ marginTop: 0, fontSize: 28 }}>
-        <BrandName /> Thanks for subscribing
+        Thanks for subscribing ✅
       </h1>
+      <p className="muted" style={{ marginBottom: 14 }}>
+        You&apos;re all set. Create your account to access your dashboard.
+      </p>
 
       {state === "processing" ? (
         <>
-          <p style={{ marginBottom: 8 }}>Finalizing your account...</p>
-          <p className="muted" style={{ marginBottom: 20 }}>
-            Please keep this page open for a moment.
-          </p>
+          <p style={{ marginBottom: 20 }}>Verifying payment...</p>
         </>
       ) : null}
 
@@ -162,10 +144,10 @@ export default function ThankYouPage() {
         </>
       ) : null}
 
-      {state === "ready" && !authLoading ? (
+      {state === "ready" ? (
         <>
           <p className="muted" style={{ marginBottom: 12 }}>
-            Your payment is confirmed. Sign in to continue.
+            Create account
           </p>
           <div style={{ display: "grid", gap: 10, maxWidth: 360, margin: "0 auto" }}>
             <button type="button" className="btn btn-primary" onClick={loginWithGoogle}>
@@ -184,7 +166,7 @@ export default function ThankYouPage() {
               }}
             />
             <button type="button" className="btn btn-secondary" onClick={sendMagicLink}>
-              Send magic link
+              Email me a login link
             </button>
             {magicMsg ? <p className="muted" style={{ margin: 0 }}>{magicMsg}</p> : null}
           </div>
@@ -192,6 +174,7 @@ export default function ThankYouPage() {
       ) : null}
 
       <div style={{ marginTop: 20, fontSize: 12, opacity: 0.8 }}>
+        {email ? <div>Email: {email}</div> : null}
         {meta.payment_status ? <div>Payment: {meta.payment_status}</div> : null}
         {meta.stripe_customer_id ? <div>Customer: {meta.stripe_customer_id}</div> : null}
         {meta.stripe_subscription_id ? <div>Subscription: {meta.stripe_subscription_id}</div> : null}
