@@ -59,6 +59,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+  const idempotencyKey = request.headers.get("idempotency-key")?.trim() || null;
 
   const samplePaths = (body.samplePaths ?? []).map((p) => p.trim()).filter(Boolean);
   if (samplePaths.length < 10 || samplePaths.length > 20) {
@@ -109,6 +110,7 @@ export async function POST(request: Request) {
     p_period_end: usageContext.periodEndIso,
     p_limit_images: usageContext.imageLimit,
     p_limit_videos: usageContext.videoLimit,
+    p_idempotency_key: idempotencyKey,
   });
 
   if (error || !data) {
