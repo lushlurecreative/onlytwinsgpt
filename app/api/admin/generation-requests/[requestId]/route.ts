@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getScenePresetByKey } from "@/lib/scene-presets";
+import { writeAuditLog } from "@/lib/audit-log";
 
 type Params = { params: Promise<{ requestId: string }> };
 
@@ -119,6 +120,13 @@ export async function PATCH(request: Request, { params }: Params) {
   if (error || !data) {
     return NextResponse.json({ error: error?.message ?? "Update failed" }, { status: 400 });
   }
+  await writeAuditLog(admin, {
+    actor: user.id,
+    actionType: "admin.generation_request.update",
+    entityRef: `generation_request:${requestId}`,
+    beforeJson: existingRow,
+    afterJson: data,
+  });
 
   return NextResponse.json({ request: data }, { status: 200 });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { writeAuditLog } from "@/lib/audit-log";
 
 type Body = {
   approved?: boolean;
@@ -37,6 +38,11 @@ export async function PATCH(request: Request, { params }: Params) {
   const status = approved ? "approved" : "rejected";
 
   const admin = getSupabaseAdmin();
+  const { data: before } = await admin
+    .from("generation_requests")
+    .select("id, status, admin_notes, approved_by, approved_at")
+    .eq("id", requestId)
+    .maybeSingle();
   const updatePayload: Record<string, unknown> = {
     status,
     approved_by: user.id,
@@ -58,6 +64,13 @@ export async function PATCH(request: Request, { params }: Params) {
   if (error || !data) {
     return NextResponse.json({ error: error?.message ?? "Could not update request" }, { status: 400 });
   }
+  await writeAuditLog(admin, {
+    actor: user.id,
+    actionType: approved ? "admin.generation_request.approve" : "admin.generation_request.reject",
+    entityRef: `generation_request:${requestId}`,
+    beforeJson: before ?? null,
+    afterJson: data,
+  });
 
   return NextResponse.json({ request: data }, { status: 200 });
 }

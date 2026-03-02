@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { isAdminUser } from "@/lib/admin";
 import type { LeadStatus } from "@/lib/db-enums";
+import { writeAuditLog } from "@/lib/audit-log";
 
 type Params = {
   params: Promise<{ leadId: string }>;
@@ -35,6 +36,11 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const approved = body.approved !== false;
   const admin = getSupabaseAdmin();
+  const { data: before } = await admin
+    .from("leads")
+    .select("id, status, approved_at, approved_by")
+    .eq("id", leadId)
+    .maybeSingle();
   const newStatus: LeadStatus = approved ? "approved" : "rejected";
   const { data, error } = await admin
     .from("leads")
@@ -50,6 +56,13 @@ export async function PATCH(request: Request, { params }: Params) {
   if (error || !data) {
     return NextResponse.json({ error: error?.message ?? "Could not update lead" }, { status: 400 });
   }
+  await writeAuditLog(admin, {
+    actor: user.id,
+    actionType: "admin.lead.approve_or_reject",
+    entityRef: `lead:${leadId}`,
+    beforeJson: before ?? null,
+    afterJson: data,
+  });
   return NextResponse.json({ lead: data }, { status: 200 });
 }
 

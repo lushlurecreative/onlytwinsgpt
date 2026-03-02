@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { writeAuditLog } from "@/lib/audit-log";
 
 type Params = { params: Promise<{ userId: string }> };
 
@@ -33,6 +34,11 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const suspended = body.suspended === true;
   const admin = getSupabaseAdmin();
+  const { data: before } = await admin
+    .from("profiles")
+    .select("id, suspended_at")
+    .eq("id", userId)
+    .maybeSingle();
   const { error } = await admin
     .from("profiles")
     .update({ suspended_at: suspended ? new Date().toISOString() : null })
@@ -41,5 +47,12 @@ export async function PATCH(request: Request, { params }: Params) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  await writeAuditLog(admin, {
+    actor: user.id,
+    actionType: suspended ? "admin.user.suspend" : "admin.user.unsuspend",
+    entityRef: `user:${userId}`,
+    beforeJson: before ?? null,
+    afterJson: { suspended_at: suspended ? "set" : null },
+  });
   return NextResponse.json({ ok: true, suspended });
 }

@@ -11,6 +11,7 @@ import {
   createGenerationJob,
   pollAllGenerationJobsUntilDone,
 } from "@/lib/generation-jobs";
+import { writeAuditLog } from "@/lib/audit-log";
 
 type Params = {
   params: Promise<{ requestId: string }>;
@@ -228,6 +229,18 @@ export async function POST(_request: Request, { params }: Params) {
       payload_json: { request_id: requestId, image_count: done - videosDone, video_count: videosDone },
     });
   }
+  await writeAuditLog(admin, {
+    actor: user.id,
+    actionType: "admin.generation_request.generate",
+    entityRef: `generation_request:${requestId}`,
+    beforeJson: { status: requestRow.status, retry_count: requestRow.retry_count },
+    afterJson: {
+      status: finalStatus,
+      generated_images: done - videosDone,
+      generated_videos: videosDone,
+      retries,
+    },
+  });
 
   return NextResponse.json(
     {

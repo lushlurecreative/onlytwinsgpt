@@ -7,6 +7,7 @@ import {
   createGenerationJob,
 } from "@/lib/generation-jobs";
 import type { LeadStatus } from "@/lib/db-enums";
+import { writeAuditLog } from "@/lib/audit-log";
 
 type Params = { params: Promise<{ leadId: string }> };
 
@@ -53,6 +54,11 @@ export async function POST(_request: Request, { params }: Params) {
   if (leadError || !lead) {
     return NextResponse.json({ error: leadError?.message ?? "Lead not found" }, { status: 404 });
   }
+  const beforeLead = {
+    id: lead.id,
+    sample_paths: lead.sample_paths ?? [],
+    image_urls_json: lead.image_urls_json ?? null,
+  };
 
   const referenceImage = getLeadReferenceImage(lead);
   if (!referenceImage) {
@@ -101,6 +107,13 @@ export async function POST(_request: Request, { params }: Params) {
     entity_type: "lead",
     entity_id: leadId,
     payload_json: { generation_job_id: jobId, source: "admin_generate_sample" },
+  });
+  await writeAuditLog(admin, {
+    actor: user.id,
+    actionType: "admin.lead.generate_sample",
+    entityRef: `lead:${leadId}`,
+    beforeJson: beforeLead,
+    afterJson: { status: "sample_queued", generation_job_id: jobId },
   });
 
   return NextResponse.json(

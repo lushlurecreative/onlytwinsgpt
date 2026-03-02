@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { isAdminUser } from "@/lib/admin";
+import { writeAuditLog } from "@/lib/audit-log";
 
 const AUTOMATION_KEYS = [
   "lead_scrape_handles",
@@ -46,12 +47,31 @@ export async function PATCH(request: Request) {
 
   const admin = getSupabaseAdmin();
   const now = new Date().toISOString();
+  const { data: existingRows } = await admin
+    .from("app_settings")
+    .select("key, value")
+    .in("key", [...AUTOMATION_KEYS]);
+  const existingByKey = new Map<string, string>(
+    (existingRows ?? []).map((r) => [(r as { key: string }).key, (r as { value: string }).value ?? ""])
+  );
+
   for (const key of AUTOMATION_KEYS) {
     if (body[key] !== undefined) {
+      const nextValue = String(body[key]).trim();
       await admin.from("app_settings").upsert(
-        { key, value: String(body[key]).trim(), updated_at: now },
+        { key, value: nextValue, updated_at: now },
         { onConflict: "key" }
       );
+      const beforeValue = existingByKey.get(key) ?? "";
+      if (beforeValue !== nextValue) {
+        await writeAuditLog(admin, {
+          actor: user.id,
+          actionType: "admin.app_settings.update",
+          entityRef: `app_settings:${key}`,
+          beforeJson: { key, value: beforeValue },
+          afterJson: { key, value: nextValue },
+        });
+      }
     }
   }
   return NextResponse.json({ ok: true });

@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { isAdminUser } from "@/lib/admin";
 import { sendOutreach, type LeadForOutreach } from "@/lib/outreach";
 import type { LeadStatus } from "@/lib/db-enums";
+import { writeAuditLog } from "@/lib/audit-log";
 
 type Params = { params: Promise<{ leadId: string }> };
 
@@ -64,6 +65,19 @@ export async function POST(_request: Request, { params }: Params) {
     entity_type: "lead",
     entity_id: leadId,
     payload_json: { source: "admin_send_outreach", attempt: attempts + 1 },
+  });
+  await writeAuditLog(admin, {
+    actor: user.id,
+    actionType: "admin.lead.outreach",
+    entityRef: `lead:${leadId}`,
+    beforeJson: {
+      status: lead.status,
+      outreach_attempts: attempts,
+    },
+    afterJson: {
+      status: "outreach_sent",
+      outreach_attempts: attempts + 1,
+    },
   });
 
   return NextResponse.json({ ok: true }, { status: 200 });

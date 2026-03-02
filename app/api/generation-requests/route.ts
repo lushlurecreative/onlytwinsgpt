@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getScenePresetByKey } from "@/lib/scene-presets";
 import { sendAlert } from "@/lib/observability";
 import { isUserSuspended } from "@/lib/suspend";
+import { resolveUsageContext, isGenerationEligibleSubscriptionStatus } from "@/lib/usage-limits";
 
 type CreateBody = {
   samplePaths?: string[];
@@ -76,29 +77,69 @@ export async function POST(request: Request) {
   const imageCount = Math.max(1, Math.min(250, Number(body.imageCount ?? 10)));
   const videoCount = Math.max(0, Math.min(20, Number(body.videoCount ?? 0)));
   const contentMode = body.contentMode === "mature" ? "mature" : "sfw";
+  const usageContext = await resolveUsageContext(admin, user.id);
+  if (!usageContext) {
+    return NextResponse.json(
+      {
+        error: "No active subscription usage context found.",
+        code: "NO_USAGE_CONTEXT",
+      },
+      { status: 403 }
+    );
+  }
+  if (!isGenerationEligibleSubscriptionStatus(usageContext.subscriptionStatus)) {
+    return NextResponse.json(
+      {
+        error: "Subscription does not allow new generation requests.",
+        code: "SUBSCRIPTION_NOT_ELIGIBLE",
+        subscription_status: usageContext.subscriptionStatus,
+      },
+      { status: 403 }
+    );
+  }
 
-  const { data, error } = await supabase
-    .from("generation_requests")
-    .insert({
-      user_id: user.id,
-      sample_paths: samplePaths,
-      scene_preset: scene.key,
-      image_count: imageCount,
-      video_count: videoCount,
-      content_mode: contentMode,
-      status: "pending",
-      progress_done: 0,
-      progress_total: imageCount + videoCount,
-    })
-    .select("id, status, created_at")
-    .single();
+  const { data, error } = await admin.rpc("create_generation_request_with_usage", {
+    p_user_id: user.id,
+    p_sample_paths: samplePaths,
+    p_scene_preset: scene.key,
+    p_image_count: imageCount,
+    p_video_count: videoCount,
+    p_content_mode: contentMode,
+    p_period_start: usageContext.periodStartIso,
+    p_period_end: usageContext.periodEndIso,
+    p_limit_images: usageContext.imageLimit,
+    p_limit_videos: usageContext.videoLimit,
+  });
 
   if (error || !data) {
-    return NextResponse.json({ error: error?.message ?? "Failed to create request" }, { status: 400 });
+    const message = error?.message ?? "Failed to create request";
+    if (message.includes("USAGE_LIMIT_EXCEEDED_IMAGES")) {
+      return NextResponse.json(
+        {
+          error: "Image usage limit exceeded for current billing period.",
+          code: "USAGE_LIMIT_EXCEEDED_IMAGES",
+        },
+        { status: 402 }
+      );
+    }
+    if (message.includes("USAGE_LIMIT_EXCEEDED_VIDEOS")) {
+      return NextResponse.json(
+        {
+          error: "Video usage limit exceeded for current billing period.",
+          code: "USAGE_LIMIT_EXCEEDED_VIDEOS",
+        },
+        { status: 402 }
+      );
+    }
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+  const inserted = Array.isArray(data) ? data[0] : data;
+  if (!inserted?.id) {
+    return NextResponse.json({ error: "Failed to create request" }, { status: 400 });
   }
 
   await sendAlert("generation_request_submitted", {
-    request_id: data.id,
+    request_id: inserted.id,
     user_id: user.id,
     scene: scene.key,
     content_mode: contentMode,
@@ -106,6 +147,6 @@ export async function POST(request: Request) {
     video_count: videoCount,
   });
 
-  return NextResponse.json({ request: data }, { status: 201 });
+  return NextResponse.json({ request: inserted }, { status: 201 });
 }
 
