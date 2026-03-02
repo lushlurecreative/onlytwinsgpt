@@ -80,24 +80,36 @@ export default function ThankYouPage() {
 
   async function loginWithGoogle() {
     const redirectTo =
-      typeof window !== "undefined" ? `${window.location.origin}/dashboard` : undefined;
-    await supabase.auth.signInWithOAuth({
+      typeof window !== "undefined"
+        ? `${window.location.origin}/auth/callback?next=/dashboard`
+        : undefined;
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
     });
+    if (oauthError) {
+      setError(oauthError.message || "Google login failed.");
+    }
   }
 
   async function sendMagicLink() {
-    const target = magicEmail.trim().toLowerCase();
-    if (!target) {
+    setError("");
+    const cleanEmail = magicEmail.trim().toLowerCase();
+    if (!cleanEmail) {
       setMagicMsg("Enter your email to receive a magic link.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setError("Please enter a valid email.");
       return;
     }
     setMagicMsg("Sending magic link...");
     const redirectTo =
-      typeof window !== "undefined" ? `${window.location.origin}/dashboard` : undefined;
+      typeof window !== "undefined"
+        ? `${window.location.origin}/auth/callback?next=/dashboard`
+        : undefined;
     const { error: otpError } = await supabase.auth.signInWithOtp({
-      email: target,
+      email: cleanEmail,
       options: { emailRedirectTo: redirectTo },
     });
     if (otpError) {
