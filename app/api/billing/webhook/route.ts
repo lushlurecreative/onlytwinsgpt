@@ -183,7 +183,7 @@ export async function POST(request: Request) {
       const session = event.data.object as Stripe.Checkout.Session;
       const source = (session.metadata?.source as string)?.trim() ?? "";
       const leadId = (session.metadata?.lead_id as string)?.trim();
-      let subscriberId = (session.metadata?.subscriber_id as string)?.trim() ?? null;
+      let subscriberId: string | null = (session.metadata?.subscriber_id as string)?.trim() ?? null;
       const creatorId =
         (session.metadata?.creator_id as string)?.trim() || getServiceCreatorId();
       const plan = (session.metadata?.plan as string)?.trim() || null;
