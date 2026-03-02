@@ -24,7 +24,21 @@ export async function proxy(request: NextRequest) {
   response = applySecurityHeaders(response);
 
   const pathname = request.nextUrl.pathname;
+  const sid = request.nextUrl.searchParams.get("sid")?.trim() ?? "";
   const ip = getClientIpFromHeaders(request.headers);
+
+  if (pathname === "/thank-you" && sid) {
+    const redirectUrl = new URL("/thank-you", request.url);
+    const redirect = NextResponse.redirect(redirectUrl);
+    redirect.cookies.set("ot_checkout_sid", sid, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 6,
+    });
+    return applySecurityHeaders(redirect);
+  }
 
   if (pathname === "/login") {
     const rl = checkRateLimit(

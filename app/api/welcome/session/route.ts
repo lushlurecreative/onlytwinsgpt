@@ -4,6 +4,7 @@ import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { logError, logInfo, logWarn } from "@/lib/observability";
 import { getServiceCreatorId } from "@/lib/service-creator";
+import { cookies } from "next/headers";
 
 function extractStripeCustomerId(
   customer: Stripe.Checkout.Session["customer"] | Stripe.Subscription["customer"] | null | undefined
@@ -51,10 +52,17 @@ export async function GET(request: Request) {
   const requestId = crypto.randomUUID();
   try {
     const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get("session_id")?.trim();
+    const sidFromQuery = searchParams.get("sid")?.trim() ?? "";
+    const sidLegacy = searchParams.get("session_id")?.trim() ?? "";
+    const cookieStore = await cookies();
+    const sidFromCookie = cookieStore.get("ot_checkout_sid")?.value?.trim() ?? "";
+    const sessionId = sidFromQuery || sidFromCookie || sidLegacy;
     if (!sessionId) {
       logWarn("welcome_session_missing_session_id", { requestId });
-      return NextResponse.json({ error: "Missing session_id" }, { status: 400 });
+      return NextResponse.json(
+        { state: "error", error: "Missing checkout session id", reason: "sid_missing", request_id: requestId },
+        { status: 400 }
+      );
     }
 
     logInfo("welcome_session_requested", { requestId, sessionId });
@@ -75,8 +83,9 @@ export async function GET(request: Request) {
       });
       return NextResponse.json(
         {
-          state: "error",
-          error: "Session not paid or invalid",
+          state: "processing",
+          error: "Payment is still processing",
+          reason: "payment_not_ready",
           request_id: requestId,
           session_id: sessionId,
           payment_status: session.payment_status ?? null,
@@ -92,6 +101,26 @@ export async function GET(request: Request) {
       );
     }
     const stripeSubscriptionId = extractStripeSubscriptionId(session.subscription);
+    if (session.mode === "subscription" && !stripeSubscriptionId) {
+      logWarn("welcome_session_subscription_missing", {
+        requestId,
+        sessionId,
+        session_mode: session.mode,
+      });
+      return NextResponse.json(
+        {
+          state: "error",
+          error: "Missing Stripe subscription id for subscription checkout.",
+          reason: "stripe_subscription_missing",
+          request_id: requestId,
+          session_id: sessionId,
+          payment_status: session.payment_status ?? null,
+          stripe_customer_id: extractStripeCustomerId(session.customer),
+          stripe_subscription_id: null,
+        },
+        { status: 400 }
+      );
+    }
     let stripeCustomerId = extractStripeCustomerId(session.customer);
     let subscriptionForResolution: Stripe.Subscription | null = null;
     if (!stripeCustomerId && stripeSubscriptionId) {
@@ -131,6 +160,13 @@ export async function GET(request: Request) {
           diagnostics: {
             session_customer_type: typeof session.customer,
             has_subscription_id: !!stripeSubscriptionId,
+            sid_source: sidFromQuery
+              ? "query"
+              : sidFromCookie
+                ? "cookie"
+                : sidLegacy
+                  ? "legacy_query"
+                  : "none",
           },
         },
         { status: 400 }
@@ -175,7 +211,6 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           state: "processing",
-          ready: false,
           email,
           session_id: sessionId,
           request_id: requestId,
@@ -214,11 +249,22 @@ export async function GET(request: Request) {
         },
         { onConflict: "id" }
       );
+      logInfo("welcome_session_profile_self_healed_create", {
+        requestId,
+        sessionId,
+        user_id: authUser.id,
+      });
     } else if (profileRow.stripe_customer_id !== stripeCustomerId) {
       await admin
         .from("profiles")
         .update({ stripe_customer_id: stripeCustomerId, updated_at: new Date().toISOString() })
         .eq("id", authUser.id);
+      logInfo("welcome_session_profile_self_healed_customer", {
+        requestId,
+        sessionId,
+        user_id: authUser.id,
+        stripe_customer_id: stripeCustomerId,
+      });
     }
 
     if (stripeSubscriptionId) {
@@ -264,32 +310,7 @@ export async function GET(request: Request) {
       | { id: string; onboarding_pending?: boolean | null; stripe_customer_id?: string | null }
       | null;
 
-    if (currentProfile && currentProfile.onboarding_pending === false) {
-      logInfo("welcome_session_onboarding_already_completed", {
-        requestId,
-        sessionId,
-        user_id: authUser.id,
-      });
-      return NextResponse.json(
-        {
-          state: "error",
-          error: "Welcome setup is already complete. Please log in.",
-          request_id: requestId,
-          session_id: sessionId,
-          payment_status: session.payment_status ?? null,
-          stripe_customer_id: stripeCustomerId,
-          stripe_subscription_id: stripeSubscriptionId,
-          reason: "onboarding_already_completed",
-        },
-        { status: 409 }
-      );
-    }
-
-    if (
-      !currentProfile ||
-      currentProfile.stripe_customer_id !== stripeCustomerId ||
-      !currentProfile.onboarding_pending
-    ) {
+    if (!currentProfile || currentProfile.stripe_customer_id !== stripeCustomerId) {
       logInfo("welcome_session_processing_profile_not_ready", {
         requestId,
         sessionId,
@@ -300,7 +321,6 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           state: "processing",
-          ready: false,
           email,
           session_id: sessionId,
           request_id: requestId,
@@ -322,7 +342,6 @@ export async function GET(request: Request) {
     });
     return NextResponse.json({
       state: "ready",
-      ready: true,
       email,
       session_id: sessionId,
       request_id: requestId,
