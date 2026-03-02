@@ -268,7 +268,6 @@ export async function GET(request: Request) {
     logInfo("thank_you_session_ready", {
       requestId,
       sessionId,
-      user_id: authUser.id,
       stripe_customer_id: stripeCustomerId,
       stripe_subscription_id: stripeSubscriptionId,
     });
