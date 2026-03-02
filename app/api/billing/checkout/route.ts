@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     if (body.plan) {
       const planPriceId = await getOrCreatePriceIdForPlan(stripe, admin, body.plan);
       const isOneTime = body.plan === "single_batch";
-      const successUrl = `${baseUrl}/welcome?session_id={CHECKOUT_SESSION_ID}`;
+      const successUrl = `${baseUrl}/api/billing/success-redirect?session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl = body.cancelUrl ?? `${baseUrl}/pricing?payment=cancel&method=stripe&plan=${body.plan}`;
       const serviceCreatorId = getServiceCreatorId();
       const metadata: Record<string, string> = {
