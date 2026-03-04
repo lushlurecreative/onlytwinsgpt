@@ -94,7 +94,7 @@ export default function ThankYouPage() {
     setMagicMsg("Sending magic link...");
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
-      options: { emailRedirectTo: `${siteUrl}/auth/callback` },
+      options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/dashboard` },
     });
     if (otpError) {
       setMagicMsg(`Failed: ${otpError.message}`);
