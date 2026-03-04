@@ -386,6 +386,103 @@ export async function POST(request: Request) {
       }
     }
 
+    if (event.type === "invoice.payment_failed") {
+      const invoice = event.data.object as Stripe.Invoice;
+      const invoiceAny = invoice as unknown as {
+        subscription?: string | { id?: string | null } | null;
+        customer?: string | { id?: string | null } | null;
+      };
+      try {
+        const subscriptionId =
+          typeof invoiceAny.subscription === "string"
+            ? invoiceAny.subscription
+            : invoiceAny.subscription &&
+                typeof invoiceAny.subscription === "object" &&
+                "id" in invoiceAny.subscription
+              ? invoiceAny.subscription.id ?? null
+              : null;
+        const customerId =
+          typeof invoiceAny.customer === "string"
+            ? invoiceAny.customer
+            : invoiceAny.customer &&
+                typeof invoiceAny.customer === "object" &&
+                "id" in invoiceAny.customer
+              ? invoiceAny.customer.id ?? null
+              : null;
+
+        let creatorId: string | null = null;
+        let subscriberId: string | null = null;
+
+        if (subscriptionId) {
+          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const parties = await resolveSubscriptionParties(subscription);
+          creatorId = parties.creatorId;
+          subscriberId = parties.subscriberId;
+        }
+
+        if (!subscriberId && customerId) {
+          const { data: profileByCustomer } = await supabaseAdmin
+            .from("profiles")
+            .select("id")
+            .eq("stripe_customer_id", customerId)
+            .maybeSingle();
+          const profileRow = profileByCustomer as { id?: string | null } | null;
+          subscriberId = profileRow?.id ?? null;
+        }
+
+        if (subscriptionId) {
+          const { error: statusError } = await supabaseAdmin
+            .from("subscriptions")
+            .update({ status: "past_due" })
+            .eq("stripe_subscription_id", subscriptionId);
+          if (statusError) {
+            logWarn("billing_webhook_invoice_failed_subscription_status_update_failed", {
+              stripeEventId: event.id,
+              stripeSubscriptionId: subscriptionId,
+              message: statusError.message,
+            });
+          }
+        }
+
+        if (subscriberId) {
+          const failedAmount = -Math.abs(invoice.amount_due || invoice.amount_remaining || 0);
+          await supabaseAdmin.from("revenue_events").insert({
+            user_id: subscriberId,
+            lead_id: null,
+            amount_cents: failedAmount,
+            currency: invoice.currency || "usd",
+            stripe_event_id: event.id,
+            plan_key: null,
+          });
+        } else {
+          logWarn("billing_webhook_invoice_failed_missing_subscriber", {
+            stripeEventId: event.id,
+            stripeSubscriptionId: subscriptionId,
+            stripeCustomerId: customerId,
+          });
+        }
+
+        await supabaseAdmin.from("system_events").insert({
+          event_type: "stripe_invoice_payment_failed",
+          payload: {
+            severity: "warning",
+            stripe_event_id: event.id,
+            stripe_subscription_id: subscriptionId,
+            stripe_customer_id: customerId,
+            creator_id: creatorId,
+            subscriber_id: subscriberId,
+            amount_due: invoice.amount_due ?? null,
+            currency: invoice.currency ?? null,
+          },
+        });
+      } catch (invoiceError) {
+        logWarn("billing_webhook_invoice_failed_handler_error", {
+          stripeEventId: event.id,
+          message: invoiceError instanceof Error ? invoiceError.message : String(invoiceError),
+        });
+      }
+    }
+
     await markStripeEventProcessed(event.id);
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
