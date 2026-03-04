@@ -1,8 +1,8 @@
 import "./globals.css";
 import Link from "next/link";
-import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BrandName from "@/app/components/BrandName";
 import AuthNav from "@/components/AuthNav";
+import HeaderSubscriptionCta from "@/components/HeaderSubscriptionCta";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata = {
@@ -42,9 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </Link>
                 <AuthNav />
               </nav>
-              <Link href={MARKETING_MESSAGE_MAP.cta.primaryHref} className="btn btn-primary">
-                {MARKETING_MESSAGE_MAP.cta.primaryLabel}
-              </Link>
+              <HeaderSubscriptionCta />
             </div>
           </header>
 

@@ -61,7 +61,7 @@ export default async function StartPage() {
             After approval, we generate and deliver your assets. Come back here or reopen the Training Vault for status.
           </li>
         </ol>
-        <Link href="/vault" className="btn btn-primary" style={{ display: "inline-block" }}>
+        <Link href="/training-vault" className="btn btn-primary" style={{ display: "inline-block" }}>
           Open Training Vault
         </Link>
       </section>

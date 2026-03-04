@@ -25,6 +25,7 @@ export default function AuthNav() {
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      router.refresh();
     });
 
     return () => {
