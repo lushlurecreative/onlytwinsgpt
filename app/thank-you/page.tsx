@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 type ThankYouState = "processing" | "ready" | "error";
 
@@ -16,6 +17,8 @@ type SessionResponse = {
 };
 
 export default function ThankYouPage() {
+  const router = useRouter();
+  const supabase = createClientComponentClient();
   const [state, setState] = useState<ThankYouState>("ready");
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
@@ -23,27 +26,11 @@ export default function ThankYouPage() {
   const [magicMsg, setMagicMsg] = useState("");
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function checkAuth() {
+    (async () => {
       const { data } = await supabase.auth.getUser();
-      if (cancelled) return;
-      const isAuthed = !!data.user;
-      if (isAuthed) {
-        window.location.replace("/dashboard");
-        return;
-      }
-    }
-
-    void checkAuth();
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) window.location.replace("/dashboard");
-    });
-    return () => {
-      cancelled = true;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
+      if (data?.user) router.replace("/dashboard");
+    })();
+  }, [router, supabase]);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,7 +71,7 @@ export default function ThankYouPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${siteUrl}/auth/callback`,
+        redirectTo: `${siteUrl}/auth/callback?next=/dashboard`,
       },
     });
     if (oauthError) {
