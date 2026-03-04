@@ -2,10 +2,10 @@
 
 import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BeforeAfterSlider from "@/app/components/BeforeAfterSlider";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function Home() {
+function HomeContent() {
   const params = useSearchParams();
   const router = useRouter();
 
@@ -172,5 +172,13 @@ export default function Home() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div />}>
+      <HomeContent />
+    </Suspense>
   );
 }

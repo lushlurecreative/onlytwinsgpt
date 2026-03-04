@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const params = useSearchParams();
   const supabase = createClientComponentClient();
@@ -32,5 +32,13 @@ export default function AuthCallbackPage() {
     <div style={{ padding: 40 }}>
       Signing you in...
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40 }}>Signing you in...</div>}>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
