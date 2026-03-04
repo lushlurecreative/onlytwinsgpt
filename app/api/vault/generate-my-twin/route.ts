@@ -5,11 +5,11 @@ import { getScenePresetByKey } from "@/lib/scene-presets";
 import { isUserSuspended } from "@/lib/suspend";
 import {
   getApprovedSubjectIdForUser,
-  getPresetIdBySceneKey,
   getLoraReferenceForSubject,
 } from "@/lib/generation-jobs";
 import { dispatchTrainingJobToRunPod } from "@/lib/runpod";
 import { sendAlert } from "@/lib/observability";
+import { createGenerationRequestWithUsage } from "@/lib/generation-request-intake";
 
 const MIN_PHOTOS_TRAINING = 30;
 const MAX_PHOTOS_TRAINING = 60;
@@ -46,6 +46,7 @@ export async function POST(request: Request) {
   const sceneCounts = body.sceneCounts ?? { beach: 45 };
   const contentMode = body.contentMode === "mature" ? "mature" : "sfw";
   const videoCount = Math.max(0, Math.min(20, Number(body.videoCount ?? 0)));
+  const requestIdempotencyBase = crypto.randomUUID();
 
   const subjectId = await getApprovedSubjectIdForUser(user.id);
   if (!subjectId) {
@@ -123,25 +124,33 @@ export async function POST(request: Request) {
     const scene = getScenePresetByKey(sceneKey);
     if (!scene) continue;
     const imageCount = Math.max(1, Math.min(250, Number(sceneCounts[sceneKey]) ?? 45));
-    const { data: req, error: reqErr } = await admin
-      .from("generation_requests")
-      .insert({
-        user_id: user.id,
-        sample_paths: samplePaths,
-        scene_preset: scene.key,
-        image_count: imageCount,
-        video_count: videoCount,
-        content_mode: contentMode,
-        status: "pending",
-        progress_done: 0,
-        progress_total: imageCount + videoCount,
-      })
-      .select("id")
-      .single();
-    if (!reqErr && req?.id) {
-      requestIds.push(req.id);
+    const creation = await createGenerationRequestWithUsage(admin, {
+      userId: user.id,
+      samplePaths,
+      scenePreset: scene.key,
+      imageCount,
+      videoCount,
+      contentMode,
+      idempotencyKey: `${requestIdempotencyBase}:${scene.key}`,
+    });
+    if (!creation.ok) {
+      if (creation.code?.startsWith("USAGE_LIMIT_EXCEEDED")) {
+        return NextResponse.json(
+          {
+            error: creation.error,
+            code: creation.code,
+          },
+          { status: creation.status }
+        );
+      }
+      continue;
+    }
+
+    const requestId = String(creation.request.id ?? "");
+    if (requestId) {
+      requestIds.push(requestId);
       await sendAlert("generation_request_submitted", {
-        request_id: req.id,
+        request_id: requestId,
         user_id: user.id,
         scene: scene.key,
         content_mode: contentMode,
