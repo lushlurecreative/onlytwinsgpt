@@ -39,6 +39,23 @@ export async function proxy(request: NextRequest) {
     return applySecurityHeaders(NextResponse.redirect(redirectUrl));
   }
 
+  if (pathname === "/welcome") {
+    const sidLegacy = request.nextUrl.searchParams.get("session_id")?.trim() ?? "";
+    const sid = request.nextUrl.searchParams.get("sid")?.trim() ?? sidLegacy;
+    const redirectUrl = new URL("/thank-you", request.url);
+    const redirect = NextResponse.redirect(redirectUrl);
+    if (sid) {
+      redirect.cookies.set("ot_checkout_sid", sid, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 6,
+      });
+    }
+    return applySecurityHeaders(redirect);
+  }
+
   if (pathname === "/thank-you" && sid) {
     const redirectUrl = new URL("/thank-you", request.url);
     const redirect = NextResponse.redirect(redirectUrl);
