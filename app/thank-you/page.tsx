@@ -69,7 +69,7 @@ export default function ThankYouPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: "https://onlytwins.dev/auth/callback",
+        redirectTo: "https://onlytwins.dev/auth/callback?next=/dashboard",
       },
     });
     if (oauthError) {

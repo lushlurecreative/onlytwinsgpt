@@ -12,6 +12,7 @@ function AuthCallbackContent() {
   useEffect(() => {
     const finishOAuth = async () => {
       const code = params.get("code");
+      const next = params.get("next") || "/dashboard";
 
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -22,7 +23,7 @@ function AuthCallbackContent() {
         }
       }
 
-      router.replace("/dashboard");
+      router.replace(next);
     };
 
     finishOAuth();
