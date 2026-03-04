@@ -94,6 +94,7 @@ export default function ThankYouPage() {
 
   async function sendMagicLink() {
     setError("");
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://onlytwins.dev";
     const cleanEmail = magicEmail.trim().toLowerCase();
     if (!cleanEmail) {
       setMagicMsg("Enter your email to receive a magic link.");
@@ -104,13 +105,9 @@ export default function ThankYouPage() {
       return;
     }
     setMagicMsg("Sending magic link...");
-    const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/auth/callback?next=/dashboard`
-        : undefined;
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
-      options: { emailRedirectTo: redirectTo },
+      options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/dashboard` },
     });
     if (otpError) {
       setMagicMsg(`Failed: ${otpError.message}`);

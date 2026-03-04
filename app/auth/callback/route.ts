@@ -1,23 +1,24 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-server";
+import { cookies } from "next/headers";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
-export async function GET(request: Request) {
-  const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get("code");
-  const nextParam = requestUrl.searchParams.get("next");
-  const nextPath = nextParam && nextParam.startsWith("/") ? nextParam : "/dashboard";
-  const origin = requestUrl.origin;
-  const redirectTarget = new URL(nextPath, origin);
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const code = url.searchParams.get("code");
+  const next = url.searchParams.get("next") || "/dashboard";
 
+  // If no code, just go to dashboard
   if (!code) {
-    return NextResponse.redirect(new URL("/login", origin));
+    return NextResponse.redirect(new URL(next, url.origin));
   }
 
-  const supabase = await createClient();
+  const supabase = createRouteHandlerClient({ cookies });
+
   const { error } = await supabase.auth.exchangeCodeForSession(code);
+
   if (error) {
-    return NextResponse.redirect(new URL("/login?error=oauth", origin));
+    return NextResponse.redirect(new URL(`/login?error=oauth`, url.origin));
   }
 
-  return NextResponse.redirect(redirectTarget);
+  return NextResponse.redirect(new URL(next, url.origin));
 }
