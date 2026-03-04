@@ -79,13 +79,14 @@ export default function ThankYouPage() {
   }, []);
 
   async function loginWithGoogle() {
-    const redirectTo =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/auth/callback?next=/dashboard`
-        : undefined;
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo },
+      options: {
+        redirectTo: `${siteUrl}/auth/callback?next=/dashboard`,
+      },
     });
     if (oauthError) {
       setError(oauthError.message || "Google login failed.");
