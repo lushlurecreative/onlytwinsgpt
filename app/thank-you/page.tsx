@@ -79,8 +79,7 @@ export default function ThankYouPage() {
   }, []);
 
   async function loginWithGoogle() {
-    const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://onlytwins.dev";
 
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",

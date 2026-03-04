@@ -9,9 +9,14 @@ export async function GET(request: Request) {
   const origin = requestUrl.origin;
   const redirectTarget = new URL(nextPath, origin);
 
-  if (code) {
-    const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+  if (!code) {
+    return NextResponse.redirect(new URL("/login", origin));
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    return NextResponse.redirect(new URL("/login?error=oauth", origin));
   }
 
   return NextResponse.redirect(redirectTarget);
