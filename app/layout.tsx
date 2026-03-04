@@ -2,6 +2,7 @@ import "./globals.css";
 import Link from "next/link";
 import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BrandName from "@/app/components/BrandName";
+import { Analytics } from "@vercel/analytics/react";
 
 export const metadata = {
   title: "OnlyTwins",
@@ -88,6 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </p>
           </footer>
         </div>
+        <Analytics />
       </body>
     </html>
   );
