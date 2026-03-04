@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@/lib/supabase/client";
 
 type ThankYouState = "processing" | "ready" | "error";
 
@@ -18,7 +18,7 @@ type SessionResponse = {
 
 export default function ThankYouPage() {
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  const supabase = createClient();
   const [state, setState] = useState<ThankYouState>("ready");
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
@@ -69,7 +69,7 @@ export default function ThankYouPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: "https://onlytwins.dev/auth/callback?next=/dashboard",
+        redirectTo: "https://onlytwins.dev/auth/callback",
       },
     });
     if (oauthError) {

@@ -1,45 +1,27 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
-function AuthCallbackContent() {
+export default function AuthCallback() {
   const router = useRouter();
-  const params = useSearchParams();
-  const supabase = createClientComponentClient();
 
   useEffect(() => {
-    const finishOAuth = async () => {
-      const code = params.get("code");
-      const next = params.get("next") || "/dashboard";
+    const supabase = createClient();
 
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const finishLogin = async () => {
+      const { data } = await supabase.auth.getSession();
 
-        if (error) {
-          router.replace("/login?error=oauth");
-          return;
-        }
+      if (data.session) {
+        router.replace("/dashboard");
+      } else {
+        router.replace("/login?error=oauth");
       }
-
-      router.replace(next);
     };
 
-    finishOAuth();
-  }, [params, router, supabase]);
+    finishLogin();
+  }, [router]);
 
-  return (
-    <div style={{ padding: 40 }}>
-      Signing you in...
-    </div>
-  );
-}
-
-export default function AuthCallbackPage() {
-  return (
-    <Suspense fallback={<div style={{ padding: 40 }}>Signing you in...</div>}>
-      <AuthCallbackContent />
-    </Suspense>
-  );
+  return <p style={{ padding: 40 }}>Signing you in…</p>;
 }
