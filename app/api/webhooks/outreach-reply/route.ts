@@ -6,6 +6,7 @@ type ReplyBody = {
   handle?: string;
   platform?: string;
   message?: string;
+  payload?: Record<string, unknown>;
 };
 
 export async function POST(request: Request) {
@@ -26,58 +27,29 @@ export async function POST(request: Request) {
   }
 
   const admin = getSupabaseAdmin();
-  let leadId = body.lead_id?.trim() || "";
-
-  if (!leadId) {
-    const handle = body.handle?.trim();
-    const platform = body.platform?.trim();
-    if (!handle || !platform) {
-      return NextResponse.json({ error: "lead_id or (handle + platform) required" }, { status: 400 });
-    }
-    const { data: byHandle } = await admin
-      .from("leads")
-      .select("id")
-      .eq("handle", handle)
-      .eq("platform", platform)
-      .maybeSingle();
-    leadId = (byHandle as { id?: string | null } | null)?.id ?? "";
+  const leadId = body.lead_id?.trim() || null;
+  const handle = body.handle?.trim() || null;
+  const platform = body.platform?.trim() || null;
+  const message = body.message?.trim() || "";
+  if (!message) {
+    return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
-  if (!leadId) {
-    return NextResponse.json({ error: "Lead not found" }, { status: 404 });
+  const { error: insertError } = await admin.from("reply_inbox").insert({
+    lead_id: leadId,
+    handle,
+    platform,
+    message,
+    payload_json: body.payload ?? {},
+  });
+  if (insertError) {
+    return NextResponse.json({ error: insertError.message }, { status: 400 });
   }
 
-  const now = new Date().toISOString();
-  const replyMessage = body.message?.trim() || "";
-  const { data: current } = await admin.from("leads").select("notes").eq("id", leadId).maybeSingle();
-  const existingNotes = ((current as { notes?: string | null } | null)?.notes ?? "").trim();
-  const mergedNotes = replyMessage
-    ? existingNotes
-      ? `${existingNotes}\n\n[Reply ${now}]\n${replyMessage}`
-      : `[Reply ${now}]\n${replyMessage}`
-    : existingNotes || null;
-
-  const { error: updateError } = await admin
-    .from("leads")
-    .update({
-      status: "replied",
-      notes: mergedNotes,
-      updated_at: now,
-    })
-    .eq("id", leadId);
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 400 });
-  }
-
-  await admin.from("automation_events").insert({
-    event_type: "reply_received",
-    entity_type: "lead",
-    entity_id: leadId,
-    payload_json: {
-      source: "outreach_reply_webhook",
-      has_message: !!replyMessage,
-    },
+  await admin.from("system_events").insert({
+    event_type: "reply_ingested",
+    payload: { lead_id: leadId, handle, platform },
   });
 
-  return NextResponse.json({ ok: true, lead_id: leadId }, { status: 200 });
+  return NextResponse.json({ ok: true }, { status: 200 });
 }
