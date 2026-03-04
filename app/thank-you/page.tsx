@@ -66,12 +66,10 @@ export default function ThankYouPage() {
   }, []);
 
   async function loginWithGoogle() {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://onlytwins.dev";
-
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${siteUrl}/auth/callback?next=/dashboard`,
+        redirectTo: "https://onlytwins.dev/auth/callback",
       },
     });
     if (oauthError) {

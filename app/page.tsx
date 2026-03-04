@@ -1,30 +1,21 @@
+"use client";
+
 import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BeforeAfterSlider from "@/app/components/BeforeAfterSlider";
-import { redirect } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-type HomeProps = {
-  searchParams?: {
-    code?: string | string[];
-    next?: string | string[];
-    [key: string]: string | string[] | undefined;
-  };
-};
+export default function Home() {
+  const params = useSearchParams();
+  const router = useRouter();
 
-export default function Home({ searchParams }: HomeProps) {
-  const oauthCode = searchParams?.code;
-  const hasCode = Array.isArray(oauthCode) ? oauthCode.length > 0 : !!oauthCode;
-  if (hasCode) {
-    const callbackParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(searchParams ?? {})) {
-      if (Array.isArray(value)) {
-        value.forEach((item) => callbackParams.append(key, item));
-      } else if (typeof value === "string") {
-        callbackParams.set(key, value);
-      }
+  useEffect(() => {
+    const code = params.get("code");
+
+    if (code) {
+      router.replace(`/auth/callback?code=${code}`);
     }
-    if (!callbackParams.get("next")) callbackParams.set("next", "/dashboard");
-    redirect(`/auth/callback?${callbackParams.toString()}`);
-  }
+  }, [params, router]);
 
   return (
     <div>
