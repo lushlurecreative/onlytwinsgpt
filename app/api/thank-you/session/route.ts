@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { logError, logInfo, logWarn } from "@/lib/observability";
-import { getServiceCreatorId } from "@/lib/service-creator";
 import { cookies } from "next/headers";
 
 function extractStripeCustomerId(
@@ -24,28 +22,6 @@ function extractStripeSubscriptionId(subscription: Stripe.Checkout.Session["subs
     return subscription.id;
   }
   return null;
-}
-
-function mapStripeStatus(status: Stripe.Subscription.Status) {
-  switch (status) {
-    case "active":
-      return "active";
-    case "trialing":
-      return "trialing";
-    case "past_due":
-      return "past_due";
-    case "unpaid":
-      return "past_due";
-    case "canceled":
-      return "canceled";
-    default:
-      return "expired";
-  }
-}
-
-function toIsoOrNull(unixSeconds: number | null | undefined) {
-  if (!unixSeconds) return null;
-  return new Date(unixSeconds * 1000).toISOString();
 }
 
 export async function GET(request: Request) {
@@ -121,11 +97,9 @@ export async function GET(request: Request) {
       );
     }
     let stripeCustomerId = extractStripeCustomerId(session.customer);
-    let subscriptionForResolution: Stripe.Subscription | null = null;
     if (!stripeCustomerId && stripeSubscriptionId) {
       try {
         const sub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-        subscriptionForResolution = sub;
         stripeCustomerId = extractStripeCustomerId(sub.customer);
       } catch (resolutionError) {
         logWarn("thank_you_session_subscription_lookup_failed", {
@@ -196,74 +170,6 @@ export async function GET(request: Request) {
         { status: 400 }
       );
     }
-
-    // Paid sessions are ready for auth immediately.
-    // Any profile/subscription self-heal runs server-side and never blocks UI readiness.
-    const admin = getSupabaseAdmin();
-    void (async () => {
-      try {
-        const { data: userList } = await admin.auth.admin.listUsers({ perPage: 500 });
-        const authUser = userList?.users?.find((u) => u.email?.toLowerCase() === email) ?? null;
-        if (!authUser?.id) {
-          logInfo("thank_you_session_self_heal_skipped_no_auth_user", {
-            requestId,
-            sessionId,
-            email,
-          });
-          return;
-        }
-
-        const { data: profile } = await admin
-          .from("profiles")
-          .select("id, stripe_customer_id")
-          .eq("id", authUser.id)
-          .maybeSingle();
-        const profileRow = profile as { id: string; stripe_customer_id?: string | null } | null;
-        if (!profileRow) {
-          await admin.from("profiles").upsert(
-            {
-              id: authUser.id,
-              stripe_customer_id: stripeCustomerId,
-              onboarding_pending: true,
-              role: "creator",
-            },
-            { onConflict: "id" }
-          );
-        } else if (profileRow.stripe_customer_id !== stripeCustomerId) {
-          await admin
-            .from("profiles")
-            .update({ stripe_customer_id: stripeCustomerId, updated_at: new Date().toISOString() })
-            .eq("id", authUser.id);
-        }
-
-        if (!stripeSubscriptionId) return;
-        const subscription =
-          subscriptionForResolution ??
-          (await stripe.subscriptions.retrieve(stripeSubscriptionId));
-        const creatorId =
-          ((session.metadata?.creator_id as string | undefined)?.trim() || "") ||
-          getServiceCreatorId();
-        const item = subscription.items.data[0];
-        await admin.from("subscriptions").upsert(
-          {
-            creator_id: creatorId,
-            subscriber_id: authUser.id,
-            status: mapStripeStatus(subscription.status),
-            current_period_end: toIsoOrNull(item?.current_period_end ?? null),
-            canceled_at: toIsoOrNull(subscription.canceled_at),
-            stripe_subscription_id: stripeSubscriptionId,
-            stripe_price_id: item?.price?.id ?? null,
-          },
-          { onConflict: "stripe_subscription_id" }
-        );
-      } catch (selfHealError) {
-        logWarn("thank_you_session_self_heal_failed", {
-          requestId,
-          sessionId,
-          message: selfHealError instanceof Error ? selfHealError.message : String(selfHealError),
-        });
-      }
-    })();
 
     logInfo("thank_you_session_ready", {
       requestId,

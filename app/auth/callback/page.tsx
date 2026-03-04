@@ -14,6 +14,7 @@ export default function AuthCallback() {
       const { data } = await supabase.auth.getSession();
 
       if (data.session) {
+        await fetch("/api/thank-you/complete", { method: "POST" }).catch(() => null);
         router.replace("/dashboard");
       } else {
         router.replace("/login?error=oauth");

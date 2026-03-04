@@ -232,7 +232,9 @@ export async function POST(request: Request) {
 
         if (!subscriberId) {
           const { data: list } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
-          const existing = list?.users?.find((u) => u.email?.toLowerCase() === customerEmail.toLowerCase());
+          const existing = list?.users?.find(
+            (u) => u.email?.toLowerCase() === customerEmail.toLowerCase()
+          );
           subscriberId = existing?.id ?? null;
         }
 
@@ -246,23 +248,51 @@ export async function POST(request: Request) {
           subscriberId = profileRow?.id ?? null;
         }
 
-        if (subscriberId) {
-          await supabaseAdmin.from("profiles").upsert(
+        if (!subscriberId) {
+          const tempPassword = `${crypto.randomUUID()}${crypto.randomUUID()}`;
+          const { data: createdUser, error: createUserError } =
+            await supabaseAdmin.auth.admin.createUser({
+              email: customerEmail.toLowerCase(),
+              password: tempPassword,
+              email_confirm: true,
+            });
+          if (!createUserError && createdUser.user?.id) {
+            subscriberId = createdUser.user.id;
+          } else {
+            const { data: usersRetry } = await supabaseAdmin.auth.admin.listUsers({ perPage: 500 });
+            const existingRetry = usersRetry?.users?.find(
+              (u) => u.email?.toLowerCase() === customerEmail.toLowerCase()
+            );
+            subscriberId = existingRetry?.id ?? null;
+          }
+        }
+
+        if (!subscriberId) {
+          return NextResponse.json(
             {
-              id: subscriberId,
-              stripe_customer_id: stripeCustomerId,
-              onboarding_pending: true,
-              role: "creator",
+              error: "Unable to resolve or create subscriber for checkout.session.completed",
+              session_id: fullSession.id,
             },
-            { onConflict: "id" }
+            { status: 500 }
           );
-        } else {
-          logWarn("billing_webhook_checkout_subscriber_not_resolved", {
+        }
+
+        const { error: profileUpsertError } = await supabaseAdmin.from("profiles").upsert(
+          {
+            id: subscriberId,
+            stripe_customer_id: stripeCustomerId,
+            onboarding_pending: true,
+            role: "creator",
+          },
+          { onConflict: "id" }
+        );
+        if (profileUpsertError) {
+          logError("billing_webhook_checkout_profile_upsert_failed", profileUpsertError, {
             stripeEventId: event.id,
             sessionId: fullSession.id,
-            customerEmail,
-            stripeCustomerId,
+            subscriberId,
           });
+          return NextResponse.json({ error: profileUpsertError.message }, { status: 500 });
         }
 
         if (stripeSubscriptionId && creatorId && subscriberId) {
@@ -290,11 +320,13 @@ export async function POST(request: Request) {
             });
           }
         } else if (stripeSubscriptionId) {
-          logWarn("billing_webhook_checkout_subscription_deferred_missing_subscriber", {
-            stripeEventId: event.id,
-            stripeSubscriptionId,
-            sessionId: fullSession.id,
-          });
+          return NextResponse.json(
+            {
+              error: "Unable to persist subscription during checkout.session.completed",
+              stripe_subscription_id: stripeSubscriptionId,
+            },
+            { status: 500 }
+          );
         }
       }
 
