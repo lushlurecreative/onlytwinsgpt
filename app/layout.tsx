@@ -2,7 +2,7 @@ import "./globals.css";
 import Link from "next/link";
 import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BrandName from "@/app/components/BrandName";
-import { Analytics } from "@vercel/analytics/react";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata = {
   title: "OnlyTwins",
