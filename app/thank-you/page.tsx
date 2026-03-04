@@ -84,7 +84,7 @@ export default function ThankYouPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${siteUrl}/auth/callback?next=/dashboard`,
+        redirectTo: `${siteUrl}/auth/callback`,
       },
     });
     if (oauthError) {
@@ -107,7 +107,7 @@ export default function ThankYouPage() {
     setMagicMsg("Sending magic link...");
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
-      options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/dashboard` },
+      options: { emailRedirectTo: `${siteUrl}/auth/callback` },
     });
     if (otpError) {
       setMagicMsg(`Failed: ${otpError.message}`);
