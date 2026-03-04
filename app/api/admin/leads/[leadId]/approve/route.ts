@@ -41,7 +41,7 @@ export async function PATCH(request: Request, { params }: Params) {
     .select("id, status, approved_at, approved_by")
     .eq("id", leadId)
     .maybeSingle();
-  const newStatus: LeadStatus = approved ? "approved" : "rejected";
+  const newStatus: LeadStatus = approved ? "qualified" : "rejected";
   const { data, error } = await admin
     .from("leads")
     .update({

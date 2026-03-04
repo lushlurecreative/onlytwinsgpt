@@ -63,6 +63,14 @@ export async function sendOutreach(
   const now = new Date().toISOString();
   const preview = message.slice(0, 200);
 
+  await admin
+    .from("leads")
+    .update({
+      status: "outreach_queued",
+      updated_at: now,
+    })
+    .eq("id", lead.id);
+
   const { error: logError } = await admin.from("outreach_logs").insert({
     lead_id: lead.id,
     sent_at: now,
@@ -88,7 +96,7 @@ export async function sendOutreach(
   const { error: updateError } = await admin
     .from("leads")
     .update({
-      status: "outreach_sent",
+      status: "contacted",
       outreach_last_sent_at: now,
       outreach_attempts: lead.outreach_attempts + 1,
       notes: newNotes,

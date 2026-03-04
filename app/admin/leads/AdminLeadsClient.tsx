@@ -99,24 +99,24 @@ export default function AdminLeadsClient() {
   const summary = {
     newToday: rows.filter((r) => new Date(r.created_at) >= todayStart).length,
     qualified: rows.filter((r) =>
-      ["qualified", "approved", "sample_queued", "sample_done", "outreach_sent", "replied", "converted", "messaged"].includes(r.status)
+      ["qualified", "sample_queued", "sample_generated", "outreach_queued", "contacted", "replied", "converted"].includes(r.status)
     ).length,
     sent: rows.filter((r) =>
-      ["outreach_sent", "messaged", "replied", "converted"].includes(r.status)
+      ["outreach_queued", "contacted", "replied", "converted"].includes(r.status)
     ).length,
     converted: rows.filter((r) => r.status === "converted").length,
   };
 
   function sampleStatus(row: LeadRow): "Not Generated" | "Generated" | "Sent" {
-    if (["outreach_sent", "messaged", "replied", "converted"].includes(row.status)) return "Sent";
-    if (row.status === "sample_done" || (row.generated_sample_paths?.length ?? 0) > 0) return "Generated";
+    if (["outreach_queued", "contacted", "replied", "converted"].includes(row.status)) return "Sent";
+    if (row.status === "sample_generated" || (row.generated_sample_paths?.length ?? 0) > 0) return "Generated";
     return "Not Generated";
   }
 
   function outreachStatus(row: LeadRow): "Not Sent" | "Sent" | "Replied" | "Converted" {
     if (row.status === "converted") return "Converted";
     if (row.status === "replied") return "Replied";
-    if (["outreach_sent", "messaged"].includes(row.status)) return "Sent";
+    if (["outreach_queued", "contacted"].includes(row.status)) return "Sent";
     return "Not Sent";
   }
 
@@ -187,9 +187,9 @@ export default function AdminLeadsClient() {
       setMessage(json.error ?? "Failed");
       return;
     }
-    setMessage(approved ? "Approved." : "Rejected.");
+    setMessage(approved ? "Qualified." : "Rejected.");
     setRows((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: (approved ? "approved" : "rejected") as LeadStatus } : r))
+      prev.map((r) => (r.id === id ? { ...r, status: (approved ? "qualified" : "rejected") as LeadStatus } : r))
     );
     void load();
   }
@@ -219,7 +219,7 @@ export default function AdminLeadsClient() {
     if (!res.ok) {
       setMessage(json.error ?? "Outreach failed");
     } else {
-      setMessage("Outreach sent. Lead marked as messaged. (No actual DM sent yet—connect a DM provider.)");
+      setMessage("Outreach sent. Lead marked as contacted. (No actual DM sent yet—connect a DM provider.)");
     }
     await load();
     setSendingOutreach(false);
@@ -400,7 +400,7 @@ export default function AdminLeadsClient() {
               {outreachPreview.message}
             </div>
             <p className="muted" style={{ fontSize: 12, marginBottom: 16 }}>
-              This will mark the lead as &quot;messaged&quot; and save the message in notes. No actual DM/email is sent yet—DM provider not connected.
+              This will mark the lead as &quot;contacted&quot; and save the message in notes. No actual DM/email is sent yet—DM provider not connected.
             </p>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button
@@ -416,7 +416,7 @@ export default function AdminLeadsClient() {
                 disabled={sendingOutreach}
                 type="button"
               >
-                {sendingOutreach ? "Sending…" : "Send (mark as messaged)"}
+                {sendingOutreach ? "Sending…" : "Send (mark as contacted)"}
               </button>
             </div>
           </div>
@@ -554,12 +554,13 @@ export default function AdminLeadsClient() {
           {(
             [
               ["all", "All"],
-              ["imported", "Imported"],
-              ["approved", "Approved"],
+              ["new", "New"],
               ["qualified", "Qualified"],
+              ["sample_generated", "Sample generated"],
+              ["outreach_queued", "Outreach queued"],
+              ["contacted", "Contacted"],
               ["rejected", "Rejected"],
-              ["messaged", "Messaged"],
-              ["outreach_sent", "Outreach sent"],
+              ["replied", "Replied"],
               ["converted", "Converted"],
             ] as [LeadStatus | "all", string][]
           ).map(([key, label]) => {
@@ -769,15 +770,15 @@ export default function AdminLeadsClient() {
                                   <button
                                     className="btn btn-primary"
                                     onClick={() => void approve(row.id, true)}
-                                    disabled={row.status !== "imported"}
+                                    disabled={row.status !== "new"}
                                     type="button"
                                   >
-                                    Approve
+                                    Qualify
                                   </button>
                                   <button
                                     className="btn btn-ghost"
                                     onClick={() => void approve(row.id, false)}
-                                    disabled={row.status !== "imported" && row.status !== "approved"}
+                                    disabled={row.status !== "new" && row.status !== "qualified"}
                                     type="button"
                                   >
                                     Reject
@@ -803,10 +804,10 @@ export default function AdminLeadsClient() {
                                   <button
                                     className="btn btn-primary"
                                     onClick={() => openOutreachPreview(row)}
-                                    disabled={row.status !== "approved" && !["messaged", "outreach_sent", "replied"].includes(row.status)}
+                                    disabled={row.status !== "qualified" && !["outreach_queued", "contacted", "replied"].includes(row.status)}
                                     type="button"
                                   >
-                                    {["messaged", "outreach_sent", "replied"].includes(row.status) ? "Resend outreach" : "Send outreach"}
+                                    {["outreach_queued", "contacted", "replied"].includes(row.status) ? "Resend outreach" : "Queue outreach"}
                                   </button>
                                 </div>
                               </div>

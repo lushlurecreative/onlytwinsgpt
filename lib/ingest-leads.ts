@@ -200,7 +200,7 @@ export async function ingestLeads(
       (profileUrls && typeof profileUrls === "object" && Object.keys(profileUrls).length > 0);
     const sampleCount = samplePaths.length || (Array.isArray(lead.sampleUrls) ? lead.sampleUrls.length : 0);
     const score = scoreLead({ hasUserInfo, sampleCount });
-    const status: LeadStatus = sampleCount >= MIN_SAMPLES_PER_LEAD && score >= 10 ? "qualified" : "imported";
+    const status: LeadStatus = sampleCount >= MIN_SAMPLES_PER_LEAD && score >= 10 ? "qualified" : "new";
     const minimalRow = {
       source,
       handle,

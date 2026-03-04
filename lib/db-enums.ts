@@ -4,30 +4,26 @@
  */
 
 export type LeadStatus =
-  | "imported"
-  | "approved"
-  | "messaged"
+  | "new"
   | "rejected"
   | "qualified"
   | "sample_queued"
-  | "sample_done"
-  | "outreach_sent"
+  | "sample_generated"
+  | "outreach_queued"
+  | "contacted"
   | "replied"
-  | "converted"
-  | "dead";
+  | "converted";
 
 export const LEAD_STATUSES: LeadStatus[] = [
-  "imported",
-  "approved",
-  "messaged",
+  "new",
   "rejected",
   "qualified",
   "sample_queued",
-  "sample_done",
-  "outreach_sent",
+  "sample_generated",
+  "outreach_queued",
+  "contacted",
   "replied",
   "converted",
-  "dead",
 ];
 
 export type GenerationJobStatus =

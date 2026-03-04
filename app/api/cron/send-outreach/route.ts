@@ -9,7 +9,7 @@ function getCronSecret(): string {
   return process.env.CRON_SECRET?.trim() || "";
 }
 
-/** GET: Auto-send outreach to sample_done leads under max_attempts. Secured by CRON_SECRET. */
+/** GET: Auto-send outreach to sample_generated leads under max_attempts. Secured by CRON_SECRET. */
 export async function GET(request: Request) {
   const secret = getCronSecret();
   const auth = request.headers.get("authorization") || "";
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   const { data: leads } = await admin
     .from("leads")
     .select("id, handle, platform, sample_preview_path, sample_asset_path, notes, outreach_attempts")
-    .eq("status", "sample_done")
+    .eq("status", "sample_generated")
     .lt("outreach_attempts", maxAttempts)
     .order("outreach_last_sent_at", { ascending: true, nullsFirst: true })
     .limit(maxPerRun);

@@ -28,7 +28,7 @@ export async function POST() {
   const { data: leads } = await admin
     .from("leads")
     .select("id, handle, platform, sample_preview_path, sample_asset_path, notes, outreach_attempts")
-    .eq("status", "sample_done")
+    .eq("status", "sample_generated")
     .lt("outreach_attempts", maxAttempts)
     .order("outreach_last_sent_at", { ascending: true, nullsFirst: true })
     .limit(maxPerRun);

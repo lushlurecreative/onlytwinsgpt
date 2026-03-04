@@ -42,7 +42,7 @@ async function upsertLead(admin: ReturnType<typeof getSupabaseAdmin>, item: Reco
     image_urls_json: imageUrlsJson,
     last_seen_at: now,
     is_new: !existing,
-    status: existing ? "imported" : "imported",
+    status: existing ? "new" : "new",
     updated_at: now,
   };
 
@@ -64,7 +64,7 @@ async function qualifyLeads(admin: ReturnType<typeof getSupabaseAdmin>) {
   const { data: rows } = await admin
     .from("leads")
     .select("id")
-    .eq("status", "imported" as LeadStatus)
+    .eq("status", "new" as LeadStatus)
     .gte("photo_count", 3);
   if (!rows?.length) return;
   await admin

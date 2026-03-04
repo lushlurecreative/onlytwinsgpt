@@ -77,12 +77,12 @@ export async function POST(request: Request) {
           .from("leads")
           .update({
             sample_asset_path: outputPath,
-            status: "sample_done" as LeadStatus,
+            status: "sample_generated" as LeadStatus,
             updated_at: new Date().toISOString(),
           })
           .eq("id", leadId);
         await admin.from("automation_events").insert({
-          event_type: "sample_done",
+          event_type: "sample_generated",
           entity_type: "lead",
           entity_id: leadId,
           payload_json: { generation_job_id: gen.id, output_path: outputPath },

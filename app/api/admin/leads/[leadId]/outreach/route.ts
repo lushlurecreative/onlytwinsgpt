@@ -40,10 +40,10 @@ export async function POST(_request: Request, { params }: Params) {
     return NextResponse.json({ error: leadError?.message ?? "Lead not found" }, { status: 404 });
   }
 
-  const allowedStatuses: LeadStatus[] = ["approved", "sample_done"];
+  const allowedStatuses: LeadStatus[] = ["qualified", "sample_generated", "outreach_queued", "contacted"];
   if (!allowedStatuses.includes(lead.status as LeadStatus)) {
     return NextResponse.json(
-      { error: `Lead must be approved or sample_done before outreach. Current: ${lead.status}` },
+      { error: `Lead must be qualified or sample_generated before outreach. Current: ${lead.status}` },
       { status: 400 }
     );
   }
@@ -75,7 +75,7 @@ export async function POST(_request: Request, { params }: Params) {
       outreach_attempts: attempts,
     },
     afterJson: {
-      status: "outreach_sent",
+      status: "contacted",
       outreach_attempts: attempts + 1,
     },
   });

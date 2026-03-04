@@ -20,7 +20,7 @@ async function upsertLead(admin: ReturnType<typeof getSupabaseAdmin>, item: Reco
   const imageUrlsJson = Array.isArray(item.images) ? item.images : imageUrls;
   const { data: existing } = await admin.from("leads").select("id").eq("platform", platform).eq("handle", handle).maybeSingle();
   const now = new Date().toISOString();
-  const status: LeadStatus = "imported";
+  const status: LeadStatus = "new";
   const row = {
     platform, handle, source: "apify_cron", profile_url: profileUrl || null, display_name: displayName || null,
     bio: bio || null, follower_count: followerCount, photo_count: photoCount, image_urls_json: imageUrlsJson,
@@ -31,7 +31,7 @@ async function upsertLead(admin: ReturnType<typeof getSupabaseAdmin>, item: Reco
 }
 
 async function qualifyLeads(admin: ReturnType<typeof getSupabaseAdmin>) {
-  const { data: rows } = await admin.from("leads").select("id").eq("status", "imported" as LeadStatus).gte("photo_count", 3);
+  const { data: rows } = await admin.from("leads").select("id").eq("status", "new" as LeadStatus).gte("photo_count", 3);
   if (!rows?.length) return;
   await admin.from("leads").update({ status: "qualified" as LeadStatus, updated_at: new Date().toISOString() }).in("id", rows.map((r) => r.id));
 }

@@ -13,7 +13,7 @@ const MIGRATIONS = [
     engagement_rate numeric(5,2) not null default 0,
     luxury_tag_hits integer not null default 0,
     score integer not null default 0,
-    status text not null default 'imported' check (status in ('imported', 'approved', 'messaged', 'rejected')),
+    status text not null default 'new' check (status in ('new', 'qualified', 'rejected', 'sample_queued', 'sample_generated', 'outreach_queued', 'contacted', 'replied', 'converted')),
     profile_url text null,
     notes text null,
     sample_preview_path text null,
@@ -121,7 +121,7 @@ const MIGRATIONS = [
   `alter table public.leads add column if not exists sample_asset_path text null;`,
   `alter table public.leads add column if not exists outreach_last_sent_at timestamptz null;`,
   `alter table public.leads add column if not exists outreach_attempts integer not null default 0;`,
-  `do $$ begin if exists (select 1 from pg_constraint where conname = 'leads_status_check') then alter table public.leads drop constraint leads_status_check; end if; alter table public.leads add constraint leads_status_check check (status in ('imported', 'approved', 'messaged', 'rejected', 'qualified', 'sample_queued', 'sample_done', 'outreach_sent', 'replied', 'converted', 'dead')); exception when duplicate_object or undefined_object then null; end $$;`,
+  `do $$ begin if exists (select 1 from pg_constraint where conname = 'leads_status_check') then alter table public.leads drop constraint leads_status_check; end if; alter table public.leads add constraint leads_status_check check (status in ('new', 'qualified', 'rejected', 'sample_queued', 'sample_generated', 'outreach_queued', 'contacted', 'replied', 'converted')); exception when duplicate_object or undefined_object then null; end $$;`,
 
   `create table if not exists public.idempotency_keys ( key text primary key, created_at timestamptz not null default timezone('utc', now()) );`,
   `alter table public.generation_jobs add column if not exists job_type text not null default 'user' check (job_type in ('user', 'lead_sample'));`,
@@ -146,8 +146,8 @@ const MIGRATIONS = [
   `create index if not exists gpu_usage_created_at_idx on public.gpu_usage(created_at desc);`,
 
   // leads/generation_jobs status as PostgreSQL enums (create types then alter columns)
-  `do $$ begin if not exists (select 1 from pg_type where typname = 'lead_status_enum') then create type public.lead_status_enum as enum ('imported', 'approved', 'messaged', 'rejected', 'qualified', 'sample_queued', 'sample_done', 'outreach_sent', 'replied', 'converted', 'dead'); end if; if not exists (select 1 from pg_type where typname = 'generation_job_status_enum') then create type public.generation_job_status_enum as enum ('pending', 'running', 'upscaling', 'watermarking', 'completed', 'failed'); end if; end $$;`,
-  `alter table public.leads drop constraint if exists leads_status_check; alter table public.leads alter column status type public.lead_status_enum using status::text::public.lead_status_enum; alter table public.leads alter column status set default 'imported'::public.lead_status_enum;`,
+  `do $$ begin if not exists (select 1 from pg_type where typname = 'lead_status_enum') then create type public.lead_status_enum as enum ('new', 'qualified', 'rejected', 'sample_queued', 'sample_generated', 'outreach_queued', 'contacted', 'replied', 'converted'); end if; if not exists (select 1 from pg_type where typname = 'generation_job_status_enum') then create type public.generation_job_status_enum as enum ('pending', 'running', 'upscaling', 'watermarking', 'completed', 'failed'); end if; end $$;`,
+  `alter table public.leads drop constraint if exists leads_status_check; alter table public.leads alter column status type public.lead_status_enum using (case status::text when 'imported' then 'new' when 'approved' then 'qualified' when 'messaged' then 'contacted' when 'sample_done' then 'sample_generated' when 'outreach_sent' then 'contacted' when 'dead' then 'rejected' else status::text end)::public.lead_status_enum; alter table public.leads alter column status set default 'new'::public.lead_status_enum;`,
   `alter table public.generation_jobs drop constraint if exists generation_jobs_status_check; alter table public.generation_jobs alter column status type public.generation_job_status_enum using status::text::public.generation_job_status_enum; alter table public.generation_jobs alter column status set default 'pending'::public.generation_job_status_enum;`,
 
   // Seed app_settings for automation (upsert so safe to run repeatedly)

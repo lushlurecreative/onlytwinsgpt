@@ -40,7 +40,7 @@ export async function runEnqueueLeadSamples(admin: Awaited<ReturnType<typeof get
   const { data: candidates } = await admin
     .from("leads")
     .select("id, image_urls_json, sample_paths")
-    .in("status", ["qualified", "imported"] as LeadStatus[])
+    .in("status", ["qualified", "new"] as LeadStatus[])
     .order("updated_at", { ascending: true })
     .limit(maxPerRun * 3);
 
