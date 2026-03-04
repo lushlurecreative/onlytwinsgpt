@@ -1,7 +1,31 @@
 import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BeforeAfterSlider from "@/app/components/BeforeAfterSlider";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+type HomeProps = {
+  searchParams?: {
+    code?: string | string[];
+    next?: string | string[];
+    [key: string]: string | string[] | undefined;
+  };
+};
+
+export default function Home({ searchParams }: HomeProps) {
+  const oauthCode = searchParams?.code;
+  const hasCode = Array.isArray(oauthCode) ? oauthCode.length > 0 : !!oauthCode;
+  if (hasCode) {
+    const callbackParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(searchParams ?? {})) {
+      if (Array.isArray(value)) {
+        value.forEach((item) => callbackParams.append(key, item));
+      } else if (typeof value === "string") {
+        callbackParams.set(key, value);
+      }
+    }
+    if (!callbackParams.get("next")) callbackParams.set("next", "/dashboard");
+    redirect(`/auth/callback?${callbackParams.toString()}`);
+  }
+
   return (
     <div>
       <section className="hero">

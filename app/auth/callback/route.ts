@@ -11,10 +11,14 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/login?error=missing_code", url.origin));
   }
 
-  const supabase = createRouteHandlerClient({ cookies });
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  try {
+    const supabase = createRouteHandlerClient({ cookies });
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error) {
+    if (error) {
+      return NextResponse.redirect(new URL("/login?error=oauth", url.origin));
+    }
+  } catch {
     return NextResponse.redirect(new URL("/login?error=oauth", url.origin));
   }
 
