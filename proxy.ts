@@ -24,8 +24,20 @@ export async function proxy(request: NextRequest) {
   response = applySecurityHeaders(response);
 
   const pathname = request.nextUrl.pathname;
+  const oauthCode = request.nextUrl.searchParams.get("code")?.trim() ?? "";
   const sid = request.nextUrl.searchParams.get("sid")?.trim() ?? "";
   const ip = getClientIpFromHeaders(request.headers);
+
+  if (pathname === "/" && oauthCode) {
+    const redirectUrl = new URL("/auth/callback", request.url);
+    request.nextUrl.searchParams.forEach((value, key) => {
+      redirectUrl.searchParams.set(key, value);
+    });
+    if (!redirectUrl.searchParams.get("next")) {
+      redirectUrl.searchParams.set("next", "/dashboard");
+    }
+    return applySecurityHeaders(NextResponse.redirect(redirectUrl));
+  }
 
   if (pathname === "/thank-you" && sid) {
     const redirectUrl = new URL("/thank-you", request.url);
