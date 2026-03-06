@@ -111,9 +111,9 @@ export default function ThankYouPage() {
   return (
     <main style={{ padding: 48, maxWidth: 560, margin: "0 auto" }}>
       <PremiumCard style={{ textAlign: "center" }}>
-        <h1 style={{ marginTop: 0, fontSize: 28 }}>Thanks for subscribing ✅</h1>
-        <p className="muted" style={{ marginBottom: 14 }}>
-          You&apos;re all set. Create your account to access your dashboard.
+        <h1 style={{ marginTop: 0, fontSize: 34, letterSpacing: "-0.02em" }}>Thanks for subscribing</h1>
+        <p className="muted" style={{ marginBottom: 18, fontSize: 16 }}>
+          Your workspace is ready. Continue with Google or magic link to enter your control center.
         </p>
 
         {state === "processing" ? (
@@ -131,9 +131,6 @@ export default function ThankYouPage() {
 
         {state === "ready" ? (
           <>
-            <p className="muted" style={{ marginBottom: 12 }}>
-              Create account
-            </p>
             <div style={{ display: "grid", gap: 10, maxWidth: 360, margin: "0 auto" }}>
               <PremiumButton type="button" onClick={loginWithGoogle}>
                 Continue with Google

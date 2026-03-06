@@ -35,7 +35,13 @@ export default function LibraryClient() {
   }
 
   if (rows.length === 0) {
-    return <p style={{ opacity: 0.8 }}>No content yet.</p>;
+    return (
+      <article className="premium-card" style={{ padding: 18 }}>
+        <p style={{ margin: 0, opacity: 0.8 }}>
+          No completed assets yet. Once generation finishes, your library will populate automatically.
+        </p>
+      </article>
+    );
   }
 
   return (

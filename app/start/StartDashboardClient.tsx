@@ -12,21 +12,21 @@ type StatusCard = {
 
 export default function StartDashboardClient() {
   const statusCards: StatusCard[] = [
-    { label: "Twin Status", value: "Ready for training", progress: 24 },
-    { label: "Training Status", value: "Waiting for photos", progress: 12 },
+    { label: "Twin Status", value: "Awaiting data intake", progress: 16 },
+    { label: "Training Status", value: "Waiting for photo upload", progress: 10 },
     { label: "Generation Queue", value: "No jobs queued", progress: 0 },
-    { label: "Recent Activity", value: "Last update just now", progress: 72 },
+    { label: "Recent Activity", value: "System online", progress: 82 },
   ];
 
   const actionCards = [
     {
-      title: "Upload Training Photos",
-      description: "Upload the photos we'll use to train your twin.",
-      buttonText: "Upload Photos",
+      title: "Step 1: Upload Training Photos",
+      description: "Start here. Upload high-quality photos so we can begin training your twin model.",
+      buttonText: "Start Creating My Twin",
       href: "/training/photos",
     },
     {
-      title: "Set Preferences",
+      title: "Step 2: Set Preferences",
       description: "Confirm what type of content and package you want generated.",
       buttonText: "Set Preferences",
       href: "/requests",
@@ -57,10 +57,15 @@ export default function StartDashboardClient() {
         <p className="eyebrow">AI Control Center</p>
         <h1>Welcome to OnlyTwins</h1>
         <p>
-          Your subscription is active. Start by uploading your training photos so we can create your
-          twin.
+          Your subscription is active. Upload your photos to initialize your twin pipeline, then track
+          training and generation from this control center.
         </p>
-        <PremiumButton href="/training/photos">Start Creating My Twin</PremiumButton>
+        <div className="cta-row" style={{ marginTop: 4 }}>
+          <PremiumButton href="/training/photos">Start Creating My Twin</PremiumButton>
+          <PremiumButton href="/requests" variant="secondary">
+            View Queue
+          </PremiumButton>
+        </div>
       </section>
 
       <section className="premium-status-grid section">

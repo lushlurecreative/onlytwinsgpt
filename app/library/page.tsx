@@ -10,9 +10,11 @@ export default async function LibraryPage() {
 
   return (
     <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
-      <PremiumCard>
-        <h1 style={{ marginTop: 0 }}>My Content Library</h1>
-        <p style={{ opacity: 0.85 }}>View and download your completed images.</p>
+      <PremiumCard className="hero-refined">
+        <h1 style={{ marginTop: 0, fontSize: 34, letterSpacing: "-0.02em" }}>My Content Library</h1>
+        <p style={{ opacity: 0.85, maxWidth: 680 }}>
+          Your completed assets are stored here and ready for download.
+        </p>
       </PremiumCard>
       <div style={{ marginTop: 16 }}>
         <LibraryClient />

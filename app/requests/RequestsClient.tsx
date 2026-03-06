@@ -37,7 +37,13 @@ export default function RequestsClient() {
   }
 
   if (rows.length === 0) {
-    return <p style={{ opacity: 0.8 }}>No requests yet.</p>;
+    return (
+      <article className="premium-card" style={{ padding: 18 }}>
+        <p style={{ margin: 0, opacity: 0.8 }}>
+          No requests yet. Upload training photos first, then set preferences to queue your first run.
+        </p>
+      </article>
+    );
   }
 
   return (

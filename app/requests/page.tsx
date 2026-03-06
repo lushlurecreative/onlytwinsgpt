@@ -10,9 +10,11 @@ export default async function RequestsPage() {
 
   return (
     <main style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-      <PremiumCard>
-        <h1 style={{ marginTop: 0 }}>View My Requests</h1>
-        <p style={{ opacity: 0.85 }}>Track your training and generation progress.</p>
+      <PremiumCard className="hero-refined">
+        <h1 style={{ marginTop: 0, fontSize: 34, letterSpacing: "-0.02em" }}>View My Requests</h1>
+        <p style={{ opacity: 0.85, maxWidth: 680 }}>
+          Track each stage of your pipeline, from training prep to generation completion.
+        </p>
       </PremiumCard>
       <div style={{ marginTop: 16 }}>
         <RequestsClient />

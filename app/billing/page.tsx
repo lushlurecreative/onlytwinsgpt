@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
+import PremiumCard from "@/components/PremiumCard";
 import BillingPortalButton from "./BillingPortalButton";
 
 type BillingSubscriptionRow = {
@@ -69,66 +70,80 @@ export default async function BillingPage() {
 
   return (
     <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
-      <h1 style={{ marginTop: 0 }}>Billing</h1>
-      <p>Track your current and past creator subscriptions.</p>
-      {!error ? (
-        <p>
-          Active: <strong>{activeCount}</strong> | Trialing: <strong>{trialingCount}</strong> |
-          Past due: <strong>{pastDueCount}</strong>
+      <PremiumCard>
+        <h1 style={{ marginTop: 0, fontSize: 34, letterSpacing: "-0.02em" }}>Account & Billing</h1>
+        <p className="section-copy" style={{ marginTop: 8 }}>
+          Manage plan state, subscription health, and Stripe billing controls.
         </p>
-      ) : null}
-      {error ? <p>❌ {error.message}</p> : null}
+        {!error ? (
+          <div className="feature-grid" style={{ marginTop: 16 }}>
+            <PremiumCard title="Active" subtitle={`${activeCount} subscription(s)`} />
+            <PremiumCard title="Trialing" subtitle={`${trialingCount} subscription(s)`} />
+            <PremiumCard title="Past Due" subtitle={`${pastDueCount} subscription(s)`} />
+          </div>
+        ) : null}
+      </PremiumCard>
+
+      {error ? <p style={{ color: "var(--danger)" }}>{error.message}</p> : null}
       {!error && rows.length === 0 ? (
-        <p>
-          No subscriptions yet. <Link href="/creators">Browse creators</Link> to start.
-        </p>
+        <PremiumCard style={{ marginTop: 14 }}>
+          <p>
+            No subscriptions yet. <Link href="/creators">Browse creators</Link> to start.
+          </p>
+        </PremiumCard>
       ) : null}
       {!error && rows.length > 0 ? (
-        <div style={{ overflowX: "auto", marginTop: 10 }}>
-          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 920 }}>
+        <PremiumCard style={{ marginTop: 14 }}>
+          <div style={{ overflowX: "auto" }}>
+          <table className="table" style={{ width: "100%", minWidth: 920 }}>
             <thead>
               <tr>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Status</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Creator</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Current Period End</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Canceled At</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Stripe Sub</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Started</th>
+                <th>Status</th>
+                <th>Creator</th>
+                <th>Current Period End</th>
+                <th>Canceled At</th>
+                <th>Stripe Sub</th>
+                <th>Started</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
+                  <td>
                     {statusBadge(row.status)}
                   </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
+                  <td>
                     <Link href={`/feed/creator/${row.creator_id}`}>
                       <code>{row.creator_id}</code>
                     </Link>
                   </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
+                  <td>
                     {row.current_period_end ? new Date(row.current_period_end).toLocaleString() : "—"}
                   </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
+                  <td>
                     {row.canceled_at ? new Date(row.canceled_at).toLocaleString() : "—"}
                   </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
+                  <td>
                     {row.stripe_subscription_id ?? "—"}
                   </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
+                  <td>
                     {new Date(row.created_at).toLocaleString()}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </PremiumCard>
       ) : null}
-      {!error ? <BillingPortalButton /> : null}
-      <p style={{ marginTop: 14 }}>
-        Need changes? Open Stripe checkout again from any creator feed to renew or re-subscribe.
-      </p>
+      {!error ? (
+        <PremiumCard style={{ marginTop: 14 }}>
+          <BillingPortalButton />
+          <p style={{ marginTop: 14 }}>
+            Need changes? Open checkout again from any creator feed to renew or re-subscribe.
+          </p>
+        </PremiumCard>
+      ) : null}
     </main>
   );
 }

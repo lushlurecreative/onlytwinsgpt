@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import PremiumCard from "@/components/PremiumCard";
 
 type PostRow = {
   id: string;
@@ -46,11 +47,14 @@ export default function MePage() {
   }, []);
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Me</h1>
-      <p>{status}</p>
-      <h2 style={{ marginTop: 18 }}>My Posts</h2>
-      {postsError ? <p>❌ {postsError}</p> : null}
+    <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
+      <PremiumCard>
+        <h1 style={{ marginTop: 0 }}>Account Overview</h1>
+        <p>{status}</p>
+      </PremiumCard>
+      <PremiumCard style={{ marginTop: 14 }}>
+      <h2 style={{ marginTop: 0 }}>My Posts</h2>
+      {postsError ? <p style={{ color: "var(--danger)" }}>{postsError}</p> : null}
       {!postsError && posts.length === 0 ? <p>No posts yet.</p> : null}
       {!postsError && posts.length > 0 ? (
         <ul>
@@ -78,9 +82,10 @@ export default function MePage() {
           ))}
         </ul>
       ) : null}
-      <p style={{ marginTop: 12 }}>
+      <p style={{ marginTop: 12, marginBottom: 0 }}>
         Go to <code>/login</code>
       </p>
+      </PremiumCard>
     </main>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import PremiumButton from "@/components/PremiumButton";
 
 export default function BillingPortalButton() {
   const [loading, setLoading] = useState(false);
@@ -27,10 +28,10 @@ export default function BillingPortalButton() {
 
   return (
     <div style={{ marginTop: 10 }}>
-      <button onClick={openPortal} disabled={loading} style={{ padding: "8px 12px" }}>
-        {loading ? "Opening..." : "Manage Billing in Stripe"}
-      </button>
-      {error ? <p style={{ color: "red", marginTop: 6 }}>❌ {error}</p> : null}
+      <PremiumButton onClick={openPortal} loading={loading}>
+        Manage Billing in Stripe
+      </PremiumButton>
+      {error ? <p style={{ color: "var(--danger)", marginTop: 6 }}>{error}</p> : null}
     </div>
   );
 }
