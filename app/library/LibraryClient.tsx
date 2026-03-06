@@ -1,0 +1,71 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type PostRow = {
+  id: string;
+  caption: string | null;
+  created_at: string;
+  signed_url: string | null;
+};
+
+export default function LibraryClient() {
+  const [rows, setRows] = useState<PostRow[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      const response = await fetch("/api/posts");
+      const result = (await response.json().catch(() => ({}))) as {
+        posts?: PostRow[];
+        error?: string;
+      };
+      if (!response.ok) {
+        setError(result.error ?? "Could not load library.");
+        return;
+      }
+      setRows(result.posts ?? []);
+    };
+    void load();
+  }, []);
+
+  if (error) {
+    return <p style={{ color: "var(--danger)" }}>{error}</p>;
+  }
+
+  if (rows.length === 0) {
+    return <p style={{ opacity: 0.8 }}>No content yet.</p>;
+  }
+
+  return (
+    <div
+      style={{
+        display: "grid",
+        gap: 10,
+        gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))",
+      }}
+    >
+      {rows.map((row) => (
+        <article key={row.id} style={{ border: "1px solid #333", borderRadius: 12, padding: 10 }}>
+          {row.signed_url ? (
+            <img
+              src={row.signed_url}
+              alt={row.caption ?? "Generated image"}
+              style={{ width: "100%", height: 180, objectFit: "cover", borderRadius: 8 }}
+            />
+          ) : (
+            <div style={{ height: 180, borderRadius: 8, background: "#111" }} />
+          )}
+          <div style={{ marginTop: 8, fontSize: 13, opacity: 0.75 }}>
+            {new Date(row.created_at).toLocaleDateString()}
+          </div>
+          {row.signed_url ? (
+            <a href={row.signed_url} download style={{ marginTop: 8, display: "inline-block" }}>
+              Download
+            </a>
+          ) : null}
+        </article>
+      ))}
+    </div>
+  );
+}

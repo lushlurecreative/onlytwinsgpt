@@ -15,14 +15,14 @@ export async function getEntitlements(
   try {
     const { data, error } = await supabase
       .from("subscriptions")
-      .select("status")
+      .select("id")
       .eq("subscriber_id", userId)
-      .order("created_at", { ascending: false })
+      .in("status", ["active", "trialing"])
       .limit(1)
       .maybeSingle();
 
-    if (!error && data?.status) {
-      isSubscriber = ["active", "trialing"].includes(String(data.status));
+    if (!error && data?.id) {
+      isSubscriber = true;
     }
   } catch {}
 
