@@ -28,7 +28,7 @@ export default function ThankYouPage() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
-      if (data?.user) router.replace("/dashboard");
+      if (data?.user) router.replace("/start");
     })();
   }, [router, supabase]);
 
@@ -69,7 +69,7 @@ export default function ThankYouPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: "https://onlytwins.dev/auth/callback",
+        redirectTo: "https://onlytwins.dev/auth/callback?next=/start",
       },
     });
     if (oauthError) {
@@ -92,7 +92,7 @@ export default function ThankYouPage() {
     setMagicMsg("Sending magic link...");
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
-      options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/dashboard` },
+      options: { emailRedirectTo: `${siteUrl}/auth/callback?next=/start` },
     });
     if (otpError) {
       setMagicMsg(`Failed: ${otpError.message}`);

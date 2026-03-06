@@ -9,13 +9,15 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const supabase = createClient();
+    const params = new URLSearchParams(window.location.search);
+    const next = params.get("next") || "/start";
 
     const finishLogin = async () => {
       const { data } = await supabase.auth.getSession();
 
       if (data.session) {
         await fetch("/api/thank-you/complete", { method: "POST" }).catch(() => null);
-        router.replace("/dashboard");
+        router.replace(next);
       } else {
         router.replace("/login?error=oauth");
       }
