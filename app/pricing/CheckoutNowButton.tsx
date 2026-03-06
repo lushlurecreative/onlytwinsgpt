@@ -41,7 +41,12 @@ export default function CheckoutNowButton({ plan, className, children }: Checkou
 
   return (
     <>
-      <button type="button" className={className ?? "btn btn-primary"} onClick={onCheckout} disabled={loading}>
+      <button
+        type="button"
+        className={className ?? `btn btn-primary ${loading ? "is-loading" : ""}`.trim()}
+        onClick={onCheckout}
+        disabled={loading}
+      >
         {loading ? "Opening..." : children}
       </button>
       {error ? <p className="muted" style={{ marginTop: 8 }}>{error}</p> : null}

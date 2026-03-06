@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 type PostRow = {
   id: string;
@@ -46,7 +47,14 @@ export default function LibraryClient() {
       }}
     >
       {rows.map((row) => (
-        <article key={row.id} style={{ border: "1px solid #333", borderRadius: 12, padding: 10 }}>
+        <motion.article
+          key={row.id}
+          className="premium-card"
+          style={{ padding: 10 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22 }}
+        >
           {row.signed_url ? (
             <img
               src={row.signed_url}
@@ -64,7 +72,7 @@ export default function LibraryClient() {
               Download
             </a>
           ) : null}
-        </article>
+        </motion.article>
       ))}
     </div>
   );

@@ -1,6 +1,7 @@
-import Link from "next/link";
 import TrainingPhotosClient from "@/app/training/photos/TrainingPhotosClient";
 import { requireActiveSubscriber } from "@/lib/require-active-subscriber";
+import PremiumCard from "@/components/PremiumCard";
+import PremiumButton from "@/components/PremiumButton";
 
 export const dynamic = "force-dynamic";
 
@@ -9,14 +10,17 @@ export default async function TrainingPhotosPage() {
 
   return (
     <main style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-      <h1 style={{ marginTop: 0 }}>Upload Training Photos</h1>
-      <p style={{ opacity: 0.85 }}>
-        Upload the photos we'll use to train your twin and generate your selected package.
-      </p>
+      <PremiumCard>
+        <h1 style={{ marginTop: 0 }}>Upload Training Photos</h1>
+        <p style={{ opacity: 0.85 }}>
+          Upload the photos we'll use to train your twin and generate your selected package.
+        </p>
+      </PremiumCard>
 
       <TrainingPhotosClient />
 
-      <section style={{ border: "1px solid #333", borderRadius: 12, padding: 16, marginTop: 16 }}>
+      <section style={{ marginTop: 16 }}>
+        <PremiumCard>
         <h2 style={{ marginTop: 0 }}>Photo checklist</h2>
         <ul style={{ marginBottom: 0 }}>
           <li>high-quality photos</li>
@@ -24,19 +28,20 @@ export default async function TrainingPhotosPage() {
           <li>face clearly visible</li>
           <li>multiple angles</li>
         </ul>
+        </PremiumCard>
       </section>
 
-      <section style={{ border: "1px solid #333", borderRadius: 12, padding: 16, marginTop: 16 }}>
+      <section style={{ marginTop: 16 }}>
+        <PremiumCard>
         <h2 style={{ marginTop: 0 }}>What happens next</h2>
         <p style={{ marginBottom: 0 }}>
           Once your photos are uploaded, we'll review them and begin training your twin.
         </p>
+        </PremiumCard>
       </section>
 
       <div style={{ marginTop: 16 }}>
-        <Link href="/requests" className="btn btn-primary">
-          Set Preferences
-        </Link>
+        <PremiumButton href="/requests">Set Preferences</PremiumButton>
       </div>
     </main>
   );

@@ -3,6 +3,8 @@ import Link from "next/link";
 import BrandName from "@/app/components/BrandName";
 import AuthNav from "@/components/AuthNav";
 import HeaderSubscriptionCta from "@/components/HeaderSubscriptionCta";
+import AnimatedBackground from "@/components/AnimatedBackground";
+import PageTransition from "@/components/PageTransition";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata = {
@@ -15,7 +17,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <div className="site">
+        <div className="site site-shell">
+          <AnimatedBackground />
           <header className="header">
             <div className="header-inner">
               <Link href="/" className="brand" aria-label="OnlyTwins home">
@@ -46,7 +49,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </header>
 
-          <main className="main">{children}</main>
+          <main className="main">
+            <PageTransition>{children}</PageTransition>
+          </main>
 
           <footer className="footer">
             <div className="footer-grid">

@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
+import PremiumCard from "@/components/PremiumCard";
+import PremiumButton from "@/components/PremiumButton";
 
 type Status = "idle" | "uploading" | "done" | "error";
 
@@ -42,7 +45,7 @@ export default function TrainingPhotosClient() {
   };
 
   return (
-    <section style={{ border: "1px solid #333", borderRadius: 12, padding: 16, marginTop: 20 }}>
+    <PremiumCard style={{ marginTop: 20 }}>
       <h2 style={{ marginTop: 0 }}>Upload area</h2>
       <p style={{ opacity: 0.8 }}>Select a photo, then click upload.</p>
 
@@ -53,18 +56,20 @@ export default function TrainingPhotosClient() {
           onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           disabled={status === "uploading"}
         />
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={onUpload}
-          disabled={!file || status === "uploading"}
-        >
-          {status === "uploading" ? "Uploading..." : "Upload Photos"}
-        </button>
+        <PremiumButton type="button" onClick={onUpload} loading={status === "uploading"} disabled={!file}>
+          Upload Photos
+        </PremiumButton>
       </div>
 
       {message ? (
-        <p style={{ marginTop: 10, color: status === "error" ? "var(--danger)" : "var(--success)" }}>{message}</p>
+        <motion.p
+          style={{ marginTop: 10, color: status === "error" ? "var(--danger)" : "var(--success)" }}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          {message}
+        </motion.p>
       ) : null}
 
       {signedUrl ? (
@@ -75,6 +80,6 @@ export default function TrainingPhotosClient() {
           </a>
         </p>
       ) : null}
-    </section>
+    </PremiumCard>
   );
 }

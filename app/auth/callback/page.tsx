@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { motion } from "framer-motion";
 
 export default function AuthCallback() {
   const router = useRouter();
@@ -26,5 +27,14 @@ export default function AuthCallback() {
     finishLogin();
   }, [router]);
 
-  return <p style={{ padding: 40 }}>Signing you in…</p>;
+  return (
+    <motion.p
+      style={{ padding: 40 }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
+      Signing you in...
+    </motion.p>
+  );
 }

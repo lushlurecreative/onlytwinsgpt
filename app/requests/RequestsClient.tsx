@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 type RequestRow = {
   id: string;
@@ -41,8 +42,15 @@ export default function RequestsClient() {
 
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      {rows.map((row) => (
-        <article key={row.id} style={{ border: "1px solid #333", borderRadius: 12, padding: 14 }}>
+      {rows.map((row, idx) => (
+        <motion.article
+          key={row.id}
+          className="premium-card"
+          style={{ padding: 14 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, delay: idx * 0.04 }}
+        >
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
             <strong>{row.scene_preset}</strong>
             <span className="badge">{row.status}</span>
@@ -50,10 +58,23 @@ export default function RequestsClient() {
           <div style={{ marginTop: 6, opacity: 0.85 }}>
             Progress: {row.progress_done}/{row.progress_total}
           </div>
+          <div className="status-progress" style={{ marginTop: 8 }}>
+            <motion.div
+              className="status-progress-fill"
+              initial={{ width: 0 }}
+              animate={{
+                width:
+                  row.progress_total > 0
+                    ? `${Math.min(100, Math.max(0, (row.progress_done / row.progress_total) * 100))}%`
+                    : "0%",
+              }}
+              transition={{ duration: 0.45, ease: "easeOut" }}
+            />
+          </div>
           <div style={{ marginTop: 6, opacity: 0.7, fontSize: 13 }}>
             {new Date(row.created_at).toLocaleString()}
           </div>
-        </article>
+        </motion.article>
       ))}
     </div>
   );

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase-server";
 import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BrandName from "@/app/components/BrandName";
+import PremiumCard from "@/components/PremiumCard";
 import CheckoutNowButton from "./CheckoutNowButton";
 import BitcoinCheckoutButton from "./BitcoinCheckoutButton";
 
@@ -23,7 +24,7 @@ export default async function PricingPage() {
       </section>
 
       <section className="feature-grid section">
-        <article className="card">
+        <PremiumCard>
           <h2>
             <BrandName /> Starter
           </h2>
@@ -38,8 +39,8 @@ export default async function PricingPage() {
             <CheckoutNowButton plan="starter">{MARKETING_MESSAGE_MAP.cta.primaryLabel}</CheckoutNowButton>
             <BitcoinCheckoutButton plan="starter" />
           </div>
-        </article>
-        <article className="card">
+        </PremiumCard>
+        <PremiumCard>
           <h2>
             <BrandName /> Professional
           </h2>
@@ -59,8 +60,8 @@ export default async function PricingPage() {
               Contact Us
             </a>
           </div>
-        </article>
-        <article className="card">
+        </PremiumCard>
+        <PremiumCard>
           <h2>
             <BrandName /> Elite
           </h2>
@@ -80,11 +81,11 @@ export default async function PricingPage() {
               Contact Us
             </a>
           </div>
-        </article>
+        </PremiumCard>
       </section>
 
       <section className="feature-grid section">
-        <article className="card">
+        <PremiumCard>
           <h3>Single Content Batch</h3>
           <p className="kpi">$399</p>
           <p>One-time purchase for urgent launches and test campaigns.</p>
@@ -92,8 +93,8 @@ export default async function PricingPage() {
             <CheckoutNowButton plan="single_batch">Checkout</CheckoutNowButton>
             <BitcoinCheckoutButton plan="single_batch" />
           </div>
-        </article>
-        <article className="card">
+        </PremiumCard>
+        <PremiumCard>
           <h3>70/30 Partner Package</h3>
           <p className="kpi">$100/mo + rev share</p>
           <p>
@@ -103,8 +104,8 @@ export default async function PricingPage() {
             <CheckoutNowButton plan="partner_70_30">Checkout</CheckoutNowButton>
             <BitcoinCheckoutButton plan="partner_70_30" />
           </div>
-        </article>
-        <article className="card">
+        </PremiumCard>
+        <PremiumCard>
           <h3>50/50 Partner Package</h3>
           <p className="kpi">$1/mo + rev share</p>
           <p>
@@ -115,10 +116,11 @@ export default async function PricingPage() {
             <CheckoutNowButton plan="partner_50_50">Checkout</CheckoutNowButton>
             <BitcoinCheckoutButton plan="partner_50_50" />
           </div>
-        </article>
+        </PremiumCard>
       </section>
 
-      <section className="section card">
+      <section className="section">
+        <PremiumCard>
         <h3>Why we are different from app tools</h3>
         <ul className="list">
           <li>Done-for-you production team, not DIY prompts and guesswork</li>
@@ -130,9 +132,11 @@ export default async function PricingPage() {
           <li>High-Res Post-Processing: 50-step inference + face restoration</li>
           <li>Identity Weight Calibration: controlled body-to-face blending</li>
         </ul>
+        </PremiumCard>
       </section>
 
-      <section className="section card">
+      <section className="section">
+        <PremiumCard>
         <h3>Other products and infrastructure</h3>
         <ul className="list">
           <li>Direct content sale portal: one-click 30, 100, and 250-piece packs</li>
@@ -152,14 +156,17 @@ export default async function PricingPage() {
           </a>
           <CheckoutNowButton plan="starter">{MARKETING_MESSAGE_MAP.cta.primaryLabel}</CheckoutNowButton>
         </div>
+        </PremiumCard>
       </section>
 
-      <section className="section card">
+      <section className="section">
+        <PremiumCard>
         <h3>Payment methods</h3>
         <ul className="list">
           <li>Supported now: Stripe card checkout and Bitcoin checkout.</li>
           <li>Amazon Pay is not active yet in this release.</li>
         </ul>
+        </PremiumCard>
       </section>
     </div>
   );

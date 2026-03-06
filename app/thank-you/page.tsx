@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import PremiumCard from "@/components/PremiumCard";
+import PremiumButton from "@/components/PremiumButton";
 
 type ThankYouState = "processing" | "ready" | "error";
 
@@ -107,56 +109,50 @@ export default function ThankYouPage() {
   );
 
   return (
-    <main style={{ padding: 48, maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
-      <h1 style={{ marginTop: 0, fontSize: 28 }}>
-        Thanks for subscribing ✅
-      </h1>
-      <p className="muted" style={{ marginBottom: 14 }}>
-        You&apos;re all set. Create your account to access your dashboard.
-      </p>
+    <main style={{ padding: 48, maxWidth: 560, margin: "0 auto" }}>
+      <PremiumCard style={{ textAlign: "center" }}>
+        <h1 style={{ marginTop: 0, fontSize: 28 }}>Thanks for subscribing ✅</h1>
+        <p className="muted" style={{ marginBottom: 14 }}>
+          You&apos;re all set. Create your account to access your dashboard.
+        </p>
 
-      {state === "processing" ? (
-        <>
-          <p style={{ marginBottom: 20 }}>Verifying payment...</p>
-        </>
-      ) : null}
+        {state === "processing" ? (
+          <>
+            <p style={{ marginBottom: 20 }}>Verifying payment...</p>
+          </>
+        ) : null}
 
-      {state === "error" ? (
-        <>
-          <p style={{ color: "#c00", marginBottom: 8 }}>{error || supportText}</p>
-          <p className="muted" style={{ marginBottom: 20 }}>{supportText}</p>
-        </>
-      ) : null}
+        {state === "error" ? (
+          <>
+            <p style={{ color: "#c00", marginBottom: 8 }}>{error || supportText}</p>
+            <p className="muted" style={{ marginBottom: 20 }}>{supportText}</p>
+          </>
+        ) : null}
 
-      {state === "ready" ? (
-        <>
-          <p className="muted" style={{ marginBottom: 12 }}>
-            Create account
-          </p>
-          <div style={{ display: "grid", gap: 10, maxWidth: 360, margin: "0 auto" }}>
-            <button type="button" className="btn btn-primary" onClick={loginWithGoogle}>
-              Continue with Google
-            </button>
-            <input
-              type="email"
-              value={magicEmail}
-              onChange={(e) => setMagicEmail(e.target.value)}
-              placeholder={email || "Email for magic link"}
-              style={{
-                width: "100%",
-                padding: 10,
-                borderRadius: 8,
-                border: "1px solid #444",
-              }}
-            />
-            <button type="button" className="btn btn-secondary" onClick={sendMagicLink}>
-              Email me a login link
-            </button>
-            {magicMsg ? <p className="muted" style={{ margin: 0 }}>{magicMsg}</p> : null}
-          </div>
-        </>
-      ) : null}
-
+        {state === "ready" ? (
+          <>
+            <p className="muted" style={{ marginBottom: 12 }}>
+              Create account
+            </p>
+            <div style={{ display: "grid", gap: 10, maxWidth: 360, margin: "0 auto" }}>
+              <PremiumButton type="button" onClick={loginWithGoogle}>
+                Continue with Google
+              </PremiumButton>
+              <input
+                type="email"
+                className="input"
+                value={magicEmail}
+                onChange={(e) => setMagicEmail(e.target.value)}
+                placeholder={email || "Email for magic link"}
+              />
+              <PremiumButton type="button" variant="secondary" onClick={sendMagicLink}>
+                Email me a login link
+              </PremiumButton>
+              {magicMsg ? <p className="muted" style={{ margin: 0 }}>{magicMsg}</p> : null}
+            </div>
+          </>
+        ) : null}
+      </PremiumCard>
     </main>
   );
 }

@@ -32,7 +32,12 @@ export default function BitcoinCheckoutButton({ plan }: BitcoinCheckoutButtonPro
 
   return (
     <>
-      <button type="button" className="btn btn-secondary" onClick={onBitcoinCheckout} disabled={loading}>
+      <button
+        type="button"
+        className={`btn btn-secondary ${loading ? "is-loading" : ""}`.trim()}
+        onClick={onBitcoinCheckout}
+        disabled={loading}
+      >
         {loading ? "Opening..." : "Pay with Bitcoin"}
       </button>
       {error ? <p className="muted" style={{ marginTop: 8 }}>{error}</p> : null}

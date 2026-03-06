@@ -4,6 +4,8 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import BrandName from "@/app/components/BrandName";
+import PremiumCard from "@/components/PremiumCard";
+import PremiumButton from "@/components/PremiumButton";
 
 function LoginPageInner() {
   const searchParams = useSearchParams();
@@ -51,57 +53,45 @@ function LoginPageInner() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 420 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>
-        <BrandName /> Login
-      </h1>
+    <main style={{ padding: 24, maxWidth: 520, margin: "0 auto" }}>
+      <PremiumCard>
+        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 16 }}>
+          <BrandName /> Login
+        </h1>
 
-      <label style={{ display: "block", marginBottom: 8 }}>Email</label>
-      <input
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        style={{
-          width: "100%",
-          padding: 10,
-          marginBottom: 12,
-          borderRadius: 8,
-          border: "1px solid #444",
-        }}
-      />
+        <label style={{ display: "block", marginBottom: 8 }}>Email</label>
+        <input
+          className="input"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{ marginBottom: 12 }}
+        />
 
-      <label style={{ display: "block", marginBottom: 8 }}>Password</label>
-      <input
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        type="password"
-        style={{
-          width: "100%",
-          padding: 10,
-          marginBottom: 12,
-          borderRadius: 8,
-          border: "1px solid #444",
-        }}
-      />
+        <label style={{ display: "block", marginBottom: 8 }}>Password</label>
+        <input
+          className="input"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          type="password"
+          style={{ marginBottom: 12 }}
+        />
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <button onClick={signUp} style={{ padding: "10px 12px", borderRadius: 8 }}>
-          Sign up
-        </button>
-        <button onClick={signIn} style={{ padding: "10px 12px", borderRadius: 8 }}>
-          Sign in
-        </button>
-        <button onClick={signOut} style={{ padding: "10px 12px", borderRadius: 8 }}>
-          Sign out
-        </button>
-      </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          <PremiumButton onClick={signUp}>Sign up</PremiumButton>
+          <PremiumButton onClick={signIn}>Sign in</PremiumButton>
+          <PremiumButton variant="secondary" onClick={signOut}>
+            Sign out
+          </PremiumButton>
+        </div>
 
-      <p>{msg}</p>
+        <p>{msg}</p>
 
-      {redirectTo !== "/start" ? (
-        <p style={{ marginTop: 18, opacity: 0.8 }}>
-          You will be taken to your destination after signing in.
-        </p>
-      ) : null}
+        {redirectTo !== "/start" ? (
+          <p style={{ marginTop: 18, opacity: 0.8 }}>
+            You will be taken to your destination after signing in.
+          </p>
+        ) : null}
+      </PremiumCard>
     </main>
   );
 }
