@@ -34,1973 +34,1727 @@ export type GalleryItem = {
 export const galleryItems: GalleryItem[] = [
   {
     src: "/gallery/cars/photo_2025-09-27_04-36-10 (2).jpg",
-    title: "Automotive",
-    tags: ["SFW", "Automotive", "Influencer", "Fitness", "Vacation", "TikTok"],
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Automotive", "Lifestyle", "Editorial", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+    description: "Social-first output adaptable for automotive-themed creator and agency campaigns.",
+  },  {
     src: "/gallery/cars/photo_2026-02-07_20-33-59 (2).jpg",
-    title: "Cosplay",
-    tags: ["SFW", "Cosplay", "Fitness", "Goth", "Anime", "TikTok"],
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Lifestyle", "Influencer", "Editorial", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+    description: "Social-first output adaptable for creator feeds and agency content directions.",
+  },  {
     src: "/gallery/cars/photo_2026-03-04_14-01-55.jpg",
-    title: "Automotive",
-    tags: ["SFW", "Automotive", "Goth", "Influencer", "Fitness"],
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Automotive", "Lifestyle", "Editorial", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+    description: "Social-first output adaptable for automotive-themed creator and agency campaigns.",
+  },  {
     src: "/gallery/cars/photo_2026-03-04_14-01-57.jpg",
-    title: "Automotive",
-    tags: ["SFW", "Automotive", "Influencer", "Lifestyle", "Luxury", "Vacation"],
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Lifestyle", "Influencer", "Editorial", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+    description: "Social-first output adaptable for creator feeds and agency content directions.",
+  },  {
     src: "/gallery/cars/photo_2026-03-04_14-01-58.jpg",
-    title: "Automotive",
-    tags: ["SFW", "Automotive", "Lifestyle", "Influencer", "Vacation"],
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Lifestyle", "Influencer", "Editorial", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+    description: "Social-first output adaptable for creator feeds and agency content directions.",
+  },  {
     src: "/gallery/cosplay/photo_2025-08-20_16-53-34.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Anime", "Editorial", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/cosplay/photo_2025-08-20_16-53-44.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Sci-Fi", "Editorial", "Goth"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/exercise/photo_2025-01-29_06-48-24.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Influencer", "TikTok", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/exercise/photo_2026-02-07_20-32-37.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Influencer", "Editorial", "Goth"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/exercise/photo_2026-02-24_15-18-23.jpg",
-    title: "Luxury",
-    tags: ["SFW", "Luxury", "Fitness", "Editorial", "Influencer", "Vacation"],
+    title: "Fitness",
+    tags: ["SFW", "Fitness", "Lifestyle", "Editorial", "Agencies", "Social Media"],
     nsfw: false,
     type: "image",
-    description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+    description: "Fitness-forward visuals for gym, training, and activewear content.",
+  },  {
     src: "/gallery/exercise/photo_2026-02-24_15-18-26.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Vacation", "TikTok", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/exercise/photo_2026-03-04_14-00-43.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Goth", "Influencer", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/exercise/photo_2026-03-04_14-00-55.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Influencer", "Anime"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/exercise/photo_2026-03-04_14-00-57.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Sci-Fi", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/exercise/photo_2026-03-04_14-00-58.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Influencer", "TikTok", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/goth/0223.mp4",
     title: "Goth",
     tags: ["SFW", "Goth", "Luxury", "Influencer", "Sci-Fi"],
     nsfw: false,
     type: "video",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/goth/photo_2025-06-27_07-56-07.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Cosplay", "TikTok", "Anime"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/goth/photo_2025-07-14_10-57-44.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Sci-Fi", "TikTok", "Anime"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/goth/photo_2025-09-30_09-01-54 (2).jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Influencer", "TikTok", "Anime"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/goth/photo_2025-09-30_09-01-55.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Anime", "Influencer", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/gym/photo_2026-03-04_14-00-39.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Goth", "Influencer", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/ai-clothes-changer-3.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Influencer", "Agencies"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2025-08-20_16-53-34 (2).jpg",
     title: "Editorial",
     tags: ["SFW", "Editorial", "Anime", "Sci-Fi", "Goth"],
     nsfw: false,
     type: "image",
     description: "Editorial-grade transformation quality with campaign-level polish.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2025-08-20_16-53-43 (2).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Social Media", "Anime"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2025-08-20_16-53-45.jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "Influencer", "Anime", "Editorial", "Goth"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2025-09-27_04-36-10 (3).jpg",
     title: "Automotive",
     tags: ["SFW", "Automotive", "Influencer", "Lifestyle", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2025-09-27_04-36-11.jpg",
     title: "Social Media",
     tags: ["SFW", "Social Media", "Influencer", "Fitness", "Luxury", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Social-first outputs tuned for engagement across multiple creator channels.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2025-10-04_10-49-36.jpg",
     title: "Editorial",
     tags: ["SFW", "Editorial", "Influencer", "Luxury", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Editorial-grade transformation quality with campaign-level polish.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2025-10-04_18-18-22 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Luxury", "Influencer", "Vacation", "Editorial"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2025-10-04_18-18-22.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Luxury", "Influencer", "Vacation", "Sci-Fi"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2025-10-04_18-22-52.jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "Influencer", "TikTok", "Vacation", "Luxury"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2025-11-17_21-26-13 (2).jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "Goth", "Cosplay", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2026-02-07_20-33-55.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Luxury", "Fitness", "Influencer", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2026-02-07_20-33-58 (2).jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Influencer", "Luxury", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2026-02-07_20-33-58.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Influencer", "Luxury", "Editorial"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2026-02-07_20-34-01.jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "Influencer", "Fitness", "Vacation", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2026-03-04_14-00-50.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Fitness", "Influencer", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2026-03-04_14-01-36.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Influencer", "Vacation", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/influencer/photo_2026-03-04_14-01-47.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Influencer", "Vacation", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/instagram/photo_2025-01-27_22-38-11 (2).jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "Influencer", "Luxury", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/instagram/photo_2025-01-27_22-38-12.jpg",
     title: "Social Media",
     tags: ["SFW", "Social Media", "Influencer", "Luxury", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Social-first outputs tuned for engagement across multiple creator channels.",
-  },
-  {
+  },  {
     src: "/gallery/instagram/photo_2026-03-04_14-00-47.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Social Media", "Luxury", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2025-04-21_15-36-24.jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "Influencer", "Social Media", "Fitness", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2025-07-03_16-54-23.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Social Media", "Lifestyle", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2025-08-18_21-11-13.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Anime", "Influencer", "TikTok", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2025-08-18_21-12-03.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "TikTok", "Anime", "Fitness"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2025-08-22_07-22-12.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Fitness", "Anime", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2025-09-22_23-49-48 (3).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Anime", "Social Media", "Influencer"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2025-09-22_23-49-50 (5).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Fitness", "TikTok", "Anime", "Goth"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2025-09-27_04-36-10 (4).jpg",
     title: "Automotive",
     tags: ["SFW", "Automotive", "Influencer", "Fitness", "TikTok", "Luxury"],
     nsfw: false,
     type: "image",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2025-10-01_10-04-13 (2).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Fitness", "Goth", "Influencer", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2025-11-05_20-26-34 (2).jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Fitness", "Social Media", "Influencer", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-01-11_18-46-57.jpg",
     title: "Editorial",
     tags: ["SFW", "Editorial", "Luxury", "TikTok", "Influencer", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Editorial-grade transformation quality with campaign-level polish.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-01-13_03-42-37 (2).jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Vacation", "Influencer", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-02-07_20-32-38.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Influencer", "Luxury", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-02-07_20-33-56 (2).jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Social Media", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-02-07_20-34-05 (2).jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "Fitness", "Goth", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-02-07_20-34-07 (2).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Fitness", "Goth", "Influencer", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-02-07_20-34-07 (3).jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Influencer", "Luxury", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-02-24_15-18-27.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Vacation", "Influencer", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-02-24_15-18-28.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Fitness", "Influencer", "Vacation", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-02-24_15-18-30.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Fitness", "Social Media", "Vacation", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-03-04_14-00-34.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Influencer", "TikTok", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-03-04_14-00-36.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Lifestyle", "Vacation", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-03-04_14-00-49.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Vacation", "Influencer", "TikTok", "Fitness"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-03-04_14-01-15.jpg",
     title: "Social Media",
     tags: ["SFW", "Social Media", "Fitness", "Vacation", "TikTok", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Social-first outputs tuned for engagement across multiple creator channels.",
-  },
-  {
+  },  {
     src: "/gallery/lifestyle/photo_2026-03-04_14-01-42.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Vacation", "Social Media", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2025-01-24_15-52-24.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Editorial", "Goth", "Automotive"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2025-01-24_15-52-25.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Automotive", "Editorial", "Goth"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2025-01-24_15-52-27.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Goth", "Editorial", "Influencer"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2025-01-27_22-38-10.jpg",
-    title: "Fitness",
-    tags: ["SFW", "Fitness", "Social Media", "Influencer", "Lifestyle"],
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Lifestyle", "Influencer", "Editorial", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+    description: "Social-first output tailored for creator branding and feed-ready campaigns.",
+  },  {
     src: "/gallery/lingerie/photo_2025-01-27_22-38-12 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Goth", "Luxury", "Influencer", "Editorial"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2025-08-18_21-11-12 (2).jpg",
-    title: "Cosplay",
-    tags: ["SFW", "Cosplay", "Goth", "Fitness", "Editorial"],
+    title: "Lifestyle",
+    tags: ["SFW", "Lifestyle", "Instagram", "Social Media", "Influencer", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+    description: "Lifestyle output with clean styling for broad creator and agency use.",
+  },  {
     src: "/gallery/lingerie/photo_2025-08-18_21-12-03 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Goth", "Fitness", "TikTok", "Cosplay"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2025-09-04_20-22-16.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Influencer", "Luxury", "Vacation"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2025-09-22_23-49-49 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Editorial", "Goth", "Fitness", "Cosplay"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2025-09-22_23-49-50 (3).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Goth", "Fitness", "TikTok", "Cosplay"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2025-10-01_21-07-08 (2).jpg",
-    title: "Cosplay",
-    tags: ["SFW", "Cosplay", "Fitness", "Goth", "Anime"],
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Instagram", "TikTok", "Lifestyle", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+    description: "Social-first output tuned for multi-platform posting.",
+  },  {
     src: "/gallery/lingerie/photo_2026-02-07_20-33-55 (2).jpg",
-    title: "Cosplay",
-    tags: ["SFW", "Cosplay", "Luxury", "Fitness", "Editorial", "Influencer"],
+    title: "Lifestyle",
+    tags: ["SFW", "Lifestyle", "Influencer", "Editorial", "Social Media", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+    description: "Lifestyle output with premium tone and flexible campaign positioning.",
+  },  {
     src: "/gallery/lingerie/photo_2026-02-07_20-34-00.jpg",
-    title: "Fitness",
-    tags: ["SFW", "Fitness", "Luxury", "TikTok", "Goth"],
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Lifestyle", "Influencer", "Instagram", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+    description: "Social-first output tailored for creator branding and feed-ready campaigns.",
+  },  {
     src: "/gallery/lingerie/photo_2026-02-24_15-12-53.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "TikTok", "Editorial", "Luxury", "Influencer"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2026-03-04_14-01-22 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Editorial", "Goth", "Luxury", "Fitness"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2026-03-04_14-01-24.jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "Editorial", "Fitness", "Goth"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2026-03-04_14-01-25.jpg",
-    title: "Cosplay",
-    tags: ["SFW", "Cosplay", "Fitness", "Vacation", "TikTok", "Influencer"],
+    title: "Lifestyle",
+    tags: ["SFW", "Lifestyle", "Social Media", "Editorial", "Influencer", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+    description: "Lifestyle output with clean styling for broad creator and agency use.",
+  },  {
     src: "/gallery/lingerie/photo_2026-03-04_14-01-27 (2).jpg",
     title: "Editorial",
     tags: ["SFW", "Editorial", "Luxury", "TikTok", "Fitness", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Editorial-grade transformation quality with campaign-level polish.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2026-03-04_14-01-27.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Luxury", "Editorial", "TikTok", "Goth"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/lingerie/photo_2026-03-04_14-02-00.jpg",
-    title: "Cosplay",
-    tags: ["SFW", "Cosplay", "Vacation", "Editorial", "Fitness", "Luxury"],
+    title: "Lifestyle",
+    tags: ["SFW", "Lifestyle", "Vacation", "Social Media", "Editorial", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+    description: "Lifestyle output with clean styling for broad creator and agency use.",
+  },  {
     src: "/gallery/lingerie/photo_2026-03-04_14-02-01.jpg",
-    title: "Cosplay",
-    tags: ["SFW", "Cosplay", "Vacation", "Fitness", "Lifestyle", "Influencer"],
+    title: "Lifestyle",
+    tags: ["SFW", "Lifestyle", "Vacation", "Social Media", "Influencer", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+    description: "Lifestyle output with clean styling for broad creator and agency use.",
+  },  {
     src: "/gallery/luxury/photo_2025-08-20_16-53-43.jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "Sci-Fi", "Editorial", "Goth", "Cosplay"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/luxury/photo_2025-08-22_07-22-12 (2).jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "Editorial", "Cosplay", "Goth", "Anime"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/luxury/photo_2026-02-07_20-34-15.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Editorial", "Goth", "Luxury", "Influencer"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/motorcycles/1008.mp4",
     title: "Automotive",
     tags: ["SFW", "Automotive", "TikTok", "Sci-Fi", "Goth"],
     nsfw: false,
     type: "video",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/motorcycles/1012.mp4",
     title: "Automotive",
     tags: ["SFW", "Automotive", "Sci-Fi", "Goth", "TikTok"],
     nsfw: false,
     type: "video",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/motorcycles/kling_20251009_Image_to_Video__356_0.mp4",
-    title: "NSFW",
-    tags: ["NSFW", "Adult", "Automotive", "Agencies", "TikTok", "Anime"],
-    nsfw: true,
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Automotive", "Lifestyle", "Editorial", "Agencies"],
+    nsfw: false,
     type: "video",
-    description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+    description: "Social-first short-form output suitable for automotive and creator campaigns.",
+  },  {
     src: "/gallery/motorcycles/kling_20251011_Image_to_Video_The_woman__1947_0.mp4",
     title: "Automotive",
     tags: ["SFW", "Automotive", "Goth", "Anime", "Editorial"],
     nsfw: false,
     type: "video",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/motorcycles/kling_20251012_Image_to_Video_the_woman__5680_0.mp4",
     title: "Automotive",
     tags: ["SFW", "Automotive", "TikTok", "Anime", "Fitness", "Sci-Fi"],
     nsfw: false,
     type: "video",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/motorcycles/kling_20251020_Image_to_Video_The_woman__2497_0.mp4",
     title: "Automotive",
     tags: ["SFW", "Automotive", "TikTok", "Fitness", "Vacation"],
     nsfw: false,
     type: "video",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/motorcycles/photo_2025-01-24_15-52-22.jpg",
-    title: "NSFW",
-    tags: ["NSFW", "Adult", "Goth", "Fitness", "Automotive", "Editorial"],
-    nsfw: true,
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Lifestyle", "Influencer", "Editorial", "Agencies"],
+    nsfw: false,
     type: "image",
-    description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+    description: "Social-first output tailored for creator branding and feed-ready campaigns.",
+  },  {
     src: "/gallery/motorcycles/photo_2025-08-18_21-11-56.jpg",
-    title: "Cosplay",
-    tags: ["SFW", "Cosplay", "Goth", "Anime", "Sci-Fi", "TikTok"],
+    title: "Lifestyle",
+    tags: ["SFW", "Lifestyle", "Social Media", "Editorial", "Influencer", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+    description: "Lifestyle output with clean styling for broad creator and agency use.",
+  },  {
     src: "/gallery/motorcycles/photo_2025-10-10_19-25-01.jpg",
-    title: "Cosplay",
-    tags: ["SFW", "Cosplay", "TikTok", "Influencer", "Lifestyle", "Vacation"],
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Lifestyle", "TikTok", "Influencer", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+    description: "Social-first output tuned for multi-platform posting.",
+  },  {
     src: "/gallery/motorcycles/photo_2025-10-10_19-25-11.jpg",
-    title: "Cosplay",
-    tags: ["SFW", "Cosplay", "Fitness", "Vacation", "Influencer", "Lifestyle"],
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Lifestyle", "Instagram", "Influencer", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+    description: "Social-first output tuned for multi-platform posting.",
+  },  {
     src: "/gallery/motorcycles/photo_2025-10-12_09-18-16.jpg",
     title: "Automotive",
     tags: ["SFW", "Automotive", "TikTok", "Lifestyle", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/motorcycles/photo_2025-10-13_09-47-01.jpg",
     title: "Automotive",
     tags: ["SFW", "Automotive", "Agencies", "Anime", "Editorial"],
     nsfw: false,
     type: "image",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/motorcycles/photo_2025-10-14_16-36-43.jpg",
-    title: "Cosplay",
-    tags: ["SFW", "Cosplay", "Sci-Fi", "TikTok", "Anime", "Fitness"],
+    title: "Social Media",
+    tags: ["SFW", "Social Media", "Lifestyle", "Editorial", "Influencer", "Agencies"],
     nsfw: false,
     type: "image",
-    description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+    description: "Social-first output tailored for creator branding and feed-ready campaigns.",
+  },  {
     src: "/gallery/motorcycles/photo_2025-10-21_05-54-32.jpg",
     title: "Automotive",
     tags: ["SFW", "Automotive", "Goth", "Lifestyle", "Agencies"],
     nsfw: false,
     type: "image",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/ComfyUI_00070_.mp4",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Lifestyle", "Social Media"],
     nsfw: false,
     type: "video",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/Wanimate_00004-audio.mp4",
     title: "NSFW",
     tags: ["NSFW", "Adult", "TikTok", "Vacation", "Instagram", "Editorial"],
     nsfw: true,
     type: "video",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/ai-clothes-changer-1.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "TikTok", "Influencer", "Fitness", "Luxury"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/counting clothses.mp4",
     title: "Social Media",
     tags: ["SFW", "Social Media", "TikTok", "Luxury", "Influencer"],
     nsfw: false,
     type: "video",
     description: "Social-first outputs tuned for engagement across multiple creator channels.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-01-24_15-52-25 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Luxury", "Influencer", "Lifestyle", "Editorial"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-01-24_15-52-26 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Editorial", "Fitness", "Luxury", "Agencies"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-01-24_15-52-26.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Luxury", "Influencer", "TikTok", "Editorial"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-01-24_15-52-27 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Social Media", "Influencer", "Lifestyle"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-01-27_22-38-11 (3).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Social Media", "Luxury", "Influencer", "Lifestyle"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-01-27_22-38-11.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "TikTok", "Fitness", "Agencies", "Influencer"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-01-29_06-48-28.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Influencer", "Vacation", "Social Media", "Fitness"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-04-21_15-36-23 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "TikTok", "Influencer", "Fitness", "Luxury"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-04-21_15-36-23.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Influencer", "Fitness", "Social Media", "TikTok"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-04-21_15-36-25.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Influencer", "Luxury", "Lifestyle", "Anime"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-06-28_09-23-45 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Social Media", "Influencer", "Lifestyle"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-06-28_09-23-45.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Vacation", "Editorial", "Lifestyle", "Social Media"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-06-28_09-23-46.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Social Media", "Influencer", "Lifestyle"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-06-28_09-23-47.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Social Media", "Influencer", "Lifestyle"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-08-10_13-30-08 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Luxury", "Goth", "Editorial"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-08-10_13-30-08.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Goth", "Luxury", "Fitness", "Influencer"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-08-10_13-30-09.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Editorial", "Luxury", "Goth", "Fitness"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-08-15_10-38-21.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Editorial", "Goth", "Luxury"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-08-16_17-35-13.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Agencies", "Goth", "Editorial", "Luxury"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-08-17_18-01-19 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Influencer", "Lifestyle", "Fitness", "Social Media"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-08-17_18-01-19.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Lifestyle", "Influencer", "Fitness", "Social Media"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-08-18_03-14-25.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Lifestyle", "TikTok", "Anime", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-08-18_21-11-39.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Vacation", "Fitness", "Goth", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-08-20_16-53-42 (2).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Goth", "Anime", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-08-20_16-53-45 (2).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Anime", "TikTok", "Goth"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-03_07-58-49 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Lifestyle", "Social Media", "Influencer"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-03_07-58-49.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Editorial", "Influencer", "Social Media"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-07_22-23-02.jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "Influencer", "Lifestyle", "Social Media"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-07_22-25-02.jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "Influencer", "Lifestyle", "Social Media"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-48 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Goth", "Editorial", "Luxury", "Influencer"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-48 (5).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Social Media", "Fitness", "Influencer", "TikTok"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-49 (3).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Luxury", "Editorial", "Goth"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-49 (6).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "TikTok", "Goth", "Cosplay", "Anime"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-50 (2).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Goth", "TikTok", "Fitness", "Anime"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-50 (4).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Anime", "TikTok", "Goth"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-51.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Luxury", "Fitness", "Influencer", "Goth"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-30_08-29-22 (2).jpg",
     title: "Vacation",
     tags: ["SFW", "Vacation", "TikTok", "Luxury", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Destination and travel-style visuals with polished lighting and tone.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-30_09-01-54.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "TikTok", "Influencer", "Anime"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-30_09-01-55 (2).jpg",
     title: "Lifestyle",
     tags: ["SFW", "Lifestyle", "Luxury", "Influencer", "TikTok", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Natural lifestyle direction with consistent identity and premium realism.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-30_09-01-56 (2).jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "Editorial", "Influencer", "Anime"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-09-30_09-01-56.jpg",
     title: "Lifestyle",
     tags: ["SFW", "Lifestyle", "Social Media", "Luxury", "TikTok", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Natural lifestyle direction with consistent identity and premium realism.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_10-04-13.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "TikTok", "Fitness", "Luxury"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_21-07-08.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Anime", "TikTok", "Fitness"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_21-07-39 (2).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Anime", "Influencer", "Goth"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_21-07-39.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Influencer", "TikTok", "Luxury"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_21-07-41.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "TikTok", "Influencer", "Anime", "Goth"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_21-07-59.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Influencer", "Luxury", "TikTok", "Fitness"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-02 (2).jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Influencer", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-02.jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "Fitness", "TikTok", "Social Media", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-03.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Social Media", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-06.jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "TikTok", "Social Media", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-07 (2).jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "TikTok", "Social Media", "Fitness"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-07.jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "TikTok", "Lifestyle", "Social Media", "Fitness"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-10-17_17-25-31.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Influencer", "Anime", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-11-01_13-38-15 (2).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Vacation", "Goth", "TikTok"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-10 (2).jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "TikTok", "Fitness", "Influencer", "Luxury"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-10 (3).jpg",
     title: "Social Media",
     tags: ["SFW", "Social Media", "Vacation", "Influencer", "TikTok", "Fitness"],
     nsfw: false,
     type: "image",
     description: "Social-first outputs tuned for engagement across multiple creator channels.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-24 (2).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Anime", "Influencer", "Goth"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-24 (3).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "TikTok", "Influencer", "Luxury", "Goth"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-34 (2).jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Vacation", "Influencer", "TikTok", "Luxury"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-46 (2).jpg",
     title: "Vacation",
     tags: ["SFW", "Vacation", "Fitness", "Influencer", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Destination and travel-style visuals with polished lighting and tone.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-11-05_20-23-59 (2).jpg",
     title: "Vacation",
     tags: ["SFW", "Vacation", "TikTok", "Luxury", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Destination and travel-style visuals with polished lighting and tone.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-11-11_06-33-29 (2).jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "Fitness", "TikTok", "Influencer", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2025-11-24_11-58-31.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Goth", "Influencer", "Luxury", "Fitness"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2026-01-03_10-03-09 (2).jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "Influencer", "Luxury", "Fitness"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2026-01-03_10-03-09.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "TikTok", "Sci-Fi", "Influencer"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2026-01-15_05-43-31.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Luxury", "TikTok", "Social Media", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2026-02-07_20-34-15 (2).jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "TikTok", "Fitness", "Influencer"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2026-02-24_15-12-52.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Editorial", "TikTok", "Luxury", "Influencer"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2026-02-24_15-18-21.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Fitness", "Anime", "Luxury"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2026-03-04_14-01-40.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Influencer", "Editorial", "Sci-Fi", "Instagram"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/nsfw/photo_2026-03-04_14-01-41.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Influencer", "Instagram", "Vacation", "Social Media"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/scifi/photo_2025-08-20_16-53-42.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Sci-Fi", "Editorial", "Goth"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/scifi/photo_2025-11-17_21-26-13.jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "Cosplay", "Sci-Fi", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/selfie/photo_2025-09-22_23-49-48 (4).jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "Fitness", "Anime", "Cosplay", "Goth"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/selfie/photo_2025-10-01_21-07-08 (3).jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "Cosplay", "Fitness", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/selfie/photo_2026-03-04_14-01-52.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Luxury", "TikTok", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/sfw/photo_2026-01-13_03-29-38 (2).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Lifestyle", "Vacation", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/sfw/photo_2026-01-13_03-29-38 (3).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Vacation", "Influencer", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/sfw/photo_2026-03-04_14-01-06.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "Vacation", "Agencies", "Lifestyle", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/swimwear/photo_2025-07-23_17-23-44.jpg",
     title: "Vacation",
     tags: ["SFW", "Vacation", "Influencer", "Luxury", "Fitness"],
     nsfw: false,
     type: "image",
     description: "Destination and travel-style visuals with polished lighting and tone.",
-  },
-  {
+  },  {
     src: "/gallery/swimwear/photo_2025-11-02_05-58-46 (3).jpg",
     title: "Vacation",
     tags: ["SFW", "Vacation", "Fitness", "Influencer", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Destination and travel-style visuals with polished lighting and tone.",
-  },
-  {
+  },  {
     src: "/gallery/swimwear/photo_2026-02-07_20-34-05.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Influencer", "Luxury", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/swimwear/photo_2026-02-07_20-34-06.jpg",
     title: "Vacation",
     tags: ["SFW", "Vacation", "Fitness", "Goth", "Influencer", "Editorial"],
     nsfw: false,
     type: "image",
     description: "Destination and travel-style visuals with polished lighting and tone.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/0210 (1).mp4",
     title: "Goth",
     tags: ["SFW", "Goth", "TikTok", "Luxury", "Lifestyle"],
     nsfw: false,
     type: "video",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/0219.mp4",
     title: "Goth",
     tags: ["SFW", "Goth", "TikTok", "Luxury", "Cosplay"],
     nsfw: false,
     type: "video",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/0224.mp4",
     title: "Goth",
     tags: ["SFW", "Goth", "TikTok", "Sci-Fi", "Luxury"],
     nsfw: false,
     type: "video",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/1008(2).mp4",
     title: "NSFW",
     tags: ["NSFW", "Adult", "TikTok", "Lifestyle", "Vacation", "Influencer"],
     nsfw: true,
     type: "video",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/ComfyUI_00018_.mp4",
     title: "Automotive",
     tags: ["SFW", "Automotive", "Fitness", "TikTok", "Anime", "Lifestyle"],
     nsfw: false,
     type: "video",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/Onlytwinvideo2.mp4",
     title: "Social Media",
     tags: ["SFW", "Social Media", "TikTok", "Luxury", "Influencer", "Fitness"],
     nsfw: false,
     type: "video",
     description: "Social-first outputs tuned for engagement across multiple creator channels.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/Wanimate_00005-audio.mp4",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Goth", "Social Media"],
     nsfw: false,
     type: "video",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/ai-clothes-changer-2.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Social Media", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/ai-clothes-changer-4.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Social Media", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/kling_20251007_Image_to_Video_the_woman__5943_0.mp4",
     title: "Automotive",
     tags: ["SFW", "Automotive", "TikTok", "Vacation", "Influencer"],
     nsfw: false,
     type: "video",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2025-01-27_22-38-11 (4).jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Influencer", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2025-07-15_20-48-03.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Influencer", "Fitness", "Goth"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2025-09-30_09-01-55 (3).jpg",
     title: "Lifestyle",
     tags: ["SFW", "Lifestyle", "Influencer", "Vacation", "Luxury", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Natural lifestyle direction with consistent identity and premium realism.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2025-10-02_10-40-32.jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "TikTok", "Fitness", "Influencer", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2025-10-02_10-46-33 (2).jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "TikTok", "Fitness", "Influencer", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2025-10-03_05-57-05 (2).jpg",
     title: "Social Media",
     tags: ["SFW", "Social Media", "Influencer", "TikTok", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Social-first outputs tuned for engagement across multiple creator channels.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2025-10-26_06-51-41.jpg",
     title: "Automotive",
     tags: ["SFW", "Automotive", "TikTok", "Social Media", "Fitness", "Lifestyle"],
     nsfw: false,
     type: "image",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2025-11-02_05-58-34 (3).jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "TikTok", "Luxury", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2025-11-02_05-58-46 (4).jpg",
     title: "Vacation",
     tags: ["SFW", "Vacation", "Fitness", "TikTok", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Destination and travel-style visuals with polished lighting and tone.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2025-11-17_01-15-07 (2).jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Automotive", "Influencer", "Goth"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2025-11-17_01-15-07.jpg",
     title: "Automotive",
     tags: ["SFW", "Automotive", "TikTok", "Influencer", "Social Media", "Anime"],
     nsfw: false,
     type: "image",
     description: "Automotive-style direction for vehicle and motion-themed content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-01-11_18-40-46.jpg",
     title: "NSFW",
     tags: ["NSFW", "Adult", "TikTok", "Fitness", "Influencer", "Social Media"],
     nsfw: true,
     type: "image",
     description: "Adult-oriented transformations with intentional stylistic control.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-01-11_19-06-54.jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "TikTok", "Lifestyle", "Influencer", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-01-11_19-07-02.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Influencer", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-01-13_03-34-50 (2).jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Vacation", "Luxury", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-02-07_20-32-37 (2).jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Luxury", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-02-07_20-33-56 (3).jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Social Media", "Anime"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-02-07_20-33-56.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Luxury", "Fitness", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-02-07_20-33-57.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Social Media", "Sci-Fi"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-02-07_20-33-59.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Fitness", "TikTok", "Anime"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-02-07_20-34-07.jpg",
     title: "Anime",
     tags: ["SFW", "Anime", "Fitness", "Influencer", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Anime-inspired aesthetic direction while preserving core identity.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-02-24_15-18-16.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Vacation", "Influencer", "Luxury"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-02-24_15-18-17.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Luxury", "Vacation", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-02-24_15-18-20.jpg",
     title: "Editorial",
     tags: ["SFW", "Editorial", "TikTok", "Fitness", "Influencer", "Luxury"],
     nsfw: false,
     type: "image",
     description: "Editorial-grade transformation quality with campaign-level polish.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-26.jpg",
     title: "Social Media",
     tags: ["SFW", "Social Media", "TikTok", "Fitness", "Luxury", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Social-first outputs tuned for engagement across multiple creator channels.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-28.jpg",
     title: "Social Media",
     tags: ["SFW", "Social Media", "TikTok", "Lifestyle", "Vacation", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Social-first outputs tuned for engagement across multiple creator channels.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-33.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Influencer", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-35.jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "Fitness", "Influencer", "TikTok"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-46.jpg",
     title: "Social Media",
     tags: ["SFW", "Social Media", "Fitness", "TikTok", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Social-first outputs tuned for engagement across multiple creator channels.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-56.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Influencer", "Agencies", "Sci-Fi"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-01 (2).jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Lifestyle", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-01.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Influencer", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-09.jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "Vacation", "TikTok", "Influencer", "Fitness"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-20 (2).jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Influencer", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-20.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Influencer", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-22.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Influencer", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-38.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "TikTok", "Lifestyle", "Influencer"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-44.jpg",
     title: "Goth",
     tags: ["SFW", "Goth", "Influencer", "Fitness", "TikTok", "Vacation"],
     nsfw: false,
     type: "image",
     description: "Alternative dark aesthetics with controlled mood and style consistency.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-46.jpg",
     title: "Luxury",
     tags: ["SFW", "Luxury", "TikTok", "Influencer", "Fitness"],
     nsfw: false,
     type: "image",
     description: "High-end glam and luxury visual direction for premium positioning.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-49.jpg",
     title: "Fitness",
     tags: ["SFW", "Fitness", "Social Media", "Vacation", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Fitness-forward visuals for gym, training, and activewear content.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-53.jpg",
     title: "Cosplay",
     tags: ["SFW", "Cosplay", "TikTok", "Fitness", "Influencer", "Social Media"],
     nsfw: false,
     type: "image",
     description: "Character-driven cosplay outputs adaptable to niche concepts.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-02-02 (2).jpg",
     title: "Lifestyle",
     tags: ["SFW", "Lifestyle", "Vacation", "Social Media", "Influencer", "Anime"],
     nsfw: false,
     type: "image",
     description: "Natural lifestyle direction with consistent identity and premium realism.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-02-02.jpg",
     title: "Lifestyle",
     tags: ["SFW", "Lifestyle", "Vacation", "Social Media", "Influencer", "TikTok"],
     nsfw: false,
     type: "image",
     description: "Natural lifestyle direction with consistent identity and premium realism.",
-  },
-  {
+  },  {
     src: "/gallery/tiktok/photo_2026-03-04_14-02-04.jpg",
     title: "Editorial",
     tags: ["SFW", "Editorial", "Fitness", "TikTok", "Vacation", "Influencer"],
