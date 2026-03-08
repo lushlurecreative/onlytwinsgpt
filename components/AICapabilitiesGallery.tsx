@@ -66,12 +66,9 @@ export default function AICapabilitiesGallery({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [activeIndex, goNext, goPrev]);
 
-  const revealNSFW = (item: GalleryItem, index: number) => {
+  const revealNSFW = (item: GalleryItem) => {
     setShowNSFWPreviews(true);
     setRevealedNSFW((prev) => ({ ...prev, [item.src]: true }));
-    setActiveIndex(index);
-    setLoadedLightbox(false);
-    setFailedLightbox(false);
   };
 
   return (
@@ -106,7 +103,7 @@ export default function AICapabilitiesGallery({
             onClick={() => {
               const hiddenNSFW = item.nsfw && !showNSFWPreviews && !revealedNSFW[item.src];
               if (hiddenNSFW) {
-                revealNSFW(item, index);
+                revealNSFW(item);
                 return;
               }
               setActiveIndex(index);
@@ -121,7 +118,7 @@ export default function AICapabilitiesGallery({
               isNSFW={item.nsfw}
               revealed={!!revealedNSFW[item.src]}
               showPreview={showNSFWPreviews}
-              onReveal={() => revealNSFW(item, index)}
+              onReveal={() => revealNSFW(item)}
             >
               <div className="ai-gallery-image-wrap">
                 {item.type === "video" ? (
@@ -144,7 +141,7 @@ export default function AICapabilitiesGallery({
                   ) : (
                     <img
                       src={item.src}
-                      alt={item.title}
+                      alt={`${item.category} example`}
                       className={`ai-gallery-image ${loadedGrid[index] ? "is-loaded" : ""}`.trim()}
                       loading="lazy"
                       decoding="async"
@@ -240,7 +237,7 @@ export default function AICapabilitiesGallery({
                 ) : (
                   <img
                     src={activeItem.src}
-                    alt={activeItem.title}
+                    alt={`${activeItem.category} example`}
                     className={`ai-gallery-lightbox-image ${loadedLightbox ? "is-loaded" : ""}`.trim()}
                     onLoad={() => setLoadedLightbox(true)}
                     onError={() => setFailedLightbox(true)}
