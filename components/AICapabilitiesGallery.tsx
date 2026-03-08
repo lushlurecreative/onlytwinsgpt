@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { GalleryItem } from "@/lib/gallery-data";
 
@@ -11,12 +11,39 @@ type AICapabilitiesGalleryProps = {
 
 export default function AICapabilitiesGallery({ items, maxItems }: AICapabilitiesGalleryProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [loadedGrid, setLoadedGrid] = useState<Record<number, boolean>>({});
+  const [loadedLightbox, setLoadedLightbox] = useState(false);
   const visibleItems = useMemo(() => {
     if (!maxItems || maxItems <= 0) return items;
     return items.slice(0, maxItems);
   }, [items, maxItems]);
 
   const activeItem = activeIndex != null ? visibleItems[activeIndex] : null;
+  const goPrev = useCallback(() => {
+    setActiveIndex((prev) => {
+      if (prev == null || visibleItems.length === 0) return prev;
+      return (prev - 1 + visibleItems.length) % visibleItems.length;
+    });
+    setLoadedLightbox(false);
+  }, [visibleItems.length]);
+  const goNext = useCallback(() => {
+    setActiveIndex((prev) => {
+      if (prev == null || visibleItems.length === 0) return prev;
+      return (prev + 1) % visibleItems.length;
+    });
+    setLoadedLightbox(false);
+  }, [visibleItems.length]);
+
+  useEffect(() => {
+    if (activeIndex == null) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActiveIndex(null);
+      if (event.key === "ArrowLeft") goPrev();
+      if (event.key === "ArrowRight") goNext();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeIndex, goNext, goPrev]);
 
   return (
     <>
@@ -32,7 +59,15 @@ export default function AICapabilitiesGallery({ items, maxItems }: AICapabilitie
             transition={{ duration: 0.22, delay: index * 0.02 }}
           >
             <div className="ai-gallery-image-wrap">
-              <img src={item.src} alt={item.title} className="ai-gallery-image" />
+              <img
+                src={item.src}
+                alt={item.title}
+                className={`ai-gallery-image ${loadedGrid[index] ? "is-loaded" : ""}`.trim()}
+                loading="lazy"
+                decoding="async"
+                onLoad={() => setLoadedGrid((prev) => ({ ...prev, [index]: true }))}
+              />
+              {!loadedGrid[index] ? <div className="ai-gallery-image-placeholder" aria-hidden="true" /> : null}
             </div>
             <div className="ai-gallery-content">
               <div className="ai-gallery-meta">
@@ -79,7 +114,29 @@ export default function AICapabilitiesGallery({ items, maxItems }: AICapabilitie
               >
                 Close
               </button>
-              <img src={activeItem.src} alt={activeItem.title} className="ai-gallery-lightbox-image" />
+              <button
+                type="button"
+                className="ai-gallery-nav ai-gallery-nav-prev"
+                onClick={goPrev}
+                aria-label="Previous image"
+              >
+                ‹
+              </button>
+              <button
+                type="button"
+                className="ai-gallery-nav ai-gallery-nav-next"
+                onClick={goNext}
+                aria-label="Next image"
+              >
+                ›
+              </button>
+              <img
+                src={activeItem.src}
+                alt={activeItem.title}
+                className={`ai-gallery-lightbox-image ${loadedLightbox ? "is-loaded" : ""}`.trim()}
+                onLoad={() => setLoadedLightbox(true)}
+              />
+              {!loadedLightbox ? <div className="ai-gallery-lightbox-placeholder" aria-hidden="true" /> : null}
               <div className="ai-gallery-lightbox-copy">
                 <span className="ai-gallery-category">{activeItem.category}</span>
                 <h3>{activeItem.title}</h3>
