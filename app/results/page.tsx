@@ -1,64 +1,72 @@
-import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
-import BeforeAfterSlider from "@/app/components/BeforeAfterSlider";
+ "use client";
+
+import { useState } from "react";
+import PremiumButton from "@/components/PremiumButton";
+import BeforeAfterSlider from "@/components/BeforeAfterSlider";
+import { resultsItems } from "@/lib/results-data";
 
 export default function ResultsPage() {
+  const [revealedNSFW, setRevealedNSFW] = useState<Record<string, boolean>>({});
+
   return (
-    <div>
-      <section className="hero">
-        <p className="eyebrow">Results</p>
-        <h1>Before/after samples from real-style transformations.</h1>
+    <main style={{ padding: 24, maxWidth: 1120, margin: "0 auto" }}>
+      <section className="hero hero-refined">
+        <p className="eyebrow">OnlyTwins Results</p>
+        <h1>See the Transformation</h1>
+        <p>From source photos to premium AI-generated twin results.</p>
         <p>
-          The same uploaded identity can be mapped into multiple scenes while preserving consistency.
+          Upload your real training photos and receive high-quality generated outputs across styles, moods,
+          and formats with consistent identity and premium detail.
         </p>
-      </section>
-
-      <section className="results-grid section">
-        <article className="card">
-          <h3>Beach scene sample</h3>
-          <BeforeAfterSlider
-            beforeSrc="/hero-before.svg"
-            afterSrc="/hero-after.svg"
-            beforeLabel="Upload"
-            afterLabel="Beach"
-          />
-        </article>
-        <article className="card">
-          <h3>Gym scene sample</h3>
-          <BeforeAfterSlider
-            beforeSrc="/hero-before.svg"
-            afterSrc="/hero-after-gym.svg"
-            beforeLabel="Upload"
-            afterLabel="Gym"
-          />
-        </article>
-        <article className="card">
-          <h3>City scene sample</h3>
-          <BeforeAfterSlider
-            beforeSrc="/hero-before.svg"
-            afterSrc="/hero-after-city.svg"
-            beforeLabel="Upload"
-            afterLabel="City"
-          />
-        </article>
-      </section>
-
-      <section className="section card">
-        <h3>Why this matters</h3>
-        <ul className="list">
-          <li>No repeated physical photoshoots for every new theme</li>
-          <li>Lower monthly production cost at scale</li>
-          <li>Faster campaign testing across multiple scene concepts</li>
-        </ul>
         <div className="cta-row">
-          <a href={MARKETING_MESSAGE_MAP.cta.primaryHref} className="btn btn-primary">
-            {MARKETING_MESSAGE_MAP.cta.primaryLabel}
-          </a>
-          <a href="/contact" className="btn btn-secondary">
-            Contact Us
-          </a>
+          <PremiumButton href="/pricing">Start Subscription</PremiumButton>
+          <PremiumButton href="/gallery" variant="secondary">
+            Explore Capabilities
+          </PremiumButton>
         </div>
       </section>
-    </div>
+
+      <section className="section">
+        <div className="results-showcase-grid">
+          {resultsItems.map((item) => {
+            const hiddenNSFW = !!item.nsfw && !revealedNSFW[item.id];
+            return (
+              <article className="premium-card results-showcase-card" key={item.id}>
+                <div className={`results-slider-wrap ${hiddenNSFW ? "is-nsfw-hidden" : ""}`.trim()}>
+                  <BeforeAfterSlider beforeSrc={item.before} afterSrc={item.after} beforeLabel="Before" afterLabel="After" />
+                  {hiddenNSFW ? (
+                    <button
+                      type="button"
+                      className="results-nsfw-overlay"
+                      onClick={() => setRevealedNSFW((prev) => ({ ...prev, [item.id]: true }))}
+                    >
+                      <strong>NSFW Example</strong>
+                      <span>Click to reveal</span>
+                    </button>
+                  ) : null}
+                </div>
+                <div className="results-copy">
+                  <span className="ai-gallery-category">{item.category}</span>
+                  <h3>{item.title}</h3>
+                  <p>{item.description}</p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="section premium-card">
+        <p className="eyebrow">Why The Transformation Works</p>
+        <h2 style={{ marginTop: 0 }}>Built for quality, consistency, and control</h2>
+        <div className="results-trust-grid">
+          <div className="results-trust-item">Trained from your photos</div>
+          <div className="results-trust-item">Customized to your style</div>
+          <div className="results-trust-item">High-quality output</div>
+          <div className="results-trust-item">Multiple visual directions</div>
+          <div className="results-trust-item">Private workflow</div>
+        </div>
+      </section>
+    </main>
   );
 }
-

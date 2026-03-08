@@ -1,11 +1,12 @@
 "use client";
 
 import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
-import BeforeAfterSlider from "@/app/components/BeforeAfterSlider";
+import BeforeAfterSlider from "@/components/BeforeAfterSlider";
 import PremiumCard from "@/components/PremiumCard";
 import PremiumButton from "@/components/PremiumButton";
 import AICapabilitiesGallery from "@/components/AICapabilitiesGallery";
 import { homeGalleryPreviewItems } from "@/lib/gallery-data";
+import { featuredResultsItems } from "@/lib/results-data";
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -70,6 +71,29 @@ function HomeContent() {
           <AICapabilitiesGallery items={homeGalleryPreviewItems} maxItems={8} previewMode />
           <div className="cta-row" style={{ marginTop: 16 }}>
             <PremiumButton href="/gallery">View Full Capabilities Gallery</PremiumButton>
+          </div>
+        </PremiumCard>
+      </section>
+
+      <section className="section">
+        <PremiumCard className="hero-refined">
+          <p className="eyebrow">Transformation Results</p>
+          <h2 style={{ marginTop: 0, marginBottom: 8 }}>Before to After Quality Showcase</h2>
+          <p className="section-copy" style={{ marginBottom: 14 }}>
+            Compare source training photos with final AI-generated outputs across multiple visual directions.
+          </p>
+          <div className="results-preview-grid">
+            {featuredResultsItems.slice(0, 4).map((item) => (
+              <div key={item.id} className="premium-card">
+                <BeforeAfterSlider beforeSrc={item.before} afterSrc={item.after} beforeLabel="Before" afterLabel="After" />
+                <p className="section-copy" style={{ marginTop: 10, fontSize: 14 }}>
+                  {item.title}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="cta-row" style={{ marginTop: 16 }}>
+            <PremiumButton href="/results">View More Results</PremiumButton>
           </div>
         </PremiumCard>
       </section>
