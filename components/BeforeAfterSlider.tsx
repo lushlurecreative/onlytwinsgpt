@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 type BeforeAfterSliderProps = {
   beforeSrc: string;
@@ -19,7 +19,6 @@ export default function BeforeAfterSlider({
 }: BeforeAfterSliderProps) {
   const [position, setPosition] = useState(50);
   const frameRef = useRef<HTMLDivElement | null>(null);
-  const sliderId = useId();
 
   const updateFromClientX = (clientX: number) => {
     const frame = frameRef.current;
@@ -55,19 +54,6 @@ export default function BeforeAfterSlider({
         <span className="ba-pill ba-pill-left">{beforeLabel}</span>
         <span className="ba-pill ba-pill-right">{afterLabel}</span>
       </div>
-
-      <label htmlFor={sliderId} className="ba-label">
-        Drag to compare
-      </label>
-      <input
-        id={sliderId}
-        type="range"
-        min={5}
-        max={95}
-        value={position}
-        className="ba-range"
-        onChange={(event) => setPosition(Number(event.target.value))}
-      />
     </div>
   );
 }
