@@ -25,28 +25,34 @@ export default async function TrainingPhotosPage() {
           <h2 style={{ marginTop: 0 }}>Photo checklist</h2>
           <ul style={{ marginBottom: 0 }}>
             <li>upload at least 10 and no more than 50 training photos</li>
-            <li>high-quality photos</li>
-            <li>good lighting</li>
-            <li>face clearly visible</li>
-            <li>multiple angles</li>
-            <li>mix of close-up, mid-shot, and full-body framing</li>
-            <li>varied outfits and expressions, no heavy filters</li>
+            <li>include a mix of full body and waist-up framing</li>
+            <li>include facing forward, facing left, and facing right angles</li>
+            <li>use good lighting and clear facial visibility</li>
+            <li>include varied outfits and expressions with no heavy filters</li>
+            <li>avoid bad photos: hats, phones in frame, hands blocking face/body, other people in photo</li>
           </ul>
         </PremiumCard>
       </section>
 
       <section style={{ marginTop: 16 }}>
         <PremiumCard>
-          <h2 style={{ marginTop: 0 }}>Set Preferences</h2>
-          <p style={{ marginBottom: 0 }}>
-            Once your photos are uploaded, complete onboarding intake so the team has your exact style,
-            bio, constraints, and delivery preferences before generation starts.
+          <h2 style={{ marginTop: 0 }}>Next Steps</h2>
+          <ol style={{ marginBottom: 0 }}>
+            <li>Set preferences</li>
+            <li>Upload training images</li>
+            <li>Choose selection of generation preferences</li>
+          </ol>
+          <p style={{ marginTop: 12, marginBottom: 0 }}>
+            Once your photos are uploaded, we review quality and begin training your twin pipeline.
           </p>
         </PremiumCard>
       </section>
 
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
         <PremiumButton href="/onboarding/intake">Set Preferences</PremiumButton>
+        <PremiumButton href="/requests" variant="secondary">
+          Choose Generation Preferences
+        </PremiumButton>
       </div>
     </main>
   );

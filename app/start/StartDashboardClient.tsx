@@ -20,16 +20,22 @@ export default function StartDashboardClient() {
 
   const actionCards = [
     {
-      title: "Step 1: Upload Training Photos",
-      description: "Start here. Upload high-quality photos so we can begin training your twin model.",
-      buttonText: "Start Creating My Twin",
+      title: "Step 1: Set Preferences",
+      description: "Complete onboarding intake with your identity details, bio, constraints, and style rules.",
+      buttonText: "Set Preferences",
+      href: "/onboarding/intake",
+    },
+    {
+      title: "Step 2: Upload Training Photos",
+      description: "Upload approved training images so we can start model training with clean source data.",
+      buttonText: "Upload Photos",
       href: "/training/photos",
     },
     {
-      title: "Step 2: Set Preferences",
-      description: "Complete onboarding intake so we know your exact style, rules, and generation direction.",
-      buttonText: "Set Preferences",
-      href: "/onboarding/intake",
+      title: "Step 3: Choose Generation Preferences",
+      description: "Choose your monthly photo/video mix and exact prompt directions for default generations.",
+      buttonText: "Choose Preferences",
+      href: "/requests",
     },
     {
       title: "View My Requests",

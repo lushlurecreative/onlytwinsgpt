@@ -2,7 +2,6 @@ import "./globals.css";
 import Link from "next/link";
 import BrandName from "@/app/components/BrandName";
 import AuthNav from "@/components/AuthNav";
-import HeaderSubscriptionCta from "@/components/HeaderSubscriptionCta";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import PageTransition from "@/components/PageTransition";
 import { Analytics } from "@vercel/analytics/next";
@@ -48,7 +47,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </Link>
                 <AuthNav />
               </nav>
-              <HeaderSubscriptionCta />
             </div>
           </header>
 
