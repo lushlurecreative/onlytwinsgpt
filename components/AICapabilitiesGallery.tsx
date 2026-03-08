@@ -67,6 +67,7 @@ export default function AICapabilitiesGallery({
   }, [activeIndex, goNext, goPrev]);
 
   const revealNSFW = (item: GalleryItem, index: number) => {
+    setShowNSFWPreviews(true);
     setRevealedNSFW((prev) => ({ ...prev, [item.src]: true }));
     setActiveIndex(index);
     setLoadedLightbox(false);
