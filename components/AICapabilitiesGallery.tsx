@@ -2,21 +2,40 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { GalleryItem } from "@/lib/gallery-data";
+import type { GalleryCategory, GalleryItem } from "@/lib/gallery-data";
+import { galleryCategories } from "@/lib/gallery-data";
+import GalleryCategoryTabs from "@/components/GalleryCategoryTabs";
+import BlurredNSFWCard from "@/components/BlurredNSFWCard";
 
 type AICapabilitiesGalleryProps = {
   items: GalleryItem[];
   maxItems?: number;
+  previewMode?: boolean;
 };
 
-export default function AICapabilitiesGallery({ items, maxItems }: AICapabilitiesGalleryProps) {
+function matchCategory(item: GalleryItem, selectedCategory: GalleryCategory) {
+  if (selectedCategory === "All") return true;
+  if (selectedCategory === "SFW") return !item.nsfw;
+  if (selectedCategory === "NSFW") return item.nsfw;
+  return item.category === selectedCategory;
+}
+
+export default function AICapabilitiesGallery({
+  items,
+  maxItems,
+  previewMode = false,
+}: AICapabilitiesGalleryProps) {
+  const [selectedCategory, setSelectedCategory] = useState<GalleryCategory>("All");
+  const [showNSFWPreviews, setShowNSFWPreviews] = useState(false);
+  const [revealedNSFW, setRevealedNSFW] = useState<Record<string, boolean>>({});
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [loadedGrid, setLoadedGrid] = useState<Record<number, boolean>>({});
   const [loadedLightbox, setLoadedLightbox] = useState(false);
   const visibleItems = useMemo(() => {
-    if (!maxItems || maxItems <= 0) return items;
-    return items.slice(0, maxItems);
-  }, [items, maxItems]);
+    const filtered = items.filter((item) => matchCategory(item, selectedCategory));
+    if (!maxItems || maxItems <= 0) return filtered;
+    return filtered.slice(0, maxItems);
+  }, [items, maxItems, selectedCategory]);
 
   const activeItem = activeIndex != null ? visibleItems[activeIndex] : null;
   const goPrev = useCallback(() => {
@@ -45,45 +64,99 @@ export default function AICapabilitiesGallery({ items, maxItems }: AICapabilitie
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [activeIndex, goNext, goPrev]);
 
+  const revealNSFW = (item: GalleryItem, index: number) => {
+    setRevealedNSFW((prev) => ({ ...prev, [item.src]: true }));
+    setActiveIndex(index);
+    setLoadedLightbox(false);
+  };
+
   return (
     <>
+      {!previewMode ? (
+        <div className="gallery-controls">
+          <GalleryCategoryTabs
+            categories={galleryCategories}
+            selected={selectedCategory}
+            onSelect={(category) => {
+              setSelectedCategory(category);
+              setActiveIndex(null);
+            }}
+          />
+          <label className="gallery-nsfw-toggle">
+            <input
+              type="checkbox"
+              checked={showNSFWPreviews}
+              onChange={(event) => setShowNSFWPreviews(event.target.checked)}
+            />
+            <span>Show NSFW previews</span>
+          </label>
+        </div>
+      ) : null}
+
       <div className="ai-gallery-grid">
         {visibleItems.map((item, index) => (
           <motion.button
             key={`${item.src}-${item.title}`}
             type="button"
             className="ai-gallery-card"
-            onClick={() => setActiveIndex(index)}
+            onClick={() => {
+              const hiddenNSFW = item.nsfw && !showNSFWPreviews && !revealedNSFW[item.src];
+              if (hiddenNSFW) {
+                revealNSFW(item, index);
+                return;
+              }
+              setActiveIndex(index);
+              setLoadedLightbox(false);
+            }}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, delay: index * 0.02 }}
           >
-            <div className="ai-gallery-image-wrap">
-              <img
-                src={item.src}
-                alt={item.title}
-                className={`ai-gallery-image ${loadedGrid[index] ? "is-loaded" : ""}`.trim()}
-                loading="lazy"
-                decoding="async"
-                onLoad={() => setLoadedGrid((prev) => ({ ...prev, [index]: true }))}
-              />
-              {!loadedGrid[index] ? <div className="ai-gallery-image-placeholder" aria-hidden="true" /> : null}
-            </div>
+            <BlurredNSFWCard
+              title={item.title}
+              revealed={!!revealedNSFW[item.src]}
+              showPreview={showNSFWPreviews}
+              onReveal={() => revealNSFW(item, index)}
+            >
+              <div className="ai-gallery-image-wrap">
+                {item.type === "video" ? (
+                  <video
+                    src={item.src}
+                    className={`ai-gallery-image ${loadedGrid[index] ? "is-loaded" : ""}`.trim()}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    onLoadedData={() => setLoadedGrid((prev) => ({ ...prev, [index]: true }))}
+                  />
+                ) : (
+                  <img
+                    src={item.src}
+                    alt={item.title}
+                    className={`ai-gallery-image ${loadedGrid[index] ? "is-loaded" : ""}`.trim()}
+                    loading="lazy"
+                    decoding="async"
+                    onLoad={() => setLoadedGrid((prev) => ({ ...prev, [index]: true }))}
+                  />
+                )}
+                {!loadedGrid[index] ? <div className="ai-gallery-image-placeholder" aria-hidden="true" /> : null}
+              </div>
+            </BlurredNSFWCard>
             <div className="ai-gallery-content">
               <div className="ai-gallery-meta">
                 <span className="ai-gallery-category">{item.category}</span>
+                <span className="ai-gallery-type">{item.type}</span>
               </div>
               <h3 className="ai-gallery-title">{item.title}</h3>
               <p className="ai-gallery-description">{item.description}</p>
-              {item.tags?.length ? (
-                <div className="ai-gallery-tags">
-                  {item.tags.slice(0, 3).map((tag) => (
-                    <span className="ai-gallery-tag" key={tag}>
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
+              <div className="ai-gallery-tags">
+                {item.audience.map((aud) => (
+                  <span className="ai-gallery-tag" key={aud}>
+                    {aud}
+                  </span>
+                ))}
+                <span className="ai-gallery-tag">{item.vertical}</span>
+                <span className="ai-gallery-tag">{item.nsfw ? "NSFW" : "SFW"}</span>
+              </div>
             </div>
           </motion.button>
         ))}
@@ -130,26 +203,37 @@ export default function AICapabilitiesGallery({ items, maxItems }: AICapabilitie
               >
                 ›
               </button>
-              <img
-                src={activeItem.src}
-                alt={activeItem.title}
-                className={`ai-gallery-lightbox-image ${loadedLightbox ? "is-loaded" : ""}`.trim()}
-                onLoad={() => setLoadedLightbox(true)}
-              />
+              {activeItem.type === "video" ? (
+                <video
+                  src={activeItem.src}
+                  className={`ai-gallery-lightbox-image ${loadedLightbox ? "is-loaded" : ""}`.trim()}
+                  controls
+                  autoPlay
+                  playsInline
+                  onLoadedData={() => setLoadedLightbox(true)}
+                />
+              ) : (
+                <img
+                  src={activeItem.src}
+                  alt={activeItem.title}
+                  className={`ai-gallery-lightbox-image ${loadedLightbox ? "is-loaded" : ""}`.trim()}
+                  onLoad={() => setLoadedLightbox(true)}
+                />
+              )}
               {!loadedLightbox ? <div className="ai-gallery-lightbox-placeholder" aria-hidden="true" /> : null}
               <div className="ai-gallery-lightbox-copy">
                 <span className="ai-gallery-category">{activeItem.category}</span>
                 <h3>{activeItem.title}</h3>
                 <p>{activeItem.description}</p>
-                {activeItem.tags?.length ? (
-                  <div className="ai-gallery-tags">
-                    {activeItem.tags.map((tag) => (
-                      <span className="ai-gallery-tag" key={tag}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
+                <div className="ai-gallery-tags">
+                  {activeItem.audience.map((aud) => (
+                    <span className="ai-gallery-tag" key={aud}>
+                      {aud}
+                    </span>
+                  ))}
+                  <span className="ai-gallery-tag">{activeItem.vertical}</span>
+                  <span className="ai-gallery-tag">{activeItem.nsfw ? "NSFW" : "SFW"}</span>
+                </div>
               </div>
             </motion.div>
           </motion.div>

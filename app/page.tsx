@@ -5,7 +5,7 @@ import BeforeAfterSlider from "@/app/components/BeforeAfterSlider";
 import PremiumCard from "@/components/PremiumCard";
 import PremiumButton from "@/components/PremiumButton";
 import AICapabilitiesGallery from "@/components/AICapabilitiesGallery";
-import { galleryItems } from "@/lib/gallery-data";
+import { homeGalleryPreviewItems } from "@/lib/gallery-data";
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -62,14 +62,14 @@ function HomeContent() {
 
       <section className="section">
         <PremiumCard className="hero-refined">
-          <p className="eyebrow">AI Capabilities</p>
-          <h2 style={{ marginTop: 0, marginBottom: 8 }}>See the Range of What We Can Generate</h2>
+          <p className="eyebrow">Capabilities Preview</p>
+          <h2 style={{ marginTop: 0, marginBottom: 8 }}>Style Range Across SFW, NSFW, Social, and Niche Aesthetics</h2>
           <p className="section-copy" style={{ marginBottom: 14 }}>
-            Explore a curated preview across studio, lifestyle, editorial, and custom style outputs.
+            Explore a mixed preview across creator, agency, adult, non-adult, and custom concept outputs.
           </p>
-          <AICapabilitiesGallery items={galleryItems} maxItems={8} />
+          <AICapabilitiesGallery items={homeGalleryPreviewItems} maxItems={8} previewMode />
           <div className="cta-row" style={{ marginTop: 16 }}>
-            <PremiumButton href="/gallery">View Full Gallery</PremiumButton>
+            <PremiumButton href="/gallery">View Full Capabilities Gallery</PremiumButton>
           </div>
         </PremiumCard>
       </section>

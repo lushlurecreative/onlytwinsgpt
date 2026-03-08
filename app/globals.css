@@ -1138,3 +1138,112 @@ a {
     background-position: -200% 0;
   }
 }
+
+.gallery-controls {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.gallery-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gallery-tab {
+  border: 1px solid rgba(173, 211, 238, 0.85);
+  border-radius: 999px;
+  background: rgba(245, 251, 255, 0.95);
+  color: #245782;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gallery-tab:hover {
+  transform: translateY(-1px);
+}
+
+.gallery-tab.is-active {
+  background: linear-gradient(135deg, #2e7fc2, #215f97);
+  border-color: rgba(41, 109, 165, 0.9);
+  color: #fff;
+}
+
+.gallery-nsfw-toggle {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(173, 211, 238, 0.85);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(245, 251, 255, 0.95);
+  color: #245782;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gallery-nsfw-toggle input {
+  accent-color: #2e7fc2;
+}
+
+.ai-gallery-type {
+  font-size: 11px;
+  color: #4f6682;
+  font-weight: 700;
+}
+
+.nsfw-wrap {
+  position: relative;
+}
+
+.nsfw-wrap.is-hidden .ai-gallery-image {
+  filter: blur(14px);
+  transform: scale(1.06);
+}
+
+.nsfw-overlay {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: linear-gradient(160deg, rgba(11, 22, 39, 0.68), rgba(17, 41, 71, 0.78));
+  color: #fff;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.nsfw-overlay strong {
+  font-size: 15px;
+}
+
+.nsfw-overlay span {
+  font-size: 12px;
+  opacity: 0.88;
+}
+
+.gallery-capabilities h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+
+.gallery-capabilities-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gallery-capability-chip {
+  border: 1px solid rgba(173, 211, 238, 0.85);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: #275581;
+  background: rgba(247, 252, 255, 0.95);
+}
