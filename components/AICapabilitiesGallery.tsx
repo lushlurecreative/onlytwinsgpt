@@ -119,7 +119,6 @@ export default function AICapabilitiesGallery({
           >
             <BlurredNSFWCard
               isNSFW={item.nsfw}
-              title={item.title}
               revealed={!!revealedNSFW[item.src]}
               showPreview={showNSFWPreviews}
               onReveal={() => revealNSFW(item, index)}
@@ -164,7 +163,7 @@ export default function AICapabilitiesGallery({
                 <span className="ai-gallery-category">{item.category}</span>
                 <span className="ai-gallery-type">{item.type}</span>
               </div>
-              <h3 className="ai-gallery-title">{item.title}</h3>
+              <h3 className="ai-gallery-title">{item.category} Example</h3>
               <p className="ai-gallery-description">{item.description}</p>
               <div className="ai-gallery-tags">
                 {item.audience.map((aud) => (
@@ -253,7 +252,7 @@ export default function AICapabilitiesGallery({
               ) : null}
               <div className="ai-gallery-lightbox-copy">
                 <span className="ai-gallery-category">{activeItem.category}</span>
-                <h3>{activeItem.title}</h3>
+                <h3>{activeItem.category} Example</h3>
                 <p>{activeItem.description}</p>
                 <div className="ai-gallery-tags">
                   {activeItem.audience.map((aud) => (

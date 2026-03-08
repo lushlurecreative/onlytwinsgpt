@@ -2,7 +2,6 @@
 
 type BlurredNSFWCardProps = {
   isNSFW: boolean;
-  title: string;
   revealed: boolean;
   showPreview: boolean;
   onReveal: () => void;
@@ -11,7 +10,6 @@ type BlurredNSFWCardProps = {
 
 export default function BlurredNSFWCard({
   isNSFW,
-  title,
   revealed,
   showPreview,
   onReveal,
@@ -27,7 +25,7 @@ export default function BlurredNSFWCard({
           type="button"
           className="nsfw-overlay"
           onClick={onReveal}
-          aria-label={`Reveal NSFW example: ${title}`}
+          aria-label="Reveal NSFW example"
         >
           <strong>NSFW Example</strong>
           <span>Click to reveal</span>
