@@ -17,7 +17,8 @@ function matchCategory(item: GalleryItem, selectedCategory: GalleryCategory) {
   if (selectedCategory === "All") return true;
   if (selectedCategory === "SFW") return !item.nsfw;
   if (selectedCategory === "NSFW") return item.nsfw;
-  return item.category === selectedCategory;
+  if (item.title === selectedCategory) return true;
+  return item.tags.includes(selectedCategory);
 }
 
 export default function AICapabilitiesGallery({
@@ -97,7 +98,7 @@ export default function AICapabilitiesGallery({
       <div className="ai-gallery-grid">
         {visibleItems.map((item, index) => (
           <motion.button
-            key={`${item.src}-${item.title}`}
+            key={item.src}
             type="button"
             className="ai-gallery-card"
             onClick={() => {
@@ -141,7 +142,7 @@ export default function AICapabilitiesGallery({
                   ) : (
                     <img
                       src={item.src}
-                      alt={`${item.category} example`}
+                      alt="Gallery image"
                       className={`ai-gallery-image ${loadedGrid[index] ? "is-loaded" : ""}`.trim()}
                       loading="lazy"
                       decoding="async"
@@ -157,19 +158,17 @@ export default function AICapabilitiesGallery({
             </BlurredNSFWCard>
             <div className="ai-gallery-content">
               <div className="ai-gallery-meta">
-                <span className="ai-gallery-category">{item.category}</span>
+                <span className="ai-gallery-category">{item.title}</span>
                 <span className="ai-gallery-type">{item.type}</span>
               </div>
-              <h3 className="ai-gallery-title">{item.category} Example</h3>
+              <h3 className="ai-gallery-title">{item.title}</h3>
               <p className="ai-gallery-description">{item.description}</p>
               <div className="ai-gallery-tags">
-                {item.audience.map((aud) => (
-                  <span className="ai-gallery-tag" key={aud}>
-                    {aud}
+                {item.tags.slice(0, 5).map((tag) => (
+                  <span className="ai-gallery-tag" key={tag}>
+                    {tag}
                   </span>
                 ))}
-                <span className="ai-gallery-tag">{item.vertical}</span>
-                <span className="ai-gallery-tag">{item.nsfw ? "NSFW" : "SFW"}</span>
               </div>
             </div>
           </motion.button>
@@ -237,7 +236,7 @@ export default function AICapabilitiesGallery({
                 ) : (
                   <img
                     src={activeItem.src}
-                    alt={`${activeItem.category} example`}
+                    alt="Gallery image"
                     className={`ai-gallery-lightbox-image ${loadedLightbox ? "is-loaded" : ""}`.trim()}
                     onLoad={() => setLoadedLightbox(true)}
                     onError={() => setFailedLightbox(true)}
@@ -248,17 +247,15 @@ export default function AICapabilitiesGallery({
                 <div className="ai-gallery-lightbox-placeholder" aria-hidden="true" />
               ) : null}
               <div className="ai-gallery-lightbox-copy">
-                <span className="ai-gallery-category">{activeItem.category}</span>
-                <h3>{activeItem.category} Example</h3>
+                <span className="ai-gallery-category">{activeItem.title}</span>
+                <h3>{activeItem.title}</h3>
                 <p>{activeItem.description}</p>
                 <div className="ai-gallery-tags">
-                  {activeItem.audience.map((aud) => (
-                    <span className="ai-gallery-tag" key={aud}>
-                      {aud}
+                  {activeItem.tags.map((tag) => (
+                    <span className="ai-gallery-tag" key={tag}>
+                      {tag}
                     </span>
                   ))}
-                  <span className="ai-gallery-tag">{activeItem.vertical}</span>
-                  <span className="ai-gallery-tag">{activeItem.nsfw ? "NSFW" : "SFW"}</span>
                 </div>
               </div>
             </motion.div>

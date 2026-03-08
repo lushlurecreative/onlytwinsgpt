@@ -7,6 +7,7 @@ import { resultsItems } from "@/lib/results-data";
 
 export default function ResultsPage() {
   const [revealedNSFW, setRevealedNSFW] = useState<Record<string, boolean>>({});
+  const hasPlaceholderPairs = resultsItems.some((item) => item.placeholder);
 
   return (
     <main style={{ padding: 24, maxWidth: 1120, margin: "0 auto" }}>
@@ -27,6 +28,16 @@ export default function ResultsPage() {
       </section>
 
       <section className="section">
+        {hasPlaceholderPairs ? (
+          <div className="premium-card" style={{ marginBottom: 14 }}>
+            <p className="eyebrow">Setup Needed</p>
+            <p className="section-copy" style={{ margin: 0 }}>
+              Live before/after files are not uploaded yet. Current sliders use visible starter samples.
+              Drop your real pairs into `/public/results/before/` and `/public/results/after/`, then update
+              `lib/results-data.ts` with those paths.
+            </p>
+          </div>
+        ) : null}
         <div className="results-showcase-grid">
           {resultsItems.map((item) => {
             const hiddenNSFW = !!item.nsfw && !revealedNSFW[item.id];
