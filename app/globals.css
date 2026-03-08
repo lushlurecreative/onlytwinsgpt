@@ -982,6 +982,19 @@ a {
   opacity: 1;
 }
 
+.ai-gallery-missing {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #35506b;
+  background: linear-gradient(140deg, #e8f4fe, #f5fbff);
+}
+
 .ai-gallery-image-placeholder {
   position: absolute;
   inset: 0;
@@ -1073,6 +1086,19 @@ a {
 
 .ai-gallery-lightbox-image.is-loaded {
   opacity: 1;
+}
+
+.ai-gallery-lightbox-missing {
+  width: 100%;
+  height: 65vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 18px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #35506b;
+  background: linear-gradient(140deg, #e8f4fe, #f5fbff);
 }
 
 .ai-gallery-lightbox-placeholder {

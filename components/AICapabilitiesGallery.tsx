@@ -30,7 +30,9 @@ export default function AICapabilitiesGallery({
   const [revealedNSFW, setRevealedNSFW] = useState<Record<string, boolean>>({});
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [loadedGrid, setLoadedGrid] = useState<Record<number, boolean>>({});
+  const [failedGrid, setFailedGrid] = useState<Record<number, boolean>>({});
   const [loadedLightbox, setLoadedLightbox] = useState(false);
+  const [failedLightbox, setFailedLightbox] = useState(false);
   const visibleItems = useMemo(() => {
     const filtered = items.filter((item) => matchCategory(item, selectedCategory));
     if (!maxItems || maxItems <= 0) return filtered;
@@ -68,6 +70,7 @@ export default function AICapabilitiesGallery({
     setRevealedNSFW((prev) => ({ ...prev, [item.src]: true }));
     setActiveIndex(index);
     setLoadedLightbox(false);
+    setFailedLightbox(false);
   };
 
   return (
@@ -107,6 +110,7 @@ export default function AICapabilitiesGallery({
               }
               setActiveIndex(index);
               setLoadedLightbox(false);
+              setFailedLightbox(false);
             }}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -120,25 +124,37 @@ export default function AICapabilitiesGallery({
             >
               <div className="ai-gallery-image-wrap">
                 {item.type === "video" ? (
-                  <video
-                    src={item.src}
-                    className={`ai-gallery-image ${loadedGrid[index] ? "is-loaded" : ""}`.trim()}
-                    muted
-                    playsInline
-                    preload="metadata"
-                    onLoadedData={() => setLoadedGrid((prev) => ({ ...prev, [index]: true }))}
-                  />
+                  failedGrid[index] ? (
+                    <div className="ai-gallery-missing">Video placeholder - add media file</div>
+                  ) : (
+                    <video
+                      src={item.src}
+                      className={`ai-gallery-image ${loadedGrid[index] ? "is-loaded" : ""}`.trim()}
+                      muted
+                      playsInline
+                      preload="metadata"
+                      onLoadedData={() => setLoadedGrid((prev) => ({ ...prev, [index]: true }))}
+                      onError={() => setFailedGrid((prev) => ({ ...prev, [index]: true }))}
+                    />
+                  )
                 ) : (
-                  <img
-                    src={item.src}
-                    alt={item.title}
-                    className={`ai-gallery-image ${loadedGrid[index] ? "is-loaded" : ""}`.trim()}
-                    loading="lazy"
-                    decoding="async"
-                    onLoad={() => setLoadedGrid((prev) => ({ ...prev, [index]: true }))}
-                  />
+                  failedGrid[index] ? (
+                    <div className="ai-gallery-missing">Image placeholder - add media file</div>
+                  ) : (
+                    <img
+                      src={item.src}
+                      alt={item.title}
+                      className={`ai-gallery-image ${loadedGrid[index] ? "is-loaded" : ""}`.trim()}
+                      loading="lazy"
+                      decoding="async"
+                      onLoad={() => setLoadedGrid((prev) => ({ ...prev, [index]: true }))}
+                      onError={() => setFailedGrid((prev) => ({ ...prev, [index]: true }))}
+                    />
+                  )
                 )}
-                {!loadedGrid[index] ? <div className="ai-gallery-image-placeholder" aria-hidden="true" /> : null}
+                {!loadedGrid[index] && !failedGrid[index] ? (
+                  <div className="ai-gallery-image-placeholder" aria-hidden="true" />
+                ) : null}
               </div>
             </BlurredNSFWCard>
             <div className="ai-gallery-content">
@@ -204,23 +220,35 @@ export default function AICapabilitiesGallery({
                 ›
               </button>
               {activeItem.type === "video" ? (
-                <video
-                  src={activeItem.src}
-                  className={`ai-gallery-lightbox-image ${loadedLightbox ? "is-loaded" : ""}`.trim()}
-                  controls
-                  autoPlay
-                  playsInline
-                  onLoadedData={() => setLoadedLightbox(true)}
-                />
+                failedLightbox ? (
+                  <div className="ai-gallery-lightbox-missing">Video missing. Add this file in `public/gallery`.</div>
+                ) : (
+                  <video
+                    src={activeItem.src}
+                    className={`ai-gallery-lightbox-image ${loadedLightbox ? "is-loaded" : ""}`.trim()}
+                    controls
+                    autoPlay
+                    playsInline
+                    onLoadedData={() => setLoadedLightbox(true)}
+                    onError={() => setFailedLightbox(true)}
+                  />
+                )
               ) : (
-                <img
-                  src={activeItem.src}
-                  alt={activeItem.title}
-                  className={`ai-gallery-lightbox-image ${loadedLightbox ? "is-loaded" : ""}`.trim()}
-                  onLoad={() => setLoadedLightbox(true)}
-                />
+                failedLightbox ? (
+                  <div className="ai-gallery-lightbox-missing">Image missing. Add this file in `public/gallery`.</div>
+                ) : (
+                  <img
+                    src={activeItem.src}
+                    alt={activeItem.title}
+                    className={`ai-gallery-lightbox-image ${loadedLightbox ? "is-loaded" : ""}`.trim()}
+                    onLoad={() => setLoadedLightbox(true)}
+                    onError={() => setFailedLightbox(true)}
+                  />
+                )
               )}
-              {!loadedLightbox ? <div className="ai-gallery-lightbox-placeholder" aria-hidden="true" /> : null}
+              {!loadedLightbox && !failedLightbox ? (
+                <div className="ai-gallery-lightbox-placeholder" aria-hidden="true" />
+              ) : null}
               <div className="ai-gallery-lightbox-copy">
                 <span className="ai-gallery-category">{activeItem.category}</span>
                 <h3>{activeItem.title}</h3>
