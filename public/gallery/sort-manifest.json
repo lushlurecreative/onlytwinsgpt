@@ -39,8 +39,8 @@
     {
       "file": "0224.mp4",
       "type": "video",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/0224.mp4",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/0224.mp4",
       "nsfw_score": 0.8199,
       "primary_guess": "tiktok"
     },
@@ -55,8 +55,8 @@
     {
       "file": "1008.mp4",
       "type": "video",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/1008.mp4",
+      "to_folder": "motorcycles",
+      "to_path": "gallery/motorcycles/1008.mp4",
       "nsfw_score": 0.7033,
       "primary_guess": "motorcycles"
     },
@@ -87,8 +87,8 @@
     {
       "file": "Onlytwinvideo2.mp4",
       "type": "video",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/Onlytwinvideo2.mp4",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/Onlytwinvideo2.mp4",
       "nsfw_score": 0.8875,
       "primary_guess": "tiktok"
     },
@@ -119,8 +119,8 @@
     {
       "file": "ai-clothes-changer-2.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/ai-clothes-changer-2.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/ai-clothes-changer-2.jpg",
       "nsfw_score": 0.6625,
       "primary_guess": "tiktok"
     },
@@ -159,8 +159,8 @@
     {
       "file": "kling_20251009_Image_to_Video__356_0.mp4",
       "type": "video",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/kling_20251009_Image_to_Video__356_0.mp4",
+      "to_folder": "motorcycles",
+      "to_path": "gallery/motorcycles/kling_20251009_Image_to_Video__356_0.mp4",
       "nsfw_score": 0.8986,
       "primary_guess": "motorcycles"
     },
@@ -183,24 +183,24 @@
     {
       "file": "kling_20251020_Image_to_Video_The_woman__2497_0.mp4",
       "type": "video",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/kling_20251020_Image_to_Video_The_woman__2497_0.mp4",
+      "to_folder": "motorcycles",
+      "to_path": "gallery/motorcycles/kling_20251020_Image_to_Video_The_woman__2497_0.mp4",
       "nsfw_score": 0.8228,
       "primary_guess": "motorcycles"
     },
     {
       "file": "photo_2025-01-24_15-52-22.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-01-24_15-52-22.jpg",
+      "to_folder": "motorcycles",
+      "to_path": "gallery/motorcycles/photo_2025-01-24_15-52-22.jpg",
       "nsfw_score": 0.7829,
       "primary_guess": "motorcycles"
     },
     {
       "file": "photo_2025-01-24_15-52-24.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-01-24_15-52-24.jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-01-24_15-52-24.jpg",
       "nsfw_score": 0.8625,
       "primary_guess": "lingerie"
     },
@@ -215,8 +215,8 @@
     {
       "file": "photo_2025-01-24_15-52-25.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-01-24_15-52-25.jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-01-24_15-52-25.jpg",
       "nsfw_score": 0.8497,
       "primary_guess": "lingerie"
     },
@@ -247,24 +247,24 @@
     {
       "file": "photo_2025-01-24_15-52-27.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-01-24_15-52-27.jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-01-24_15-52-27.jpg",
       "nsfw_score": 0.8028,
       "primary_guess": "lingerie"
     },
     {
       "file": "photo_2025-01-27_22-38-10.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-01-27_22-38-10.jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-01-27_22-38-10.jpg",
       "nsfw_score": 0.7842,
       "primary_guess": "lingerie"
     },
     {
       "file": "photo_2025-01-27_22-38-11 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-01-27_22-38-11 (2).jpg",
+      "to_folder": "instagram",
+      "to_path": "gallery/instagram/photo_2025-01-27_22-38-11 (2).jpg",
       "nsfw_score": 0.8368,
       "primary_guess": "instagram"
     },
@@ -279,8 +279,8 @@
     {
       "file": "photo_2025-01-27_22-38-11 (4).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-01-27_22-38-11 (4).jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2025-01-27_22-38-11 (4).jpg",
       "nsfw_score": 0.8467,
       "primary_guess": "tiktok"
     },
@@ -295,24 +295,24 @@
     {
       "file": "photo_2025-01-27_22-38-12 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-01-27_22-38-12 (2).jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-01-27_22-38-12 (2).jpg",
       "nsfw_score": 0.8385,
       "primary_guess": "lingerie"
     },
     {
       "file": "photo_2025-01-27_22-38-12.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-01-27_22-38-12.jpg",
+      "to_folder": "instagram",
+      "to_path": "gallery/instagram/photo_2025-01-27_22-38-12.jpg",
       "nsfw_score": 0.8006,
       "primary_guess": "instagram"
     },
     {
       "file": "photo_2025-01-29_06-48-24.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-01-29_06-48-24.jpg",
+      "to_folder": "exercise",
+      "to_path": "gallery/exercise/photo_2025-01-29_06-48-24.jpg",
       "nsfw_score": 0.8747,
       "primary_guess": "exercise"
     },
@@ -343,8 +343,8 @@
     {
       "file": "photo_2025-04-21_15-36-24.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-04-21_15-36-24.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-04-21_15-36-24.jpg",
       "nsfw_score": 0.8205,
       "primary_guess": "lifestyle"
     },
@@ -359,8 +359,8 @@
     {
       "file": "photo_2025-06-27_07-56-07.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-06-27_07-56-07.jpg",
+      "to_folder": "goth",
+      "to_path": "gallery/goth/photo_2025-06-27_07-56-07.jpg",
       "nsfw_score": 0.7838,
       "primary_guess": "goth"
     },
@@ -399,32 +399,32 @@
     {
       "file": "photo_2025-07-03_16-54-23.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-07-03_16-54-23.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-07-03_16-54-23.jpg",
       "nsfw_score": 0.8761,
       "primary_guess": "lifestyle"
     },
     {
       "file": "photo_2025-07-14_10-57-44.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-07-14_10-57-44.jpg",
+      "to_folder": "goth",
+      "to_path": "gallery/goth/photo_2025-07-14_10-57-44.jpg",
       "nsfw_score": 0.816,
       "primary_guess": "goth"
     },
     {
       "file": "photo_2025-07-15_20-48-03.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-07-15_20-48-03.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2025-07-15_20-48-03.jpg",
       "nsfw_score": 0.8375,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2025-07-23_17-23-44.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-07-23_17-23-44.jpg",
+      "to_folder": "swimwear",
+      "to_path": "gallery/swimwear/photo_2025-07-23_17-23-44.jpg",
       "nsfw_score": 0.8817,
       "primary_guess": "swimwear"
     },
@@ -495,24 +495,24 @@
     {
       "file": "photo_2025-08-18_21-11-12 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-08-18_21-11-12 (2).jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-08-18_21-11-12 (2).jpg",
       "nsfw_score": 0.8263,
       "primary_guess": "lingerie"
     },
     {
       "file": "photo_2025-08-18_21-11-12.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-08-18_21-11-12.jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-08-18_21-11-12.jpg",
       "nsfw_score": 0.8263,
       "primary_guess": "lingerie"
     },
     {
       "file": "photo_2025-08-18_21-11-13.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-08-18_21-11-13.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-08-18_21-11-13.jpg",
       "nsfw_score": 0.8209,
       "primary_guess": "lifestyle"
     },
@@ -527,40 +527,40 @@
     {
       "file": "photo_2025-08-18_21-11-56.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-08-18_21-11-56.jpg",
+      "to_folder": "motorcycles",
+      "to_path": "gallery/motorcycles/photo_2025-08-18_21-11-56.jpg",
       "nsfw_score": 0.8613,
       "primary_guess": "motorcycles"
     },
     {
       "file": "photo_2025-08-18_21-12-03 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-08-18_21-12-03 (2).jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-08-18_21-12-03 (2).jpg",
       "nsfw_score": 0.6535,
       "primary_guess": "lingerie"
     },
     {
       "file": "photo_2025-08-18_21-12-03.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-08-18_21-12-03.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-08-18_21-12-03.jpg",
       "nsfw_score": 0.885,
       "primary_guess": "lifestyle"
     },
     {
       "file": "photo_2025-08-20_16-53-34 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-08-20_16-53-34 (2).jpg",
+      "to_folder": "influencer",
+      "to_path": "gallery/influencer/photo_2025-08-20_16-53-34 (2).jpg",
       "nsfw_score": 0.8615,
       "primary_guess": "influencer"
     },
     {
       "file": "photo_2025-08-20_16-53-34.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-08-20_16-53-34.jpg",
+      "to_folder": "cosplay",
+      "to_path": "gallery/cosplay/photo_2025-08-20_16-53-34.jpg",
       "nsfw_score": 0.8402,
       "primary_guess": "cosplay"
     },
@@ -591,8 +591,8 @@
     {
       "file": "photo_2025-08-20_16-53-43.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-08-20_16-53-43.jpg",
+      "to_folder": "luxury",
+      "to_path": "gallery/luxury/photo_2025-08-20_16-53-43.jpg",
       "nsfw_score": 0.7372,
       "primary_guess": "luxury"
     },
@@ -615,8 +615,8 @@
     {
       "file": "photo_2025-08-20_16-53-45.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-08-20_16-53-45.jpg",
+      "to_folder": "influencer",
+      "to_path": "gallery/influencer/photo_2025-08-20_16-53-45.jpg",
       "nsfw_score": 0.8632,
       "primary_guess": "influencer"
     },
@@ -631,8 +631,8 @@
     {
       "file": "photo_2025-08-22_07-22-12.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-08-22_07-22-12.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-08-22_07-22-12.jpg",
       "nsfw_score": 0.8905,
       "primary_guess": "lifestyle"
     },
@@ -655,8 +655,8 @@
     {
       "file": "photo_2025-09-04_20-22-16.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-04_20-22-16.jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-09-04_20-22-16.jpg",
       "nsfw_score": 0.8638,
       "primary_guess": "lingerie"
     },
@@ -687,16 +687,16 @@
     {
       "file": "photo_2025-09-22_23-49-48 (3).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-48 (3).jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-09-22_23-49-48 (3).jpg",
       "nsfw_score": 0.8686,
       "primary_guess": "lifestyle"
     },
     {
       "file": "photo_2025-09-22_23-49-48 (4).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-48 (4).jpg",
+      "to_folder": "selfie",
+      "to_path": "gallery/selfie/photo_2025-09-22_23-49-48 (4).jpg",
       "nsfw_score": 0.8811,
       "primary_guess": "selfie"
     },
@@ -719,40 +719,40 @@
     {
       "file": "photo_2025-09-22_23-49-48 (7).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-48 (7).jpg",
+      "to_folder": "selfie",
+      "to_path": "gallery/selfie/photo_2025-09-22_23-49-48 (7).jpg",
       "nsfw_score": 0.8811,
       "primary_guess": "selfie"
     },
     {
       "file": "photo_2025-09-22_23-49-48 (8).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-48 (8).jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-09-22_23-49-48 (8).jpg",
       "nsfw_score": 0.8686,
       "primary_guess": "lifestyle"
     },
     {
       "file": "photo_2025-09-22_23-49-48 (9).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-48 (9).jpg",
+      "to_folder": "selfie",
+      "to_path": "gallery/selfie/photo_2025-09-22_23-49-48 (9).jpg",
       "nsfw_score": 0.8811,
       "primary_guess": "selfie"
     },
     {
       "file": "photo_2025-09-22_23-49-48.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-48.jpg",
+      "to_folder": "selfie",
+      "to_path": "gallery/selfie/photo_2025-09-22_23-49-48.jpg",
       "nsfw_score": 0.8811,
       "primary_guess": "selfie"
     },
     {
       "file": "photo_2025-09-22_23-49-49 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-49 (2).jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-09-22_23-49-49 (2).jpg",
       "nsfw_score": 0.8578,
       "primary_guess": "lingerie"
     },
@@ -767,8 +767,8 @@
     {
       "file": "photo_2025-09-22_23-49-49 (4).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-49 (4).jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-09-22_23-49-49 (4).jpg",
       "nsfw_score": 0.8578,
       "primary_guess": "lingerie"
     },
@@ -791,8 +791,8 @@
     {
       "file": "photo_2025-09-22_23-49-49.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-49.jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-09-22_23-49-49.jpg",
       "nsfw_score": 0.8578,
       "primary_guess": "lingerie"
     },
@@ -807,8 +807,8 @@
     {
       "file": "photo_2025-09-22_23-49-50 (3).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-50 (3).jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-09-22_23-49-50 (3).jpg",
       "nsfw_score": 0.6459,
       "primary_guess": "lingerie"
     },
@@ -823,16 +823,16 @@
     {
       "file": "photo_2025-09-22_23-49-50 (5).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-50 (5).jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-09-22_23-49-50 (5).jpg",
       "nsfw_score": 0.7502,
       "primary_guess": "lifestyle"
     },
     {
       "file": "photo_2025-09-22_23-49-50.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-22_23-49-50.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-09-22_23-49-50.jpg",
       "nsfw_score": 0.7502,
       "primary_guess": "lifestyle"
     },
@@ -911,8 +911,8 @@
     {
       "file": "photo_2025-09-30_09-01-54 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-30_09-01-54 (2).jpg",
+      "to_folder": "goth",
+      "to_path": "gallery/goth/photo_2025-09-30_09-01-54 (2).jpg",
       "nsfw_score": 0.7278,
       "primary_guess": "goth"
     },
@@ -935,16 +935,16 @@
     {
       "file": "photo_2025-09-30_09-01-55 (3).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-30_09-01-55 (3).jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2025-09-30_09-01-55 (3).jpg",
       "nsfw_score": 0.8654,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2025-09-30_09-01-55.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-09-30_09-01-55.jpg",
+      "to_folder": "goth",
+      "to_path": "gallery/goth/photo_2025-09-30_09-01-55.jpg",
       "nsfw_score": 0.718,
       "primary_guess": "goth"
     },
@@ -967,8 +967,8 @@
     {
       "file": "photo_2025-10-01_10-04-13 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-10-01_10-04-13 (2).jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-10-01_10-04-13 (2).jpg",
       "nsfw_score": 0.7031,
       "primary_guess": "lifestyle"
     },
@@ -983,16 +983,16 @@
     {
       "file": "photo_2025-10-01_21-07-08 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-10-01_21-07-08 (2).jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2025-10-01_21-07-08 (2).jpg",
       "nsfw_score": 0.6892,
       "primary_guess": "lingerie"
     },
     {
       "file": "photo_2025-10-01_21-07-08 (3).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-10-01_21-07-08 (3).jpg",
+      "to_folder": "selfie",
+      "to_path": "gallery/selfie/photo_2025-10-01_21-07-08 (3).jpg",
       "nsfw_score": 0.795,
       "primary_guess": "selfie"
     },
@@ -1087,24 +1087,24 @@
     {
       "file": "photo_2025-10-02_10-40-32.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-10-02_10-40-32.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2025-10-02_10-40-32.jpg",
       "nsfw_score": 0.8803,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2025-10-02_10-46-33 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-10-02_10-46-33 (2).jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2025-10-02_10-46-33 (2).jpg",
       "nsfw_score": 0.804,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2025-10-02_10-46-33.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-10-02_10-46-33.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2025-10-02_10-46-33.jpg",
       "nsfw_score": 0.804,
       "primary_guess": "tiktok"
     },
@@ -1135,8 +1135,8 @@
     {
       "file": "photo_2025-10-04_18-18-22 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-10-04_18-18-22 (2).jpg",
+      "to_folder": "influencer",
+      "to_path": "gallery/influencer/photo_2025-10-04_18-18-22 (2).jpg",
       "nsfw_score": 0.74,
       "primary_guess": "influencer"
     },
@@ -1175,8 +1175,8 @@
     {
       "file": "photo_2025-10-12_09-18-16.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-10-12_09-18-16.jpg",
+      "to_folder": "motorcycles",
+      "to_path": "gallery/motorcycles/photo_2025-10-12_09-18-16.jpg",
       "nsfw_score": 0.8503,
       "primary_guess": "motorcycles"
     },
@@ -1191,8 +1191,8 @@
     {
       "file": "photo_2025-10-14_16-36-43.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-10-14_16-36-43.jpg",
+      "to_folder": "motorcycles",
+      "to_path": "gallery/motorcycles/photo_2025-10-14_16-36-43.jpg",
       "nsfw_score": 0.8172,
       "primary_guess": "motorcycles"
     },
@@ -1207,8 +1207,8 @@
     {
       "file": "photo_2025-10-21_05-54-32.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-10-21_05-54-32.jpg",
+      "to_folder": "motorcycles",
+      "to_path": "gallery/motorcycles/photo_2025-10-21_05-54-32.jpg",
       "nsfw_score": 0.6678,
       "primary_guess": "motorcycles"
     },
@@ -1311,16 +1311,16 @@
     {
       "file": "photo_2025-11-02_05-58-34 (3).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-11-02_05-58-34 (3).jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2025-11-02_05-58-34 (3).jpg",
       "nsfw_score": 0.8986,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2025-11-02_05-58-34.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-11-02_05-58-34.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2025-11-02_05-58-34.jpg",
       "nsfw_score": 0.8986,
       "primary_guess": "tiktok"
     },
@@ -1335,16 +1335,16 @@
     {
       "file": "photo_2025-11-02_05-58-46 (3).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-11-02_05-58-46 (3).jpg",
+      "to_folder": "swimwear",
+      "to_path": "gallery/swimwear/photo_2025-11-02_05-58-46 (3).jpg",
       "nsfw_score": 0.8238,
       "primary_guess": "swimwear"
     },
     {
       "file": "photo_2025-11-02_05-58-46 (4).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-11-02_05-58-46 (4).jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2025-11-02_05-58-46 (4).jpg",
       "nsfw_score": 0.8799,
       "primary_guess": "tiktok"
     },
@@ -1359,8 +1359,8 @@
     {
       "file": "photo_2025-11-02_05-58-46.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-11-02_05-58-46.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2025-11-02_05-58-46.jpg",
       "nsfw_score": 0.8799,
       "primary_guess": "tiktok"
     },
@@ -1383,16 +1383,16 @@
     {
       "file": "photo_2025-11-05_20-26-34 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-11-05_20-26-34 (2).jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-11-05_20-26-34 (2).jpg",
       "nsfw_score": 0.8254,
       "primary_guess": "lifestyle"
     },
     {
       "file": "photo_2025-11-05_20-26-34.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-11-05_20-26-34.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2025-11-05_20-26-34.jpg",
       "nsfw_score": 0.8254,
       "primary_guess": "lifestyle"
     },
@@ -1423,16 +1423,16 @@
     {
       "file": "photo_2025-11-17_01-15-07.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-11-17_01-15-07.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2025-11-17_01-15-07.jpg",
       "nsfw_score": 0.7196,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2025-11-17_21-26-13 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2025-11-17_21-26-13 (2).jpg",
+      "to_folder": "influencer",
+      "to_path": "gallery/influencer/photo_2025-11-17_21-26-13 (2).jpg",
       "nsfw_score": 0.7693,
       "primary_guess": "influencer"
     },
@@ -1471,32 +1471,32 @@
     {
       "file": "photo_2026-01-11_18-40-46.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-01-11_18-40-46.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-01-11_18-40-46.jpg",
       "nsfw_score": 0.746,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2026-01-11_18-46-57.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-01-11_18-46-57.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2026-01-11_18-46-57.jpg",
       "nsfw_score": 0.7283,
       "primary_guess": "lifestyle"
     },
     {
       "file": "photo_2026-01-11_19-06-54.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-01-11_19-06-54.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-01-11_19-06-54.jpg",
       "nsfw_score": 0.8709,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2026-01-11_19-07-02.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-01-11_19-07-02.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-01-11_19-07-02.jpg",
       "nsfw_score": 0.8032,
       "primary_guess": "tiktok"
     },
@@ -1535,32 +1535,32 @@
     {
       "file": "photo_2026-01-13_03-34-50 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-01-13_03-34-50 (2).jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-01-13_03-34-50 (2).jpg",
       "nsfw_score": 0.8831,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2026-01-13_03-34-50.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-01-13_03-34-50.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-01-13_03-34-50.jpg",
       "nsfw_score": 0.8831,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2026-01-13_03-42-37 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-01-13_03-42-37 (2).jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2026-01-13_03-42-37 (2).jpg",
       "nsfw_score": 0.7134,
       "primary_guess": "lifestyle"
     },
     {
       "file": "photo_2026-01-13_03-42-37.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-01-13_03-42-37.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2026-01-13_03-42-37.jpg",
       "nsfw_score": 0.7134,
       "primary_guess": "lifestyle"
     },
@@ -1599,24 +1599,24 @@
     {
       "file": "photo_2026-02-07_20-33-55 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-33-55 (2).jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2026-02-07_20-33-55 (2).jpg",
       "nsfw_score": 0.7731,
       "primary_guess": "lingerie"
     },
     {
       "file": "photo_2026-02-07_20-33-55.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-33-55.jpg",
+      "to_folder": "influencer",
+      "to_path": "gallery/influencer/photo_2026-02-07_20-33-55.jpg",
       "nsfw_score": 0.8862,
       "primary_guess": "influencer"
     },
     {
       "file": "photo_2026-02-07_20-33-56 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-33-56 (2).jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2026-02-07_20-33-56 (2).jpg",
       "nsfw_score": 0.7034,
       "primary_guess": "lifestyle"
     },
@@ -1631,8 +1631,8 @@
     {
       "file": "photo_2026-02-07_20-33-56.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-33-56.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-02-07_20-33-56.jpg",
       "nsfw_score": 0.8062,
       "primary_guess": "tiktok"
     },
@@ -1647,16 +1647,16 @@
     {
       "file": "photo_2026-02-07_20-33-58 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-33-58 (2).jpg",
+      "to_folder": "influencer",
+      "to_path": "gallery/influencer/photo_2026-02-07_20-33-58 (2).jpg",
       "nsfw_score": 0.6944,
       "primary_guess": "influencer"
     },
     {
       "file": "photo_2026-02-07_20-33-58.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-33-58.jpg",
+      "to_folder": "influencer",
+      "to_path": "gallery/influencer/photo_2026-02-07_20-33-58.jpg",
       "nsfw_score": 0.6954,
       "primary_guess": "influencer"
     },
@@ -1671,24 +1671,24 @@
     {
       "file": "photo_2026-02-07_20-33-59.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-33-59.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-02-07_20-33-59.jpg",
       "nsfw_score": 0.6635,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2026-02-07_20-34-00.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-34-00.jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2026-02-07_20-34-00.jpg",
       "nsfw_score": 0.7766,
       "primary_guess": "lingerie"
     },
     {
       "file": "photo_2026-02-07_20-34-01.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-34-01.jpg",
+      "to_folder": "influencer",
+      "to_path": "gallery/influencer/photo_2026-02-07_20-34-01.jpg",
       "nsfw_score": 0.7079,
       "primary_guess": "influencer"
     },
@@ -1703,16 +1703,16 @@
     {
       "file": "photo_2026-02-07_20-34-05.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-34-05.jpg",
+      "to_folder": "swimwear",
+      "to_path": "gallery/swimwear/photo_2026-02-07_20-34-05.jpg",
       "nsfw_score": 0.6838,
       "primary_guess": "swimwear"
     },
     {
       "file": "photo_2026-02-07_20-34-06.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-34-06.jpg",
+      "to_folder": "swimwear",
+      "to_path": "gallery/swimwear/photo_2026-02-07_20-34-06.jpg",
       "nsfw_score": 0.7668,
       "primary_guess": "swimwear"
     },
@@ -1735,8 +1735,8 @@
     {
       "file": "photo_2026-02-07_20-34-07.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-34-07.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-02-07_20-34-07.jpg",
       "nsfw_score": 0.7132,
       "primary_guess": "tiktok"
     },
@@ -1751,8 +1751,8 @@
     {
       "file": "photo_2026-02-07_20-34-15.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-07_20-34-15.jpg",
+      "to_folder": "luxury",
+      "to_path": "gallery/luxury/photo_2026-02-07_20-34-15.jpg",
       "nsfw_score": 0.7506,
       "primary_guess": "luxury"
     },
@@ -1767,8 +1767,8 @@
     {
       "file": "photo_2026-02-24_15-12-53.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-24_15-12-53.jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2026-02-24_15-12-53.jpg",
       "nsfw_score": 0.8995,
       "primary_guess": "lingerie"
     },
@@ -1783,16 +1783,16 @@
     {
       "file": "photo_2026-02-24_15-18-17.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-24_15-18-17.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-02-24_15-18-17.jpg",
       "nsfw_score": 0.6441,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2026-02-24_15-18-20.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-24_15-18-20.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-02-24_15-18-20.jpg",
       "nsfw_score": 0.7942,
       "primary_guess": "tiktok"
     },
@@ -1807,8 +1807,8 @@
     {
       "file": "photo_2026-02-24_15-18-23.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-02-24_15-18-23.jpg",
+      "to_folder": "exercise",
+      "to_path": "gallery/exercise/photo_2026-02-24_15-18-23.jpg",
       "nsfw_score": 0.6778,
       "primary_guess": "exercise"
     },
@@ -1855,8 +1855,8 @@
     {
       "file": "photo_2026-03-04_14-00-28.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-00-28.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-03-04_14-00-28.jpg",
       "nsfw_score": 0.8155,
       "primary_guess": "tiktok"
     },
@@ -1879,16 +1879,16 @@
     {
       "file": "photo_2026-03-04_14-00-35.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-00-35.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-03-04_14-00-35.jpg",
       "nsfw_score": 0.6947,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2026-03-04_14-00-36.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-00-36.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2026-03-04_14-00-36.jpg",
       "nsfw_score": 0.6994,
       "primary_guess": "lifestyle"
     },
@@ -1903,24 +1903,24 @@
     {
       "file": "photo_2026-03-04_14-00-43.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-00-43.jpg",
+      "to_folder": "exercise",
+      "to_path": "gallery/exercise/photo_2026-03-04_14-00-43.jpg",
       "nsfw_score": 0.6806,
       "primary_guess": "exercise"
     },
     {
       "file": "photo_2026-03-04_14-00-46.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-00-46.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-03-04_14-00-46.jpg",
       "nsfw_score": 0.8435,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2026-03-04_14-00-47.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-00-47.jpg",
+      "to_folder": "instagram",
+      "to_path": "gallery/instagram/photo_2026-03-04_14-00-47.jpg",
       "nsfw_score": 0.8281,
       "primary_guess": "instagram"
     },
@@ -1999,24 +1999,24 @@
     {
       "file": "photo_2026-03-04_14-01-09.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-01-09.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-03-04_14-01-09.jpg",
       "nsfw_score": 0.6574,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2026-03-04_14-01-15.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-01-15.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2026-03-04_14-01-15.jpg",
       "nsfw_score": 0.8387,
       "primary_guess": "lifestyle"
     },
     {
       "file": "photo_2026-03-04_14-01-20 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-01-20 (2).jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-03-04_14-01-20 (2).jpg",
       "nsfw_score": 0.8274,
       "primary_guess": "tiktok"
     },
@@ -2055,8 +2055,8 @@
     {
       "file": "photo_2026-03-04_14-01-25.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-01-25.jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2026-03-04_14-01-25.jpg",
       "nsfw_score": 0.8177,
       "primary_guess": "lingerie"
     },
@@ -2095,8 +2095,8 @@
     {
       "file": "photo_2026-03-04_14-01-38.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-01-38.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-03-04_14-01-38.jpg",
       "nsfw_score": 0.7785,
       "primary_guess": "tiktok"
     },
@@ -2119,8 +2119,8 @@
     {
       "file": "photo_2026-03-04_14-01-42.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-01-42.jpg",
+      "to_folder": "lifestyle",
+      "to_path": "gallery/lifestyle/photo_2026-03-04_14-01-42.jpg",
       "nsfw_score": 0.7192,
       "primary_guess": "lifestyle"
     },
@@ -2135,8 +2135,8 @@
     {
       "file": "photo_2026-03-04_14-01-46.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-01-46.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-03-04_14-01-46.jpg",
       "nsfw_score": 0.8673,
       "primary_guess": "tiktok"
     },
@@ -2159,24 +2159,24 @@
     {
       "file": "photo_2026-03-04_14-01-52.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-01-52.jpg",
+      "to_folder": "selfie",
+      "to_path": "gallery/selfie/photo_2026-03-04_14-01-52.jpg",
       "nsfw_score": 0.8084,
       "primary_guess": "selfie"
     },
     {
       "file": "photo_2026-03-04_14-01-53.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-01-53.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-03-04_14-01-53.jpg",
       "nsfw_score": 0.8733,
       "primary_guess": "tiktok"
     },
     {
       "file": "photo_2026-03-04_14-01-55.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-01-55.jpg",
+      "to_folder": "cars",
+      "to_path": "gallery/cars/photo_2026-03-04_14-01-55.jpg",
       "nsfw_score": 0.7493,
       "primary_guess": "cars"
     },
@@ -2207,16 +2207,16 @@
     {
       "file": "photo_2026-03-04_14-02-01.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-02-01.jpg",
+      "to_folder": "lingerie",
+      "to_path": "gallery/lingerie/photo_2026-03-04_14-02-01.jpg",
       "nsfw_score": 0.8176,
       "primary_guess": "lingerie"
     },
     {
       "file": "photo_2026-03-04_14-02-02 (2).jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-02-02 (2).jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-03-04_14-02-02 (2).jpg",
       "nsfw_score": 0.7462,
       "primary_guess": "tiktok"
     },
@@ -2231,8 +2231,8 @@
     {
       "file": "photo_2026-03-04_14-02-04.jpg",
       "type": "image",
-      "to_folder": "nsfw",
-      "to_path": "gallery/nsfw/photo_2026-03-04_14-02-04.jpg",
+      "to_folder": "tiktok",
+      "to_path": "gallery/tiktok/photo_2026-03-04_14-02-04.jpg",
       "nsfw_score": 0.6501,
       "primary_guess": "tiktok"
     }
