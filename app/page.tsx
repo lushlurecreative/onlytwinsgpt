@@ -4,6 +4,8 @@ import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BeforeAfterSlider from "@/app/components/BeforeAfterSlider";
 import PremiumCard from "@/components/PremiumCard";
 import PremiumButton from "@/components/PremiumButton";
+import AICapabilitiesGallery from "@/components/AICapabilitiesGallery";
+import { galleryItems } from "@/lib/gallery-data";
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -56,6 +58,20 @@ function HomeContent() {
         <PremiumCard title="Train" subtitle="We build your personalized twin model." />
         <PremiumCard title="Generate" subtitle="Requests are processed through your AI pipeline." />
         <PremiumCard title="Deliver" subtitle="Finished assets appear in your private library." />
+      </section>
+
+      <section className="section">
+        <PremiumCard className="hero-refined">
+          <p className="eyebrow">AI Capabilities</p>
+          <h2 style={{ marginTop: 0, marginBottom: 8 }}>See the Range of What We Can Generate</h2>
+          <p className="section-copy" style={{ marginBottom: 14 }}>
+            Explore a curated preview across studio, lifestyle, editorial, and custom style outputs.
+          </p>
+          <AICapabilitiesGallery items={galleryItems} maxItems={8} />
+          <div className="cta-row" style={{ marginTop: 16 }}>
+            <PremiumButton href="/gallery">View Full Gallery</PremiumButton>
+          </div>
+        </PremiumCard>
       </section>
 
       <section className="section split">
