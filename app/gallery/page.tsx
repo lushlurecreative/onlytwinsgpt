@@ -29,7 +29,6 @@ export default function GalleryPage() {
           niche, and content style you actually want.
         </p>
         <div className="cta-row">
-          <PremiumButton href="/pricing">Start Subscription</PremiumButton>
           <PremiumButton href="/start" variant="secondary">
             Open Dashboard
           </PremiumButton>

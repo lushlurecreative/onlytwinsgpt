@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase-server";
+import { redirect } from "next/navigation";
 import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BrandName from "@/app/components/BrandName";
 import PremiumCard from "@/components/PremiumCard";
-import PremiumButton from "@/components/PremiumButton";
 import CheckoutNowButton from "./CheckoutNowButton";
 import BitcoinCheckoutButton from "./BitcoinCheckoutButton";
 
@@ -11,7 +11,9 @@ export const dynamic = "force-dynamic";
 export default async function PricingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  // Pricing is public; guest checkout allowed (no login required before Stripe).
+  if (user) {
+    redirect("/start");
+  }
 
   return (
     <div>
@@ -56,9 +58,6 @@ export default async function PricingPage() {
           <div className="cta-row">
             <CheckoutNowButton plan="professional">{MARKETING_MESSAGE_MAP.cta.primaryLabel}</CheckoutNowButton>
             <BitcoinCheckoutButton plan="professional" />
-            <PremiumButton href="/contact" variant="secondary">
-              Contact Us
-            </PremiumButton>
           </div>
         </PremiumCard>
         <PremiumCard className="pricing-card">
@@ -77,9 +76,6 @@ export default async function PricingPage() {
           <div className="cta-row">
             <CheckoutNowButton plan="elite">{MARKETING_MESSAGE_MAP.cta.primaryLabel}</CheckoutNowButton>
             <BitcoinCheckoutButton plan="elite" />
-            <PremiumButton href="/contact">
-              Contact Us
-            </PremiumButton>
           </div>
         </PremiumCard>
       </section>
@@ -123,9 +119,6 @@ export default async function PricingPage() {
             <li>Structured delivery cadence with clear status visibility</li>
           </ul>
           <div className="cta-row">
-            <PremiumButton href="/contact" variant="secondary">
-              Talk to us about fit
-            </PremiumButton>
             <CheckoutNowButton plan="starter">{MARKETING_MESSAGE_MAP.cta.primaryLabel}</CheckoutNowButton>
           </div>
         </PremiumCard>

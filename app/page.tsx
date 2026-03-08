@@ -7,12 +7,15 @@ import PremiumButton from "@/components/PremiumButton";
 import AICapabilitiesGallery from "@/components/AICapabilitiesGallery";
 import { homeGalleryPreviewItems } from "@/lib/gallery-data";
 import { featuredResultsItems } from "@/lib/results-data";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 function HomeContent() {
   const params = useSearchParams();
   const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const [hasSession, setHasSession] = useState(false);
 
   useEffect(() => {
     const code = params.get("code");
@@ -21,6 +24,14 @@ function HomeContent() {
       router.replace(`/auth/callback?code=${code}`);
     }
   }, [params, router]);
+
+  useEffect(() => {
+    const loadSession = async () => {
+      const { data } = await supabase.auth.getUser();
+      setHasSession(!!data.user);
+    };
+    void loadSession();
+  }, [supabase]);
 
   return (
     <div>
@@ -32,14 +43,18 @@ function HomeContent() {
           <BeforeAfterSlider
             beforeSrc="/hero-before.svg"
             afterSrc="/hero-after.svg"
-            beforeLabel="User Upload"
-            afterLabel="AI Beach Scene"
+            beforeLabel="Original"
+            afterLabel="Twin"
           />
         </div>
         <div className="cta-row">
-          <PremiumButton href={MARKETING_MESSAGE_MAP.cta.primaryHref}>
-            {MARKETING_MESSAGE_MAP.cta.primaryLabel}
-          </PremiumButton>
+          {hasSession ? (
+            <PremiumButton href="/start">Open Dashboard</PremiumButton>
+          ) : (
+            <PremiumButton href={MARKETING_MESSAGE_MAP.cta.primaryHref}>
+              {MARKETING_MESSAGE_MAP.cta.primaryLabel}
+            </PremiumButton>
+          )}
           <PremiumButton href="/how-it-works" variant="secondary">
             See How It Works
           </PremiumButton>
@@ -78,7 +93,7 @@ function HomeContent() {
       <section className="section">
         <PremiumCard className="hero-refined">
           <p className="eyebrow">Transformation Results</p>
-          <h2 style={{ marginTop: 0, marginBottom: 8 }}>Before to After Quality Showcase</h2>
+          <h2 style={{ marginTop: 0, marginBottom: 8 }}>Original to Twin Quality Showcase</h2>
           <p className="section-copy" style={{ marginBottom: 14 }}>
             Compare source training photos with final AI-generated outputs across multiple visual directions.
           </p>
@@ -86,7 +101,7 @@ function HomeContent() {
             <div className="results-preview-grid">
               {featuredResultsItems.slice(0, 4).map((item) => (
                 <div key={item.id} className="premium-card">
-                  <BeforeAfterSlider beforeSrc={item.before} afterSrc={item.after} beforeLabel="Before" afterLabel="After" />
+                  <BeforeAfterSlider beforeSrc={item.before} afterSrc={item.after} beforeLabel="Original" afterLabel="Twin" />
                   <p className="section-copy" style={{ marginTop: 10, fontSize: 14 }}>
                     {item.title}
                   </p>

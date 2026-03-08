@@ -8,7 +8,6 @@ import { getEntitlements } from "@/lib/entitlements";
 export default function HeaderSubscriptionCta() {
   const supabase = useMemo(() => createClient(), []);
   const [loading, setLoading] = useState(true);
-  const [isSubscriber, setIsSubscriber] = useState(false);
   const [hasUser, setHasUser] = useState(false);
 
   useEffect(() => {
@@ -21,15 +20,12 @@ export default function HeaderSubscriptionCta() {
 
       if (!user) {
         setHasUser(false);
-        setIsSubscriber(false);
         setLoading(false);
         return;
       }
 
       setHasUser(true);
-      const entitlements = await getEntitlements(supabase, user.id);
-      if (!active) return;
-      setIsSubscriber(entitlements.isSubscriber);
+      await getEntitlements(supabase, user.id);
       setLoading(false);
     };
 
@@ -47,7 +43,7 @@ export default function HeaderSubscriptionCta() {
 
   if (loading) return null;
 
-  if (hasUser && isSubscriber) {
+  if (hasUser) {
     return (
       <Link href="/billing" className="nav-link">
         Account

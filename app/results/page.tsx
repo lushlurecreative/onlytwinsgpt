@@ -20,7 +20,6 @@ export default function ResultsPage() {
           and formats with consistent identity and premium detail.
         </p>
         <div className="cta-row">
-          <PremiumButton href="/pricing">Start Subscription</PremiumButton>
           <PremiumButton href="/gallery" variant="secondary">
             Explore Capabilities
           </PremiumButton>
@@ -52,7 +51,7 @@ export default function ResultsPage() {
               return (
                 <article className="premium-card results-showcase-card" key={item.id}>
                   <div className={`results-slider-wrap ${hiddenNSFW ? "is-nsfw-hidden" : ""}`.trim()}>
-                    <BeforeAfterSlider beforeSrc={item.before} afterSrc={item.after} beforeLabel="Before" afterLabel="After" />
+                    <BeforeAfterSlider beforeSrc={item.before} afterSrc={item.after} beforeLabel="Original" afterLabel="Twin" />
                     {hiddenNSFW ? (
                       <button
                         type="button"

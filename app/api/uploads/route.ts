@@ -11,6 +11,49 @@ import { getMaxUploadBytes, RATE_LIMITS } from "@/lib/security-config";
 
 export const runtime = "nodejs";
 
+export async function GET() {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: objects, error: listError } = await supabase.storage.from("uploads").list(user.id, {
+      limit: 100,
+      sortBy: { column: "created_at", order: "desc" },
+    });
+
+    if (listError) {
+      return NextResponse.json({ error: listError.message }, { status: 400 });
+    }
+
+    const files = await Promise.all(
+      (objects ?? [])
+        .filter((item) => !!item.name)
+        .map(async (item) => {
+          const objectPath = `${user.id}/${item.name}`;
+          const { data: signedData } = await supabase.storage.from("uploads").createSignedUrl(objectPath, 3600);
+          return {
+            objectPath,
+            name: item.name,
+            createdAt: item.created_at ?? null,
+            signedUrl: signedData?.signedUrl ?? null,
+          };
+        })
+    );
+
+    return NextResponse.json({ files }, { status: 200 });
+  } catch (error) {
+    logError("upload_list_unhandled_error", error);
+    return NextResponse.json({ error: "Unexpected list error" }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const ip = getClientIpFromHeaders(request.headers);
@@ -108,6 +151,36 @@ export async function POST(request: Request) {
   } catch (error) {
     logError("upload_route_unhandled_error", error);
     return NextResponse.json({ error: "Unexpected upload error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = (await request.json().catch(() => ({}))) as { objectPath?: string };
+    const objectPath = (body.objectPath ?? "").trim();
+    if (!objectPath || !objectPath.startsWith(`${user.id}/`)) {
+      return NextResponse.json({ error: "Invalid object path" }, { status: 400 });
+    }
+
+    const { error: removeError } = await supabase.storage.from("uploads").remove([objectPath]);
+    if (removeError) {
+      return NextResponse.json({ error: removeError.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    logError("upload_delete_unhandled_error", error);
+    return NextResponse.json({ error: "Unexpected delete error" }, { status: 500 });
   }
 }
 

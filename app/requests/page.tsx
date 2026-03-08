@@ -13,7 +13,7 @@ export default async function RequestsPage() {
       <PremiumCard className="hero-refined">
         <h1 style={{ marginTop: 0, fontSize: 34, letterSpacing: "-0.02em" }}>View My Requests</h1>
         <p style={{ opacity: 0.85, maxWidth: 680 }}>
-          Track each stage of your pipeline, from training prep to generation completion.
+          Set your monthly output mix and track each stage from training prep to generation completion.
         </p>
       </PremiumCard>
       <div style={{ marginTop: 16 }}>
@@ -21,7 +21,7 @@ export default async function RequestsPage() {
       </div>
 
       <div style={{ marginTop: 16 }}>
-        <PremiumButton href="/training/photos">Start Creating My Twin</PremiumButton>
+        <PremiumButton href="/onboarding/intake">Set Preferences</PremiumButton>
       </div>
     </main>
   );

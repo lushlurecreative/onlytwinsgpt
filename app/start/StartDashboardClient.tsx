@@ -27,9 +27,9 @@ export default function StartDashboardClient() {
     },
     {
       title: "Step 2: Set Preferences",
-      description: "Confirm what type of content and package you want generated.",
+      description: "Complete onboarding intake so we know your exact style, rules, and generation direction.",
       buttonText: "Set Preferences",
-      href: "/requests",
+      href: "/onboarding/intake",
     },
     {
       title: "View My Requests",
@@ -57,13 +57,13 @@ export default function StartDashboardClient() {
         <p className="eyebrow">AI Control Center</p>
         <h1>Welcome to OnlyTwins</h1>
         <p>
-          Your subscription is active. Upload your photos to initialize your twin pipeline, then track
-          training and generation from this control center.
+          Your subscription is active. Start by uploading your training photos so we can generate your twin
+          images.
         </p>
         <div className="cta-row" style={{ marginTop: 4 }}>
           <PremiumButton href="/training/photos">Start Creating My Twin</PremiumButton>
-          <PremiumButton href="/requests" variant="secondary">
-            View Queue
+          <PremiumButton href="/onboarding/intake" variant="secondary">
+            Set Preferences
           </PremiumButton>
         </div>
       </section>

@@ -14,8 +14,8 @@ type BeforeAfterSliderProps = {
 export default function BeforeAfterSlider({
   beforeSrc,
   afterSrc,
-  beforeLabel = "Before",
-  afterLabel = "After",
+  beforeLabel = "Original",
+  afterLabel = "Twin",
 }: BeforeAfterSliderProps) {
   const [position, setPosition] = useState(50);
   const frameRef = useRef<HTMLDivElement | null>(null);
