@@ -399,6 +399,17 @@ a {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.results-template {
+  margin: 12px 0 0;
+  border-radius: 12px;
+  background: rgba(242, 248, 255, 0.95);
+  border: 1px solid rgba(177, 211, 233, 0.8);
+  padding: 12px;
+  color: #223b57;
+  overflow-x: auto;
+  font-size: 13px;
+}
+
 .preset-grid {
   margin-top: 12px;
   display: flex;

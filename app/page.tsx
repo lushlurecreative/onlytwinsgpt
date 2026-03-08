@@ -82,16 +82,22 @@ function HomeContent() {
           <p className="section-copy" style={{ marginBottom: 14 }}>
             Compare source training photos with final AI-generated outputs across multiple visual directions.
           </p>
-          <div className="results-preview-grid">
-            {featuredResultsItems.slice(0, 4).map((item) => (
-              <div key={item.id} className="premium-card">
-                <BeforeAfterSlider beforeSrc={item.before} afterSrc={item.after} beforeLabel="Before" afterLabel="After" />
-                <p className="section-copy" style={{ marginTop: 10, fontSize: 14 }}>
-                  {item.title}
-                </p>
-              </div>
-            ))}
-          </div>
+          {featuredResultsItems.length > 0 ? (
+            <div className="results-preview-grid">
+              {featuredResultsItems.slice(0, 4).map((item) => (
+                <div key={item.id} className="premium-card">
+                  <BeforeAfterSlider beforeSrc={item.before} afterSrc={item.after} beforeLabel="Before" afterLabel="After" />
+                  <p className="section-copy" style={{ marginTop: 10, fontSize: 14 }}>
+                    {item.title}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="section-copy" style={{ marginBottom: 0 }}>
+              Add your first before/after pairs in `lib/results-data.ts` to populate this section.
+            </p>
+          )}
           <div className="cta-row" style={{ marginTop: 16 }}>
             <PremiumButton href="/results">View More Results</PremiumButton>
           </div>

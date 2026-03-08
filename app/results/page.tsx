@@ -3,11 +3,11 @@
 import { useState } from "react";
 import PremiumButton from "@/components/PremiumButton";
 import BeforeAfterSlider from "@/components/BeforeAfterSlider";
-import { resultsItems } from "@/lib/results-data";
+import { resultsItemTemplate, resultsItems } from "@/lib/results-data";
 
 export default function ResultsPage() {
   const [revealedNSFW, setRevealedNSFW] = useState<Record<string, boolean>>({});
-  const hasPlaceholderPairs = resultsItems.some((item) => item.placeholder);
+  const hasResults = resultsItems.length > 0;
 
   return (
     <main style={{ padding: 24, maxWidth: 1120, margin: "0 auto" }}>
@@ -28,43 +28,52 @@ export default function ResultsPage() {
       </section>
 
       <section className="section">
-        {hasPlaceholderPairs ? (
+        {!hasResults ? (
           <div className="premium-card" style={{ marginBottom: 14 }}>
             <p className="eyebrow">Setup Needed</p>
             <p className="section-copy" style={{ margin: 0 }}>
-              Live before/after files are not uploaded yet. Current sliders use visible starter samples.
-              Drop your real pairs into `/public/results/before/` and `/public/results/after/`, then update
-              `lib/results-data.ts` with those paths.
+              No before/after pairs are configured yet. Add files to `/public/results/before/` and
+              `/public/results/after/`, then add entries in `lib/results-data.ts` using this structure:
             </p>
+            <pre className="results-template">{`{
+  id: "${resultsItemTemplate.id}",
+  before: "${resultsItemTemplate.before}",
+  after: "${resultsItemTemplate.after}",
+  title: "${resultsItemTemplate.title}",
+  category: "${resultsItemTemplate.category}",
+  description: "${resultsItemTemplate.description}"
+}`}</pre>
           </div>
         ) : null}
-        <div className="results-showcase-grid">
-          {resultsItems.map((item) => {
-            const hiddenNSFW = !!item.nsfw && !revealedNSFW[item.id];
-            return (
-              <article className="premium-card results-showcase-card" key={item.id}>
-                <div className={`results-slider-wrap ${hiddenNSFW ? "is-nsfw-hidden" : ""}`.trim()}>
-                  <BeforeAfterSlider beforeSrc={item.before} afterSrc={item.after} beforeLabel="Before" afterLabel="After" />
-                  {hiddenNSFW ? (
-                    <button
-                      type="button"
-                      className="results-nsfw-overlay"
-                      onClick={() => setRevealedNSFW((prev) => ({ ...prev, [item.id]: true }))}
-                    >
-                      <strong>NSFW Example</strong>
-                      <span>Click to reveal</span>
-                    </button>
-                  ) : null}
-                </div>
-                <div className="results-copy">
-                  <span className="ai-gallery-category">{item.category}</span>
-                  <h3>{item.title}</h3>
-                  <p>{item.description}</p>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+        {hasResults ? (
+          <div className="results-showcase-grid">
+            {resultsItems.map((item) => {
+              const hiddenNSFW = !!item.nsfw && !revealedNSFW[item.id];
+              return (
+                <article className="premium-card results-showcase-card" key={item.id}>
+                  <div className={`results-slider-wrap ${hiddenNSFW ? "is-nsfw-hidden" : ""}`.trim()}>
+                    <BeforeAfterSlider beforeSrc={item.before} afterSrc={item.after} beforeLabel="Before" afterLabel="After" />
+                    {hiddenNSFW ? (
+                      <button
+                        type="button"
+                        className="results-nsfw-overlay"
+                        onClick={() => setRevealedNSFW((prev) => ({ ...prev, [item.id]: true }))}
+                      >
+                        <strong>NSFW Example</strong>
+                        <span>Click to reveal</span>
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="results-copy">
+                    <span className="ai-gallery-category">{item.category}</span>
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : null}
       </section>
 
       <section className="section premium-card">
