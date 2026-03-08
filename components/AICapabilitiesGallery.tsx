@@ -25,7 +25,7 @@ export default function AICapabilitiesGallery({
   maxItems,
   previewMode = false,
 }: AICapabilitiesGalleryProps) {
-  const [selectedCategory, setSelectedCategory] = useState<GalleryCategory>("All");
+  const [selectedCategory, setSelectedCategory] = useState<GalleryCategory>(previewMode ? "All" : "SFW");
   const [showNSFWPreviews, setShowNSFWPreviews] = useState(false);
   const [revealedNSFW, setRevealedNSFW] = useState<Record<string, boolean>>({});
   const [activeIndex, setActiveIndex] = useState<number | null>(null);

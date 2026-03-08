@@ -40,7 +40,7 @@ export type GalleryItem = {
 export const galleryItems: GalleryItem[] = [
   {
     src: "/gallery/sfw/photo_2026-01-13_03-29-38 (2).jpg",
-    title: "Photo 2026 01 13 03 29 38 (2)",
+    title: "Result Transformation 1",
     category: "SFW",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -50,7 +50,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/sfw/photo_2026-01-13_03-29-38 (3).jpg",
-    title: "Photo 2026 01 13 03 29 38 (3)",
+    title: "SFW Transformation 1",
     category: "SFW",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -60,7 +60,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/sfw/photo_2026-01-13_03-29-38 (4).jpg",
-    title: "Photo 2026 01 13 03 29 38 (4)",
+    title: "SFW Transformation 2",
     category: "SFW",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -70,7 +70,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/sfw/photo_2026-01-13_03-29-38.jpg",
-    title: "Photo 2026 01 13 03 29 38",
+    title: "SFW Transformation 3",
     category: "SFW",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -80,7 +80,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/sfw/photo_2026-03-04_14-01-06.jpg",
-    title: "Photo 2026 03 04 14 01 06",
+    title: "SFW Transformation 4",
     category: "SFW",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -90,7 +90,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/ComfyUI_00070_.mp4",
-    title: "Comfyui 00070",
+    title: "SFW Transformation 5",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -100,7 +100,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/Wanimate_00004-audio.mp4",
-    title: "Wanimate 00004 Audio",
+    title: "NSFW Transformation 1",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -110,7 +110,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/ai-clothes-changer-1.jpg",
-    title: "Ai Clothes Changer 1",
+    title: "NSFW Transformation 2",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -120,7 +120,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/counting clothses.mp4",
-    title: "Counting Clothses",
+    title: "NSFW Transformation 3",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -130,7 +130,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-01-24_15-52-25 (2).jpg",
-    title: "Photo 2025 01 24 15 52 25 (2)",
+    title: "NSFW Transformation 4",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -140,7 +140,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-01-24_15-52-26 (2).jpg",
-    title: "Photo 2025 01 24 15 52 26 (2)",
+    title: "NSFW Transformation 5",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -150,7 +150,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-01-24_15-52-26.jpg",
-    title: "Photo 2025 01 24 15 52 26",
+    title: "NSFW Transformation 6",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -160,7 +160,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-01-24_15-52-27 (2).jpg",
-    title: "Photo 2025 01 24 15 52 27 (2)",
+    title: "NSFW Transformation 7",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -170,7 +170,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-01-27_22-38-11 (3).jpg",
-    title: "Photo 2025 01 27 22 38 11 (3)",
+    title: "NSFW Transformation 8",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -180,7 +180,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-01-27_22-38-11.jpg",
-    title: "Photo 2025 01 27 22 38 11",
+    title: "NSFW Transformation 9",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -190,7 +190,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-01-29_06-48-28.jpg",
-    title: "Photo 2025 01 29 06 48 28",
+    title: "NSFW Transformation 10",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -200,7 +200,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-04-21_15-36-23 (2).jpg",
-    title: "Photo 2025 04 21 15 36 23 (2)",
+    title: "NSFW Transformation 11",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -210,7 +210,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-04-21_15-36-23.jpg",
-    title: "Photo 2025 04 21 15 36 23",
+    title: "NSFW Transformation 12",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -220,7 +220,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-04-21_15-36-25.jpg",
-    title: "Photo 2025 04 21 15 36 25",
+    title: "NSFW Transformation 13",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -230,7 +230,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-06-28_09-23-45 (2).jpg",
-    title: "Photo 2025 06 28 09 23 45 (2)",
+    title: "NSFW Transformation 14",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -240,7 +240,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-06-28_09-23-45.jpg",
-    title: "Photo 2025 06 28 09 23 45",
+    title: "NSFW Transformation 15",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -250,7 +250,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-06-28_09-23-46.jpg",
-    title: "Photo 2025 06 28 09 23 46",
+    title: "NSFW Transformation 16",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -260,7 +260,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-06-28_09-23-47.jpg",
-    title: "Photo 2025 06 28 09 23 47",
+    title: "NSFW Transformation 17",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -270,7 +270,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-08-10_13-30-08 (2).jpg",
-    title: "Photo 2025 08 10 13 30 08 (2)",
+    title: "NSFW Transformation 18",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -280,7 +280,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-08-10_13-30-08.jpg",
-    title: "Photo 2025 08 10 13 30 08",
+    title: "NSFW Transformation 19",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -290,7 +290,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-08-10_13-30-09.jpg",
-    title: "Photo 2025 08 10 13 30 09",
+    title: "NSFW Transformation 20",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -300,7 +300,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-08-15_10-38-21.jpg",
-    title: "Photo 2025 08 15 10 38 21",
+    title: "NSFW Transformation 21",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -310,7 +310,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-08-16_17-35-13.jpg",
-    title: "Photo 2025 08 16 17 35 13",
+    title: "NSFW Transformation 22",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -320,7 +320,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-08-17_18-01-19 (2).jpg",
-    title: "Photo 2025 08 17 18 01 19 (2)",
+    title: "NSFW Transformation 23",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -330,7 +330,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-08-17_18-01-19.jpg",
-    title: "Photo 2025 08 17 18 01 19",
+    title: "NSFW Transformation 24",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -340,7 +340,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-08-18_03-14-25.jpg",
-    title: "Photo 2025 08 18 03 14 25",
+    title: "NSFW Transformation 25",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -350,7 +350,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-08-18_21-11-39.jpg",
-    title: "Photo 2025 08 18 21 11 39",
+    title: "NSFW Transformation 26",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -360,7 +360,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-08-20_16-53-42 (2).jpg",
-    title: "Photo 2025 08 20 16 53 42 (2)",
+    title: "NSFW Transformation 27",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -370,7 +370,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-08-20_16-53-45 (2).jpg",
-    title: "Photo 2025 08 20 16 53 45 (2)",
+    title: "NSFW Transformation 28",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -380,7 +380,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-03_07-58-49 (2).jpg",
-    title: "Photo 2025 09 03 07 58 49 (2)",
+    title: "NSFW Transformation 29",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -390,7 +390,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-03_07-58-49.jpg",
-    title: "Photo 2025 09 03 07 58 49",
+    title: "NSFW Transformation 30",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -400,7 +400,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-07_22-23-02.jpg",
-    title: "Photo 2025 09 07 22 23 02",
+    title: "NSFW Transformation 31",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -410,7 +410,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-07_22-25-02.jpg",
-    title: "Photo 2025 09 07 22 25 02",
+    title: "NSFW Transformation 32",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -420,7 +420,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-48 (2).jpg",
-    title: "Photo 2025 09 22 23 49 48 (2)",
+    title: "NSFW Transformation 33",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -430,7 +430,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-48 (5).jpg",
-    title: "Photo 2025 09 22 23 49 48 (5)",
+    title: "NSFW Transformation 34",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -440,7 +440,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-48 (6).jpg",
-    title: "Photo 2025 09 22 23 49 48 (6)",
+    title: "NSFW Transformation 35",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -450,7 +450,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-49 (3).jpg",
-    title: "Photo 2025 09 22 23 49 49 (3)",
+    title: "NSFW Transformation 36",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -460,7 +460,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-49 (5).jpg",
-    title: "Photo 2025 09 22 23 49 49 (5)",
+    title: "NSFW Transformation 37",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -470,7 +470,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-49 (6).jpg",
-    title: "Photo 2025 09 22 23 49 49 (6)",
+    title: "NSFW Transformation 38",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -480,7 +480,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-50 (2).jpg",
-    title: "Photo 2025 09 22 23 49 50 (2)",
+    title: "NSFW Transformation 39",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -490,7 +490,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-50 (4).jpg",
-    title: "Photo 2025 09 22 23 49 50 (4)",
+    title: "NSFW Transformation 40",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -500,7 +500,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-22_23-49-51.jpg",
-    title: "Photo 2025 09 22 23 49 51",
+    title: "NSFW Transformation 41",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -510,7 +510,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-30_08-29-22 (2).jpg",
-    title: "Photo 2025 09 30 08 29 22 (2)",
+    title: "NSFW Transformation 42",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -520,7 +520,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-30_08-29-22.jpg",
-    title: "Photo 2025 09 30 08 29 22",
+    title: "NSFW Transformation 43",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -530,7 +530,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-30_09-01-54.jpg",
-    title: "Photo 2025 09 30 09 01 54",
+    title: "NSFW Transformation 44",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -540,7 +540,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-30_09-01-55 (2).jpg",
-    title: "Photo 2025 09 30 09 01 55 (2)",
+    title: "NSFW Transformation 45",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -550,7 +550,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-30_09-01-56 (2).jpg",
-    title: "Photo 2025 09 30 09 01 56 (2)",
+    title: "NSFW Transformation 46",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -560,7 +560,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-09-30_09-01-56.jpg",
-    title: "Photo 2025 09 30 09 01 56",
+    title: "NSFW Transformation 47",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -570,7 +570,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_10-04-13.jpg",
-    title: "Photo 2025 10 01 10 04 13",
+    title: "NSFW Transformation 48",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -580,7 +580,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_21-07-08.jpg",
-    title: "Photo 2025 10 01 21 07 08",
+    title: "NSFW Transformation 49",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -590,7 +590,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_21-07-39 (2).jpg",
-    title: "Photo 2025 10 01 21 07 39 (2)",
+    title: "NSFW Transformation 50",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -600,7 +600,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_21-07-39.jpg",
-    title: "Photo 2025 10 01 21 07 39",
+    title: "NSFW Transformation 51",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -610,7 +610,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_21-07-41.jpg",
-    title: "Photo 2025 10 01 21 07 41",
+    title: "NSFW Transformation 52",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -620,7 +620,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_21-07-59.jpg",
-    title: "Photo 2025 10 01 21 07 59",
+    title: "NSFW Transformation 53",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -630,7 +630,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-02 (2).jpg",
-    title: "Photo 2025 10 01 22 02 02 (2)",
+    title: "NSFW Transformation 54",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -640,7 +640,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-02.jpg",
-    title: "Photo 2025 10 01 22 02 02",
+    title: "NSFW Transformation 55",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -650,7 +650,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-03.jpg",
-    title: "Photo 2025 10 01 22 02 03",
+    title: "NSFW Transformation 56",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -660,7 +660,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-06.jpg",
-    title: "Photo 2025 10 01 22 02 06",
+    title: "NSFW Transformation 57",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -670,7 +670,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-07 (2).jpg",
-    title: "Photo 2025 10 01 22 02 07 (2)",
+    title: "NSFW Transformation 58",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -680,7 +680,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-01_22-02-07.jpg",
-    title: "Photo 2025 10 01 22 02 07",
+    title: "NSFW Transformation 59",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -690,7 +690,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-10-17_17-25-31.jpg",
-    title: "Photo 2025 10 17 17 25 31",
+    title: "NSFW Transformation 60",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -700,7 +700,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-01_13-38-15 (2).jpg",
-    title: "Photo 2025 11 01 13 38 15 (2)",
+    title: "NSFW Transformation 61",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -710,7 +710,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-01_13-38-15.jpg",
-    title: "Photo 2025 11 01 13 38 15",
+    title: "NSFW Transformation 62",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -720,7 +720,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-10 (2).jpg",
-    title: "Photo 2025 11 02 05 58 10 (2)",
+    title: "NSFW Transformation 63",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -730,7 +730,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-10 (3).jpg",
-    title: "Photo 2025 11 02 05 58 10 (3)",
+    title: "NSFW Transformation 64",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -740,7 +740,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-10 (4).jpg",
-    title: "Photo 2025 11 02 05 58 10 (4)",
+    title: "NSFW Transformation 65",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -750,7 +750,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-10.jpg",
-    title: "Photo 2025 11 02 05 58 10",
+    title: "NSFW Transformation 66",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -760,7 +760,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-24 (2).jpg",
-    title: "Photo 2025 11 02 05 58 24 (2)",
+    title: "NSFW Transformation 67",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -770,7 +770,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-24 (3).jpg",
-    title: "Photo 2025 11 02 05 58 24 (3)",
+    title: "NSFW Transformation 68",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -780,7 +780,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-24 (4).jpg",
-    title: "Photo 2025 11 02 05 58 24 (4)",
+    title: "NSFW Transformation 69",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -790,7 +790,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-24.jpg",
-    title: "Photo 2025 11 02 05 58 24",
+    title: "NSFW Transformation 70",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -800,7 +800,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-34 (2).jpg",
-    title: "Photo 2025 11 02 05 58 34 (2)",
+    title: "NSFW Transformation 71",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -810,7 +810,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-46 (2).jpg",
-    title: "Photo 2025 11 02 05 58 46 (2)",
+    title: "NSFW Transformation 72",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -820,7 +820,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-02_05-58-46 (5).jpg",
-    title: "Photo 2025 11 02 05 58 46 (5)",
+    title: "NSFW Transformation 73",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -830,7 +830,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-05_20-23-59 (2).jpg",
-    title: "Photo 2025 11 05 20 23 59 (2)",
+    title: "NSFW Transformation 74",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -840,7 +840,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-05_20-23-59.jpg",
-    title: "Photo 2025 11 05 20 23 59",
+    title: "NSFW Transformation 75",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -850,7 +850,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-11_06-33-29 (2).jpg",
-    title: "Photo 2025 11 11 06 33 29 (2)",
+    title: "NSFW Transformation 76",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -860,7 +860,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-11_06-33-29.jpg",
-    title: "Photo 2025 11 11 06 33 29",
+    title: "NSFW Transformation 77",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -870,7 +870,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2025-11-24_11-58-31.jpg",
-    title: "Photo 2025 11 24 11 58 31",
+    title: "NSFW Transformation 78",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -880,7 +880,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2026-01-03_10-03-09 (2).jpg",
-    title: "Photo 2026 01 03 10 03 09 (2)",
+    title: "NSFW Transformation 79",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -890,7 +890,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2026-01-03_10-03-09.jpg",
-    title: "Photo 2026 01 03 10 03 09",
+    title: "NSFW Transformation 80",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -900,7 +900,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2026-01-15_05-43-31.jpg",
-    title: "Photo 2026 01 15 05 43 31",
+    title: "NSFW Transformation 81",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -910,7 +910,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2026-02-07_20-34-15 (2).jpg",
-    title: "Photo 2026 02 07 20 34 15 (2)",
+    title: "NSFW Transformation 82",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -920,7 +920,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2026-02-24_15-12-52.jpg",
-    title: "Photo 2026 02 24 15 12 52",
+    title: "NSFW Transformation 83",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -930,7 +930,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2026-02-24_15-18-21.jpg",
-    title: "Photo 2026 02 24 15 18 21",
+    title: "NSFW Transformation 84",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -940,7 +940,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2026-03-04_14-01-40.jpg",
-    title: "Photo 2026 03 04 14 01 40",
+    title: "NSFW Transformation 85",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -950,7 +950,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/nsfw/photo_2026-03-04_14-01-41.jpg",
-    title: "Photo 2026 03 04 14 01 41",
+    title: "NSFW Transformation 86",
     category: "NSFW",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -960,7 +960,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/goth/0223.mp4",
-    title: "0223",
+    title: "NSFW Transformation 87",
     category: "Goth",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -970,7 +970,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/goth/photo_2025-06-27_07-56-07.jpg",
-    title: "Photo 2025 06 27 07 56 07",
+    title: "Goth Transformation 1",
     category: "Goth",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -980,7 +980,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/goth/photo_2025-07-14_10-57-44.jpg",
-    title: "Photo 2025 07 14 10 57 44",
+    title: "Goth Transformation 2",
     category: "Goth",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -990,7 +990,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/goth/photo_2025-09-30_09-01-54 (2).jpg",
-    title: "Photo 2025 09 30 09 01 54 (2)",
+    title: "Goth Transformation 3",
     category: "Goth",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1000,7 +1000,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/goth/photo_2025-09-30_09-01-55.jpg",
-    title: "Photo 2025 09 30 09 01 55",
+    title: "Goth Transformation 4",
     category: "Goth",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1010,7 +1010,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/instagram/photo_2025-01-27_22-38-11 (2).jpg",
-    title: "Photo 2025 01 27 22 38 11 (2)",
+    title: "Goth Transformation 5",
     category: "Instagram",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1020,7 +1020,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/instagram/photo_2025-01-27_22-38-12.jpg",
-    title: "Photo 2025 01 27 22 38 12",
+    title: "Instagram Transformation 1",
     category: "Instagram",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1030,7 +1030,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/instagram/photo_2026-03-04_14-00-47.jpg",
-    title: "Photo 2026 03 04 14 00 47",
+    title: "Instagram Transformation 2",
     category: "Instagram",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1040,7 +1040,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/0210 (1).mp4",
-    title: "0210 (1)",
+    title: "Instagram Transformation 3",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1050,7 +1050,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/0219.mp4",
-    title: "0219",
+    title: "TikTok Transformation 1",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1060,7 +1060,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/0224.mp4",
-    title: "0224",
+    title: "TikTok Transformation 2",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1070,7 +1070,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/1008(2).mp4",
-    title: "1008(2)",
+    title: "TikTok Transformation 3",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1080,7 +1080,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/ComfyUI_00018_.mp4",
-    title: "Comfyui 00018",
+    title: "TikTok Transformation 4",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1090,7 +1090,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/Onlytwinvideo2.mp4",
-    title: "Onlytwinvideo2",
+    title: "TikTok Transformation 5",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1100,7 +1100,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/Wanimate_00005-audio.mp4",
-    title: "Wanimate 00005 Audio",
+    title: "TikTok Transformation 6",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1110,7 +1110,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/ai-clothes-changer-2.jpg",
-    title: "Ai Clothes Changer 2",
+    title: "TikTok Transformation 7",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1120,7 +1120,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/ai-clothes-changer-4.jpg",
-    title: "Ai Clothes Changer 4",
+    title: "TikTok Transformation 8",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1130,7 +1130,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/kling_20251007_Image_to_Video_the_woman__5943_0.mp4",
-    title: "Kling 20251007 Image To Video The Woman 5943 0",
+    title: "TikTok Transformation 9",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1140,7 +1140,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-01-27_22-38-11 (4).jpg",
-    title: "Photo 2025 01 27 22 38 11 (4)",
+    title: "TikTok Transformation 10",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1150,7 +1150,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-07-15_20-48-03.jpg",
-    title: "Photo 2025 07 15 20 48 03",
+    title: "TikTok Transformation 11",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1160,7 +1160,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-09-30_09-01-55 (3).jpg",
-    title: "Photo 2025 09 30 09 01 55 (3)",
+    title: "TikTok Transformation 12",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1170,7 +1170,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-10-02_10-40-32.jpg",
-    title: "Photo 2025 10 02 10 40 32",
+    title: "TikTok Transformation 13",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1180,7 +1180,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-10-02_10-46-33 (2).jpg",
-    title: "Photo 2025 10 02 10 46 33 (2)",
+    title: "TikTok Transformation 14",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1190,7 +1190,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-10-02_10-46-33.jpg",
-    title: "Photo 2025 10 02 10 46 33",
+    title: "TikTok Transformation 15",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1200,7 +1200,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-10-03_05-57-05 (2).jpg",
-    title: "Photo 2025 10 03 05 57 05 (2)",
+    title: "TikTok Transformation 16",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1210,7 +1210,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-10-03_05-57-05.jpg",
-    title: "Photo 2025 10 03 05 57 05",
+    title: "TikTok Transformation 17",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1220,7 +1220,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-10-26_06-51-41.jpg",
-    title: "Photo 2025 10 26 06 51 41",
+    title: "TikTok Transformation 18",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1230,7 +1230,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-11-02_05-58-34 (3).jpg",
-    title: "Photo 2025 11 02 05 58 34 (3)",
+    title: "TikTok Transformation 19",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1240,7 +1240,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-11-02_05-58-34.jpg",
-    title: "Photo 2025 11 02 05 58 34",
+    title: "TikTok Transformation 20",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1250,7 +1250,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-11-02_05-58-46 (4).jpg",
-    title: "Photo 2025 11 02 05 58 46 (4)",
+    title: "TikTok Transformation 21",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1260,7 +1260,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-11-02_05-58-46.jpg",
-    title: "Photo 2025 11 02 05 58 46",
+    title: "TikTok Transformation 22",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1270,7 +1270,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-11-17_01-15-07 (2).jpg",
-    title: "Photo 2025 11 17 01 15 07 (2)",
+    title: "TikTok Transformation 23",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1280,7 +1280,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2025-11-17_01-15-07.jpg",
-    title: "Photo 2025 11 17 01 15 07",
+    title: "TikTok Transformation 24",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1290,7 +1290,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-01-11_18-40-46.jpg",
-    title: "Photo 2026 01 11 18 40 46",
+    title: "TikTok Transformation 25",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1300,7 +1300,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-01-11_19-06-54.jpg",
-    title: "Photo 2026 01 11 19 06 54",
+    title: "TikTok Transformation 26",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1310,7 +1310,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-01-11_19-07-02.jpg",
-    title: "Photo 2026 01 11 19 07 02",
+    title: "TikTok Transformation 27",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1320,7 +1320,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-01-13_03-34-50 (2).jpg",
-    title: "Photo 2026 01 13 03 34 50 (2)",
+    title: "TikTok Transformation 28",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1330,7 +1330,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-01-13_03-34-50.jpg",
-    title: "Photo 2026 01 13 03 34 50",
+    title: "TikTok Transformation 29",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1340,7 +1340,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-02-07_20-32-37 (2).jpg",
-    title: "Photo 2026 02 07 20 32 37 (2)",
+    title: "TikTok Transformation 30",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1350,7 +1350,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-02-07_20-33-56 (3).jpg",
-    title: "Photo 2026 02 07 20 33 56 (3)",
+    title: "TikTok Transformation 31",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1360,7 +1360,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-02-07_20-33-56.jpg",
-    title: "Photo 2026 02 07 20 33 56",
+    title: "TikTok Transformation 32",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1370,7 +1370,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-02-07_20-33-57.jpg",
-    title: "Photo 2026 02 07 20 33 57",
+    title: "TikTok Transformation 33",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1380,7 +1380,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-02-07_20-33-59.jpg",
-    title: "Photo 2026 02 07 20 33 59",
+    title: "TikTok Transformation 34",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1390,7 +1390,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-02-07_20-34-07.jpg",
-    title: "Photo 2026 02 07 20 34 07",
+    title: "TikTok Transformation 35",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1400,7 +1400,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-02-24_15-18-16.jpg",
-    title: "Photo 2026 02 24 15 18 16",
+    title: "TikTok Transformation 36",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1410,7 +1410,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-02-24_15-18-17.jpg",
-    title: "Photo 2026 02 24 15 18 17",
+    title: "TikTok Transformation 37",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1420,7 +1420,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-02-24_15-18-20.jpg",
-    title: "Photo 2026 02 24 15 18 20",
+    title: "TikTok Transformation 38",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1430,7 +1430,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-26.jpg",
-    title: "Photo 2026 03 04 14 00 26",
+    title: "TikTok Transformation 39",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1440,7 +1440,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-28.jpg",
-    title: "Photo 2026 03 04 14 00 28",
+    title: "TikTok Transformation 40",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1450,7 +1450,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-33.jpg",
-    title: "Photo 2026 03 04 14 00 33",
+    title: "TikTok Transformation 41",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1460,7 +1460,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-35.jpg",
-    title: "Photo 2026 03 04 14 00 35",
+    title: "TikTok Transformation 42",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1470,7 +1470,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-46.jpg",
-    title: "Photo 2026 03 04 14 00 46",
+    title: "TikTok Transformation 43",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1480,7 +1480,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-00-56.jpg",
-    title: "Photo 2026 03 04 14 00 56",
+    title: "TikTok Transformation 44",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1490,7 +1490,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-01 (2).jpg",
-    title: "Photo 2026 03 04 14 01 01 (2)",
+    title: "TikTok Transformation 45",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1500,7 +1500,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-01.jpg",
-    title: "Photo 2026 03 04 14 01 01",
+    title: "TikTok Transformation 46",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1510,7 +1510,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-09.jpg",
-    title: "Photo 2026 03 04 14 01 09",
+    title: "TikTok Transformation 47",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1520,7 +1520,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-20 (2).jpg",
-    title: "Photo 2026 03 04 14 01 20 (2)",
+    title: "TikTok Transformation 48",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1530,7 +1530,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-20.jpg",
-    title: "Photo 2026 03 04 14 01 20",
+    title: "TikTok Transformation 49",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1540,7 +1540,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-22.jpg",
-    title: "Photo 2026 03 04 14 01 22",
+    title: "TikTok Transformation 50",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1550,7 +1550,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-38.jpg",
-    title: "Photo 2026 03 04 14 01 38",
+    title: "TikTok Transformation 51",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1560,7 +1560,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-44.jpg",
-    title: "Photo 2026 03 04 14 01 44",
+    title: "TikTok Transformation 52",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1570,7 +1570,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-46.jpg",
-    title: "Photo 2026 03 04 14 01 46",
+    title: "TikTok Transformation 53",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1580,7 +1580,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-49.jpg",
-    title: "Photo 2026 03 04 14 01 49",
+    title: "TikTok Transformation 54",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1590,7 +1590,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-01-53.jpg",
-    title: "Photo 2026 03 04 14 01 53",
+    title: "TikTok Transformation 55",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1600,7 +1600,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-02-02 (2).jpg",
-    title: "Photo 2026 03 04 14 02 02 (2)",
+    title: "TikTok Transformation 56",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1610,7 +1610,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-02-02.jpg",
-    title: "Photo 2026 03 04 14 02 02",
+    title: "TikTok Transformation 57",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1620,7 +1620,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/tiktok/photo_2026-03-04_14-02-04.jpg",
-    title: "Photo 2026 03 04 14 02 04",
+    title: "TikTok Transformation 58",
     category: "TikTok",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1630,7 +1630,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/cosplay/photo_2025-08-20_16-53-34.jpg",
-    title: "Photo 2025 08 20 16 53 34",
+    title: "TikTok Transformation 59",
     category: "Cosplay",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1640,7 +1640,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/cosplay/photo_2025-08-20_16-53-44.jpg",
-    title: "Photo 2025 08 20 16 53 44",
+    title: "Cosplay Transformation 1",
     category: "Cosplay",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1650,7 +1650,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/luxury/photo_2025-08-20_16-53-43.jpg",
-    title: "Photo 2025 08 20 16 53 43",
+    title: "Cosplay Transformation 2",
     category: "Luxury",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1660,7 +1660,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/luxury/photo_2025-08-22_07-22-12 (2).jpg",
-    title: "Photo 2025 08 22 07 22 12 (2)",
+    title: "Luxury Transformation 1",
     category: "Luxury",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1670,7 +1670,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/luxury/photo_2026-02-07_20-34-15.jpg",
-    title: "Photo 2026 02 07 20 34 15",
+    title: "Luxury Transformation 2",
     category: "Luxury",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1680,7 +1680,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/selfie/photo_2025-09-22_23-49-48 (4).jpg",
-    title: "Photo 2025 09 22 23 49 48 (4)",
+    title: "Luxury Transformation 3",
     category: "Selfie / UGC",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1690,7 +1690,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/selfie/photo_2025-09-22_23-49-48 (7).jpg",
-    title: "Photo 2025 09 22 23 49 48 (7)",
+    title: "Selfie / UGC Transformation 1",
     category: "Selfie / UGC",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1700,7 +1700,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/selfie/photo_2025-09-22_23-49-48 (9).jpg",
-    title: "Photo 2025 09 22 23 49 48 (9)",
+    title: "Selfie / UGC Transformation 2",
     category: "Selfie / UGC",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1710,7 +1710,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/selfie/photo_2025-09-22_23-49-48.jpg",
-    title: "Photo 2025 09 22 23 49 48",
+    title: "Selfie / UGC Transformation 3",
     category: "Selfie / UGC",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1720,7 +1720,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/selfie/photo_2025-10-01_21-07-08 (3).jpg",
-    title: "Photo 2025 10 01 21 07 08 (3)",
+    title: "Selfie / UGC Transformation 4",
     category: "Selfie / UGC",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1730,7 +1730,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/selfie/photo_2026-03-04_14-01-52.jpg",
-    title: "Photo 2026 03 04 14 01 52",
+    title: "Selfie / UGC Transformation 5",
     category: "Selfie / UGC",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -1740,7 +1740,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/gym/photo_2026-03-04_14-00-39.jpg",
-    title: "Photo 2026 03 04 14 00 39",
+    title: "Selfie / UGC Transformation 6",
     category: "Gym",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -1750,7 +1750,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/exercise/photo_2025-01-29_06-48-24.jpg",
-    title: "Photo 2025 01 29 06 48 24",
+    title: "Gym Transformation 1",
     category: "Exercise",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -1760,7 +1760,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/exercise/photo_2026-02-07_20-32-37.jpg",
-    title: "Photo 2026 02 07 20 32 37",
+    title: "Exercise Transformation 1",
     category: "Exercise",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -1770,7 +1770,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/exercise/photo_2026-02-24_15-18-23.jpg",
-    title: "Photo 2026 02 24 15 18 23",
+    title: "Exercise Transformation 2",
     category: "Exercise",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -1780,7 +1780,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/exercise/photo_2026-02-24_15-18-26.jpg",
-    title: "Photo 2026 02 24 15 18 26",
+    title: "Exercise Transformation 3",
     category: "Exercise",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -1790,7 +1790,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/exercise/photo_2026-03-04_14-00-43.jpg",
-    title: "Photo 2026 03 04 14 00 43",
+    title: "Exercise Transformation 4",
     category: "Exercise",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -1800,7 +1800,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/exercise/photo_2026-03-04_14-00-55.jpg",
-    title: "Photo 2026 03 04 14 00 55",
+    title: "Exercise Transformation 5",
     category: "Exercise",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -1810,7 +1810,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/exercise/photo_2026-03-04_14-00-57.jpg",
-    title: "Photo 2026 03 04 14 00 57",
+    title: "Exercise Transformation 6",
     category: "Exercise",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -1820,7 +1820,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/exercise/photo_2026-03-04_14-00-58.jpg",
-    title: "Photo 2026 03 04 14 00 58",
+    title: "Exercise Transformation 7",
     category: "Exercise",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -1830,7 +1830,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-01-24_15-52-24.jpg",
-    title: "Photo 2025 01 24 15 52 24",
+    title: "Exercise Transformation 8",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1840,7 +1840,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-01-24_15-52-25.jpg",
-    title: "Photo 2025 01 24 15 52 25",
+    title: "Lingerie Transformation 1",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1850,7 +1850,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-01-24_15-52-27.jpg",
-    title: "Photo 2025 01 24 15 52 27",
+    title: "Lingerie Transformation 2",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1860,7 +1860,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-01-27_22-38-10.jpg",
-    title: "Photo 2025 01 27 22 38 10",
+    title: "Lingerie Transformation 3",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1870,7 +1870,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-01-27_22-38-12 (2).jpg",
-    title: "Photo 2025 01 27 22 38 12 (2)",
+    title: "Lingerie Transformation 4",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1880,7 +1880,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-08-18_21-11-12 (2).jpg",
-    title: "Photo 2025 08 18 21 11 12 (2)",
+    title: "Lingerie Transformation 5",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1890,7 +1890,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-08-18_21-11-12.jpg",
-    title: "Photo 2025 08 18 21 11 12",
+    title: "Lingerie Transformation 6",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1900,7 +1900,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-08-18_21-12-03 (2).jpg",
-    title: "Photo 2025 08 18 21 12 03 (2)",
+    title: "Lingerie Transformation 7",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1910,7 +1910,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-09-04_20-22-16.jpg",
-    title: "Photo 2025 09 04 20 22 16",
+    title: "Lingerie Transformation 8",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1920,7 +1920,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-09-22_23-49-49 (2).jpg",
-    title: "Photo 2025 09 22 23 49 49 (2)",
+    title: "Lingerie Transformation 9",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1930,7 +1930,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-09-22_23-49-49 (4).jpg",
-    title: "Photo 2025 09 22 23 49 49 (4)",
+    title: "Lingerie Transformation 10",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1940,7 +1940,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-09-22_23-49-49.jpg",
-    title: "Photo 2025 09 22 23 49 49",
+    title: "Lingerie Transformation 11",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1950,7 +1950,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-09-22_23-49-50 (3).jpg",
-    title: "Photo 2025 09 22 23 49 50 (3)",
+    title: "Lingerie Transformation 12",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1960,7 +1960,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2025-10-01_21-07-08 (2).jpg",
-    title: "Photo 2025 10 01 21 07 08 (2)",
+    title: "Lingerie Transformation 13",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1970,7 +1970,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2026-02-07_20-33-55 (2).jpg",
-    title: "Photo 2026 02 07 20 33 55 (2)",
+    title: "Lingerie Transformation 14",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1980,7 +1980,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2026-02-07_20-34-00.jpg",
-    title: "Photo 2026 02 07 20 34 00",
+    title: "Lingerie Transformation 15",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -1990,7 +1990,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2026-02-24_15-12-53.jpg",
-    title: "Photo 2026 02 24 15 12 53",
+    title: "Lingerie Transformation 16",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -2000,7 +2000,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2026-03-04_14-01-22 (2).jpg",
-    title: "Photo 2026 03 04 14 01 22 (2)",
+    title: "Lingerie Transformation 17",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -2010,7 +2010,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2026-03-04_14-01-24.jpg",
-    title: "Photo 2026 03 04 14 01 24",
+    title: "Lingerie Transformation 18",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -2020,7 +2020,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2026-03-04_14-01-25.jpg",
-    title: "Photo 2026 03 04 14 01 25",
+    title: "Lingerie Transformation 19",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -2030,7 +2030,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2026-03-04_14-01-27 (2).jpg",
-    title: "Photo 2026 03 04 14 01 27 (2)",
+    title: "Lingerie Transformation 20",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -2040,7 +2040,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2026-03-04_14-01-27.jpg",
-    title: "Photo 2026 03 04 14 01 27",
+    title: "Lingerie Transformation 21",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -2050,7 +2050,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2026-03-04_14-02-00.jpg",
-    title: "Photo 2026 03 04 14 02 00",
+    title: "Lingerie Transformation 22",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -2060,7 +2060,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lingerie/photo_2026-03-04_14-02-01.jpg",
-    title: "Photo 2026 03 04 14 02 01",
+    title: "Lingerie Transformation 23",
     category: "Lingerie",
     audience: ["individual", "agency"],
     vertical: "adult",
@@ -2070,7 +2070,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/swimwear/photo_2025-07-23_17-23-44.jpg",
-    title: "Photo 2025 07 23 17 23 44",
+    title: "Lingerie Transformation 24",
     category: "Swimwear",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2080,7 +2080,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/swimwear/photo_2025-11-02_05-58-46 (3).jpg",
-    title: "Photo 2025 11 02 05 58 46 (3)",
+    title: "Swimwear Transformation 1",
     category: "Swimwear",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2090,7 +2090,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/swimwear/photo_2026-02-07_20-34-05.jpg",
-    title: "Photo 2026 02 07 20 34 05",
+    title: "Swimwear Transformation 2",
     category: "Swimwear",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2100,7 +2100,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/swimwear/photo_2026-02-07_20-34-06.jpg",
-    title: "Photo 2026 02 07 20 34 06",
+    title: "Swimwear Transformation 3",
     category: "Swimwear",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2110,7 +2110,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-04-21_15-36-24.jpg",
-    title: "Photo 2025 04 21 15 36 24",
+    title: "Swimwear Transformation 4",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2120,7 +2120,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-07-03_16-54-23.jpg",
-    title: "Photo 2025 07 03 16 54 23",
+    title: "Lifestyle Transformation 1",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2130,7 +2130,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-08-18_21-11-13.jpg",
-    title: "Photo 2025 08 18 21 11 13",
+    title: "Lifestyle Transformation 2",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2140,7 +2140,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-08-18_21-12-03.jpg",
-    title: "Photo 2025 08 18 21 12 03",
+    title: "Lifestyle Transformation 3",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2150,7 +2150,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-08-22_07-22-12.jpg",
-    title: "Photo 2025 08 22 07 22 12",
+    title: "Lifestyle Transformation 4",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2160,7 +2160,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-09-22_23-49-48 (3).jpg",
-    title: "Photo 2025 09 22 23 49 48 (3)",
+    title: "Lifestyle Transformation 5",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2170,7 +2170,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-09-22_23-49-48 (8).jpg",
-    title: "Photo 2025 09 22 23 49 48 (8)",
+    title: "Lifestyle Transformation 6",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2180,7 +2180,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-09-22_23-49-50 (5).jpg",
-    title: "Photo 2025 09 22 23 49 50 (5)",
+    title: "Lifestyle Transformation 7",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2190,7 +2190,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-09-22_23-49-50.jpg",
-    title: "Photo 2025 09 22 23 49 50",
+    title: "Lifestyle Transformation 8",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2200,7 +2200,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-09-27_04-36-10 (4).jpg",
-    title: "Photo 2025 09 27 04 36 10 (4)",
+    title: "Lifestyle Transformation 9",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2210,7 +2210,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-09-27_04-36-10.jpg",
-    title: "Photo 2025 09 27 04 36 10",
+    title: "Lifestyle Transformation 10",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2220,7 +2220,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-10-01_10-04-13 (2).jpg",
-    title: "Photo 2025 10 01 10 04 13 (2)",
+    title: "Lifestyle Transformation 11",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2230,7 +2230,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-11-05_20-26-34 (2).jpg",
-    title: "Photo 2025 11 05 20 26 34 (2)",
+    title: "Lifestyle Transformation 12",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2240,7 +2240,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2025-11-05_20-26-34.jpg",
-    title: "Photo 2025 11 05 20 26 34",
+    title: "Lifestyle Transformation 13",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2250,7 +2250,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-01-11_18-46-57.jpg",
-    title: "Photo 2026 01 11 18 46 57",
+    title: "Lifestyle Transformation 14",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2260,7 +2260,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-01-13_03-42-37 (2).jpg",
-    title: "Photo 2026 01 13 03 42 37 (2)",
+    title: "Lifestyle Transformation 15",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2270,7 +2270,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-01-13_03-42-37.jpg",
-    title: "Photo 2026 01 13 03 42 37",
+    title: "Lifestyle Transformation 16",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2280,7 +2280,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-02-07_20-32-38.jpg",
-    title: "Photo 2026 02 07 20 32 38",
+    title: "Lifestyle Transformation 17",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2290,7 +2290,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-02-07_20-33-56 (2).jpg",
-    title: "Photo 2026 02 07 20 33 56 (2)",
+    title: "Lifestyle Transformation 18",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2300,7 +2300,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-02-07_20-34-05 (2).jpg",
-    title: "Photo 2026 02 07 20 34 05 (2)",
+    title: "Lifestyle Transformation 19",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2310,7 +2310,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-02-07_20-34-07 (2).jpg",
-    title: "Photo 2026 02 07 20 34 07 (2)",
+    title: "Lifestyle Transformation 20",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2320,7 +2320,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-02-07_20-34-07 (3).jpg",
-    title: "Photo 2026 02 07 20 34 07 (3)",
+    title: "Lifestyle Transformation 21",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2330,7 +2330,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-02-24_15-18-27.jpg",
-    title: "Photo 2026 02 24 15 18 27",
+    title: "Lifestyle Transformation 22",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2340,7 +2340,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-02-24_15-18-28.jpg",
-    title: "Photo 2026 02 24 15 18 28",
+    title: "Lifestyle Transformation 23",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2350,7 +2350,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-02-24_15-18-30.jpg",
-    title: "Photo 2026 02 24 15 18 30",
+    title: "Lifestyle Transformation 24",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2360,7 +2360,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-03-04_14-00-34.jpg",
-    title: "Photo 2026 03 04 14 00 34",
+    title: "Lifestyle Transformation 25",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2370,7 +2370,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-03-04_14-00-36.jpg",
-    title: "Photo 2026 03 04 14 00 36",
+    title: "Lifestyle Transformation 26",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2380,7 +2380,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-03-04_14-00-49.jpg",
-    title: "Photo 2026 03 04 14 00 49",
+    title: "Lifestyle Transformation 27",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2390,7 +2390,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-03-04_14-01-15.jpg",
-    title: "Photo 2026 03 04 14 01 15",
+    title: "Lifestyle Transformation 28",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2400,7 +2400,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-03-04_14-01-34.jpg",
-    title: "Photo 2026 03 04 14 01 34",
+    title: "Lifestyle Transformation 29",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2410,7 +2410,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/lifestyle/photo_2026-03-04_14-01-42.jpg",
-    title: "Photo 2026 03 04 14 01 42",
+    title: "Lifestyle Transformation 30",
     category: "Lifestyle",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2420,7 +2420,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/ai-clothes-changer-3.jpg",
-    title: "Ai Clothes Changer 3",
+    title: "Lifestyle Transformation 31",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2430,7 +2430,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2025-08-20_16-53-34 (2).jpg",
-    title: "Photo 2025 08 20 16 53 34 (2)",
+    title: "Influencer Transformation 1",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2440,7 +2440,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2025-08-20_16-53-43 (2).jpg",
-    title: "Photo 2025 08 20 16 53 43 (2)",
+    title: "Influencer Transformation 2",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2450,7 +2450,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2025-08-20_16-53-45.jpg",
-    title: "Photo 2025 08 20 16 53 45",
+    title: "Influencer Transformation 3",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2460,7 +2460,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2025-09-27_04-36-10 (3).jpg",
-    title: "Photo 2025 09 27 04 36 10 (3)",
+    title: "Influencer Transformation 4",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2470,7 +2470,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2025-09-27_04-36-11.jpg",
-    title: "Photo 2025 09 27 04 36 11",
+    title: "Influencer Transformation 5",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2480,7 +2480,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2025-10-04_10-49-36.jpg",
-    title: "Photo 2025 10 04 10 49 36",
+    title: "Influencer Transformation 6",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2490,7 +2490,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2025-10-04_18-18-22 (2).jpg",
-    title: "Photo 2025 10 04 18 18 22 (2)",
+    title: "Influencer Transformation 7",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2500,7 +2500,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2025-10-04_18-18-22.jpg",
-    title: "Photo 2025 10 04 18 18 22",
+    title: "Influencer Transformation 8",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2510,7 +2510,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2025-10-04_18-22-52.jpg",
-    title: "Photo 2025 10 04 18 22 52",
+    title: "Influencer Transformation 9",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2520,7 +2520,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2025-11-17_21-26-13 (2).jpg",
-    title: "Photo 2025 11 17 21 26 13 (2)",
+    title: "Influencer Transformation 10",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2530,7 +2530,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2026-02-07_20-33-55.jpg",
-    title: "Photo 2026 02 07 20 33 55",
+    title: "Influencer Transformation 11",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2540,7 +2540,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2026-02-07_20-33-58 (2).jpg",
-    title: "Photo 2026 02 07 20 33 58 (2)",
+    title: "Influencer Transformation 12",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2550,7 +2550,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2026-02-07_20-33-58.jpg",
-    title: "Photo 2026 02 07 20 33 58",
+    title: "Influencer Transformation 13",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2560,7 +2560,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2026-02-07_20-34-01.jpg",
-    title: "Photo 2026 02 07 20 34 01",
+    title: "Influencer Transformation 14",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2570,7 +2570,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2026-03-04_14-00-50.jpg",
-    title: "Photo 2026 03 04 14 00 50",
+    title: "Influencer Transformation 15",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2580,7 +2580,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2026-03-04_14-01-36.jpg",
-    title: "Photo 2026 03 04 14 01 36",
+    title: "Influencer Transformation 16",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2590,7 +2590,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/influencer/photo_2026-03-04_14-01-47.jpg",
-    title: "Photo 2026 03 04 14 01 47",
+    title: "Influencer Transformation 17",
     category: "Influencer",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2600,7 +2600,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/scifi/photo_2025-08-20_16-53-42.jpg",
-    title: "Photo 2025 08 20 16 53 42",
+    title: "Influencer Transformation 18",
     category: "Sci-Fi",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2610,7 +2610,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/scifi/photo_2025-11-17_21-26-13.jpg",
-    title: "Photo 2025 11 17 21 26 13",
+    title: "Sci-Fi Transformation 1",
     category: "Sci-Fi",
     audience: ["individual", "agency", "brand"],
     vertical: "general",
@@ -2620,7 +2620,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/cars/photo_2025-09-27_04-36-10 (2).jpg",
-    title: "Photo 2025 09 27 04 36 10 (2)",
+    title: "Sci-Fi Transformation 2",
     category: "Cars",
     audience: ["agency", "brand"],
     vertical: "non-adult",
@@ -2630,7 +2630,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/cars/photo_2025-09-27_04-36-10 (5).jpg",
-    title: "Photo 2025 09 27 04 36 10 (5)",
+    title: "Cars Transformation 1",
     category: "Cars",
     audience: ["agency", "brand"],
     vertical: "non-adult",
@@ -2640,7 +2640,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/cars/photo_2026-02-07_20-33-59 (2).jpg",
-    title: "Photo 2026 02 07 20 33 59 (2)",
+    title: "Cars Transformation 2",
     category: "Cars",
     audience: ["agency", "brand"],
     vertical: "non-adult",
@@ -2650,7 +2650,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/cars/photo_2026-03-04_14-01-55.jpg",
-    title: "Photo 2026 03 04 14 01 55",
+    title: "Cars Transformation 3",
     category: "Cars",
     audience: ["agency", "brand"],
     vertical: "non-adult",
@@ -2660,7 +2660,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/cars/photo_2026-03-04_14-01-57.jpg",
-    title: "Photo 2026 03 04 14 01 57",
+    title: "Cars Transformation 4",
     category: "Cars",
     audience: ["agency", "brand"],
     vertical: "non-adult",
@@ -2670,7 +2670,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/cars/photo_2026-03-04_14-01-58.jpg",
-    title: "Photo 2026 03 04 14 01 58",
+    title: "Cars Transformation 5",
     category: "Cars",
     audience: ["agency", "brand"],
     vertical: "non-adult",
@@ -2680,7 +2680,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/1008.mp4",
-    title: "1008",
+    title: "Cars Transformation 6",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2690,7 +2690,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/1012.mp4",
-    title: "1012",
+    title: "Motorcycles Transformation 1",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2700,7 +2700,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/kling_20251009_Image_to_Video__356_0.mp4",
-    title: "Kling 20251009 Image To Video 356 0",
+    title: "Motorcycles Transformation 2",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2710,7 +2710,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/kling_20251011_Image_to_Video_The_woman__1947_0.mp4",
-    title: "Kling 20251011 Image To Video The Woman 1947 0",
+    title: "Motorcycles Transformation 3",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2720,7 +2720,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/kling_20251012_Image_to_Video_the_woman__5680_0.mp4",
-    title: "Kling 20251012 Image To Video The Woman 5680 0",
+    title: "Motorcycles Transformation 4",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2730,7 +2730,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/kling_20251020_Image_to_Video_The_woman__2497_0.mp4",
-    title: "Kling 20251020 Image To Video The Woman 2497 0",
+    title: "Motorcycles Transformation 5",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2740,7 +2740,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/photo_2025-01-24_15-52-22.jpg",
-    title: "Photo 2025 01 24 15 52 22",
+    title: "Motorcycles Transformation 6",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2750,7 +2750,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/photo_2025-08-18_21-11-56.jpg",
-    title: "Photo 2025 08 18 21 11 56",
+    title: "Motorcycles Transformation 7",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2760,7 +2760,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/photo_2025-10-10_19-25-01.jpg",
-    title: "Photo 2025 10 10 19 25 01",
+    title: "Motorcycles Transformation 8",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2770,7 +2770,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/photo_2025-10-10_19-25-11.jpg",
-    title: "Photo 2025 10 10 19 25 11",
+    title: "Motorcycles Transformation 9",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2780,7 +2780,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/photo_2025-10-12_09-18-16.jpg",
-    title: "Photo 2025 10 12 09 18 16",
+    title: "Motorcycles Transformation 10",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2790,7 +2790,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/photo_2025-10-13_09-47-01.jpg",
-    title: "Photo 2025 10 13 09 47 01",
+    title: "Motorcycles Transformation 11",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2800,7 +2800,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/photo_2025-10-14_16-36-43.jpg",
-    title: "Photo 2025 10 14 16 36 43",
+    title: "Motorcycles Transformation 12",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
@@ -2810,7 +2810,7 @@ export const galleryItems: GalleryItem[] = [
   },
   {
     src: "/gallery/motorcycles/photo_2025-10-21_05-54-32.jpg",
-    title: "Photo 2025 10 21 05 54 32",
+    title: "Motorcycles Transformation 13",
     category: "Motorcycles",
     audience: ["individual", "agency", "brand"],
     vertical: "non-adult",
