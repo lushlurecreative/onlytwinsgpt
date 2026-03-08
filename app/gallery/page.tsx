@@ -6,26 +6,6 @@ import GalleryCapabilitiesRow from "@/components/GalleryCapabilitiesRow";
 export const dynamic = "force-static";
 
 export default function GalleryPage() {
-  const capabilityItems = [
-    "Cosplay",
-    "Vacation lifestyle",
-    "Instagram-ready content",
-    "TikTok / short-form aesthetics",
-    "Fitness / gym content",
-    "Exercise and activewear looks",
-    "Lingerie",
-    "Swimwear",
-    "Alternative / goth",
-    "Safe-for-work",
-    "Adult content",
-    "Luxury / glam",
-    "Automotive / cars",
-    "Motorcycles",
-    "Anime-inspired",
-    "Sci-fi looks",
-    "Custom requests",
-  ];
-
   const audienceItems = [
     "Individual Creators",
     "Agencies",
@@ -54,10 +34,6 @@ export default function GalleryPage() {
             Open Dashboard
           </PremiumButton>
         </div>
-      </section>
-
-      <section className="section">
-        <GalleryCapabilitiesRow title="Capability Coverage" items={capabilityItems} />
       </section>
 
       <section className="section">
