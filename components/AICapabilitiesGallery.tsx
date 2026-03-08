@@ -117,6 +117,7 @@ export default function AICapabilitiesGallery({
             transition={{ duration: 0.22, delay: index * 0.02 }}
           >
             <BlurredNSFWCard
+              isNSFW={item.nsfw}
               title={item.title}
               revealed={!!revealedNSFW[item.src]}
               showPreview={showNSFWPreviews}

@@ -1,6 +1,7 @@
 "use client";
 
 type BlurredNSFWCardProps = {
+  isNSFW: boolean;
   title: string;
   revealed: boolean;
   showPreview: boolean;
@@ -9,13 +10,14 @@ type BlurredNSFWCardProps = {
 };
 
 export default function BlurredNSFWCard({
+  isNSFW,
   title,
   revealed,
   showPreview,
   onReveal,
   children,
 }: BlurredNSFWCardProps) {
-  const hidden = !showPreview && !revealed;
+  const hidden = isNSFW && !showPreview && !revealed;
 
   return (
     <div className={`nsfw-wrap ${hidden ? "is-hidden" : ""}`.trim()}>
