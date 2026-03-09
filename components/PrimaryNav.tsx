@@ -51,9 +51,6 @@ export default function PrimaryNav() {
         <Link href="/status" className="nav-link">
           Status
         </Link>
-        <Link href="/billing" className="nav-link">
-          Account
-        </Link>
       </>
     );
   }

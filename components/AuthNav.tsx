@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
@@ -13,6 +13,8 @@ export default function AuthNav() {
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -33,9 +35,20 @@ export default function AuthNav() {
       mounted = false;
       sub.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [router, supabase]);
+
+  useEffect(() => {
+    const onDocClick = (event: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (menuRef.current.contains(event.target as Node)) return;
+      setOpen(false);
+    };
+    window.addEventListener("mousedown", onDocClick);
+    return () => window.removeEventListener("mousedown", onDocClick);
+  }, []);
 
   const onLogout = async () => {
+    setOpen(false);
     await supabase.auth.signOut();
     router.refresh();
     router.push("/");
@@ -59,13 +72,30 @@ export default function AuthNav() {
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm text-gray-700 truncate max-w-[220px]">
-        {user.email ?? "Account"}
-      </span>
-      <button onClick={onLogout} className="text-sm font-medium hover:underline" type="button">
-        Log out
+    <div className="user-menu-wrap" ref={menuRef}>
+      <button type="button" className="user-menu-trigger" onClick={() => setOpen((prev) => !prev)}>
+        <span className="user-menu-avatar">{(user.email ?? "A").slice(0, 1).toUpperCase()}</span>
+        <span className="user-menu-label">{user.email ?? "Account"}</span>
       </button>
+      {open ? (
+        <div className="user-menu-panel">
+          <div className="user-menu-head">
+            <div className="user-menu-email">{user.email ?? "Account"}</div>
+          </div>
+          <Link href="/billing" className="user-menu-item" onClick={() => setOpen(false)}>
+            Account
+          </Link>
+          <Link href="/requests" className="user-menu-item" onClick={() => setOpen(false)}>
+            Requests
+          </Link>
+          <Link href="/upgrade" className="user-menu-item" onClick={() => setOpen(false)}>
+            Upgrade plan
+          </Link>
+          <button onClick={onLogout} className="user-menu-item danger" type="button">
+            Log out
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

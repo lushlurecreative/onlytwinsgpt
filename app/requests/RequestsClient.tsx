@@ -1,421 +1,343 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import PremiumButton from "@/components/PremiumButton";
 
-type RequestRow = {
+type MixLine = {
   id: string;
-  status: string;
-  progress_done: number;
-  progress_total: number;
-  created_at: string;
-  scene_preset: string;
+  type: "photo" | "video";
+  quantity: number;
+  prompt: string;
 };
 
-type AllocationRow = {
-  id: string;
-  kind: "photo" | "video";
-  count: number;
-  direction: string;
-};
-
-type EntitlementResponse = {
-  entitlements?: {
-    planKey: string;
-    imageLimit?: number;
-    videoLimit?: number;
-  } | null;
-};
-
-type RequestPreferencesResponse = {
-  preferences?: {
-    monthlyPlan?: string;
-    preset?: string;
-    allocationRows?: AllocationRow[];
-  } | null;
-};
-
-const PRESET_ROWS: Record<string, AllocationRow[]> = {
-  balanced: [
-    { id: "a1", kind: "photo", count: 10, direction: "Gym" },
-    { id: "a2", kind: "photo", count: 15, direction: "Bedroom" },
-    { id: "a3", kind: "photo", count: 20, direction: "NSFW" },
-    { id: "a4", kind: "video", count: 5, direction: "Mixed social clips" },
-  ],
-  social: [
-    { id: "b1", kind: "photo", count: 20, direction: "Instagram lifestyle" },
-    { id: "b2", kind: "photo", count: 15, direction: "Travel + vacation" },
-    { id: "b3", kind: "photo", count: 10, direction: "Fitness and gym" },
-    { id: "b4", kind: "video", count: 5, direction: "TikTok short videos" },
-  ],
-  custom: [{ id: "c1", kind: "photo", count: 10, direction: "10 with purple hair on the beach" }],
+type PlannerResponse = {
+  plan: {
+    key: string | null;
+    name: string;
+    status: string;
+    billingCadence: string;
+    allowance: { photos: number; videos: number };
+    nextRenewalAt: string | null;
+  };
+  timing: {
+    cutoffAt: string | null;
+    editsApplyTo: "next_cycle" | "following_cycle";
+  };
+  cycleUsage: {
+    photosUsed: number;
+    videosUsed: number;
+    photosRemaining: number;
+    videosRemaining: number;
+  };
+  recurringMix: {
+    updatedAt: string | null;
+    appliesTo: "next_cycle" | "following_cycle";
+    cutoffAt: string | null;
+    nextRenewalAt: string | null;
+    cycleEffectiveAt: string | null;
+    lines: MixLine[];
+  };
 };
 
 export default function RequestsClient() {
-  const LOCAL_KEY = "ot_request_allocation_plan_v1";
-  const [rows, setRows] = useState<RequestRow[]>([]);
+  const [planner, setPlanner] = useState<PlannerResponse | null>(null);
+  const [mixLines, setMixLines] = useState<MixLine[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [entitlementPlan, setEntitlementPlan] = useState<string>("45-5");
-  const [entitlementLabel, setEntitlementLabel] = useState("your package");
-  const [monthlyPlan, setMonthlyPlan] = useState("45-5");
-  const [preset, setPreset] = useState("balanced");
-  const [allocationRows, setAllocationRows] = useState<AllocationRow[]>(PRESET_ROWS.balanced);
-  const [saved, setSaved] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [hasSavedPreferences, setHasSavedPreferences] = useState(false);
-  const [hydrating, setHydrating] = useState(true);
-  const [loadingRequests, setLoadingRequests] = useState(true);
+  const [savedState, setSavedState] = useState<{
+    appliesTo?: "next_cycle" | "following_cycle";
+    cutoffAt?: string | null;
+  } | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const [allowedPhotos, allowedVideos] = monthlyPlan.split("-").map((x) => Number(x));
-  const selectedPhotos = allocationRows
-    .filter((row) => row.kind === "photo")
-    .reduce((sum, row) => sum + row.count, 0);
-  const selectedVideos = allocationRows
-    .filter((row) => row.kind === "video")
-    .reduce((sum, row) => sum + row.count, 0);
-
-  useEffect(() => {
-    const loadEntitlements = async () => {
-      const response = await fetch("/api/me/entitlements");
-      const result = (await response.json().catch(() => ({}))) as EntitlementResponse;
-      const planKey = result.entitlements?.planKey ?? "";
-      if (planKey === "starter") {
-        setEntitlementPlan("45-5");
-        setMonthlyPlan("45-5");
-        setEntitlementLabel("Starter (45 photos + 5 videos)");
-      } else if (planKey === "professional") {
-        setEntitlementPlan("90-15");
-        setMonthlyPlan("90-15");
-        setEntitlementLabel("Professional (90 photos + 15 videos)");
-      } else if (planKey === "elite") {
-        setEntitlementPlan("200-35");
-        setMonthlyPlan("200-35");
-        setEntitlementLabel("Elite (200 photos + 35 videos)");
-      } else {
-        setEntitlementPlan("45-5");
-        setMonthlyPlan("45-5");
-        setEntitlementLabel("Current package");
-      }
-    };
-
-    const loadSavedPreferences = async () => {
-      let loadedFromLocal = false;
-      try {
-        const raw = window.localStorage.getItem(LOCAL_KEY);
-        if (raw) {
-          const local = JSON.parse(raw) as {
-            monthlyPlan?: string;
-            preset?: string;
-            allocationRows?: AllocationRow[];
-          };
-          if (typeof local.preset === "string") setPreset(local.preset);
-          if (Array.isArray(local.allocationRows) && local.allocationRows.length > 0) {
-            setAllocationRows(local.allocationRows);
-            setHasSavedPreferences(true);
-            loadedFromLocal = true;
-          }
-        }
-      } catch {}
-
-      const response = await fetch("/api/me/request-preferences");
-      const result = (await response.json().catch(() => ({}))) as RequestPreferencesResponse;
-      const savedPrefs = result.preferences;
-      if (!savedPrefs) return;
-      if (!loadedFromLocal && typeof savedPrefs.preset === "string") setPreset(savedPrefs.preset);
-      if (!loadedFromLocal && Array.isArray(savedPrefs.allocationRows) && savedPrefs.allocationRows.length > 0) {
-        setAllocationRows(savedPrefs.allocationRows);
-        setHasSavedPreferences(true);
-      }
-    };
-
-    const load = async () => {
-      const response = await fetch("/api/generation-requests");
-      const result = (await response.json().catch(() => ({}))) as {
-        requests?: RequestRow[];
-        error?: string;
-      };
-      if (!response.ok) {
-        setError(result.error ?? "Could not load requests.");
-        setLoadingRequests(false);
-        return;
-      }
-      setRows(result.requests ?? []);
-      setLoadingRequests(false);
-    };
-    void (async () => {
-      await Promise.allSettled([loadEntitlements(), loadSavedPreferences(), load()]);
-      setHydrating(false);
-    })();
+  const loadPlanner = useCallback(async () => {
+    const response = await fetch("/api/me/request-planner");
+    const result = (await response.json().catch(() => ({}))) as PlannerResponse & { error?: string };
+    if (!response.ok || !result.plan) {
+      setError(result.error ?? "Could not load request planner.");
+      setLoading(false);
+      return;
+    }
+    setPlanner(result);
+    setMixLines(result.recurringMix.lines.length > 0 ? result.recurringMix.lines : [
+      { id: crypto.randomUUID(), type: "photo", quantity: 10, prompt: "Gym set with premium studio lighting" },
+      { id: crypto.randomUUID(), type: "photo", quantity: 15, prompt: "Bedroom/lifestyle creator shots" },
+      { id: crypto.randomUUID(), type: "video", quantity: 5, prompt: "Short social reels with varied camera movement" },
+    ]);
+    setLoading(false);
   }, []);
 
-  const setPresetRows = (key: string) => {
-    setPreset(key);
-    const source = PRESET_ROWS[key] ?? PRESET_ROWS.custom;
-    setAllocationRows(source.map((row) => ({ ...row, id: crypto.randomUUID() })));
-  };
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadPlanner();
+  }, [loadPlanner]);
 
   const addRow = () => {
-    setAllocationRows((prev) => [
+    setMixLines((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), kind: "photo", count: 1, direction: "" },
+      { id: crypto.randomUUID(), type: "photo", quantity: 1, prompt: "" },
     ]);
   };
 
-  const updateRow = (id: string, patch: Partial<AllocationRow>) => {
-    setAllocationRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
+  const updateRow = (id: string, patch: Partial<MixLine>) => {
+    setMixLines((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   };
 
   const removeRow = (id: string) => {
-    setAllocationRows((prev) => prev.filter((row) => row.id !== id));
+    setMixLines((prev) => prev.filter((row) => row.id !== id));
   };
 
-  const savePlan = () => {
-    if (monthlyPlan !== entitlementPlan) return;
+  const totals = useMemo(
+    () => ({
+      photos: mixLines.filter((line) => line.type === "photo").reduce((sum, line) => sum + line.quantity, 0),
+      videos: mixLines.filter((line) => line.type === "video").reduce((sum, line) => sum + line.quantity, 0),
+    }),
+    [mixLines]
+  );
+
+  const canSave =
+    !!planner &&
+    mixLines.length > 0 &&
+    mixLines.every((line) => line.prompt.trim().length > 0) &&
+    totals.photos <= planner.plan.allowance.photos &&
+    totals.videos <= planner.plan.allowance.videos;
+
+  async function saveRecurringMix() {
+    if (!canSave) return;
+    setSaving(true);
+    setError("");
     const payload = {
-      monthlyPlan,
-      preset,
-      allocationRows,
+      preset: "custom",
+      allocationRows: mixLines.map((line) => ({
+        id: line.id,
+        kind: line.type,
+        count: line.quantity,
+        direction: line.prompt,
+      })),
     };
-    try {
-      window.localStorage.setItem(LOCAL_KEY, JSON.stringify(payload));
-    } catch {}
-    void (async () => {
-      const response = await fetch("/api/me/request-preferences", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) return;
-      setHasSavedPreferences(true);
-      setIsEditing(false);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2200);
-    })();
-  };
-
-  const readOnly = hasSavedPreferences && !isEditing;
-  const allocationHealth = useMemo(() => {
-    if (selectedPhotos === allowedPhotos && selectedVideos === allowedVideos) return "balanced";
-    return "needs_attention";
-  }, [selectedPhotos, selectedVideos, allowedPhotos, allowedVideos]);
+    const response = await fetch("/api/me/request-preferences", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const result = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      appliesTo?: "next_cycle" | "following_cycle";
+      cutoffAt?: string | null;
+    };
+    if (!response.ok) {
+      setError(result.error ?? "Could not save recurring mix.");
+      setSaving(false);
+      return;
+    }
+    setLoading(true);
+    setSavedState({ appliesTo: result.appliesTo, cutoffAt: result.cutoffAt });
+    setSaving(false);
+    await loadPlanner();
+  }
 
   return (
     <div className="planner-stack">
       <article className="premium-card planner-hero">
-        <h2 style={{ marginTop: 0 }}>AI Generation Planning Console</h2>
+        <h2 style={{ marginTop: 0 }}>Monthly request planner</h2>
         <p className="planner-copy">
-          Choose a default mix or customize exactly how your monthly photo/video allotment should be used. You
-          can type your own directions in every text box.
+          These requests repeat every month unless updated at least 5 days before renewal.
         </p>
         <p className="planner-copy">
-          Monthly plans repeat the same saved allocation each cycle unless you update preferences at least 5
-          days before your next generation cycle.
+          If changes are made too late, they apply to the following cycle.
         </p>
         <p className="planner-copy" style={{ marginBottom: 0 }}>
-          Generation delivery target: 2 days after request submission.
+          Your next cycle generates fresh content based on your saved recurring request mix.
         </p>
       </article>
 
-      <section className="planner-summary-grid">
-        {hydrating ? (
-          Array.from({ length: 3 }).map((_, idx) => (
-            <article className="premium-card" key={`planner-summary-skeleton-${idx}`}>
-              <div className="skeleton-line w-30" />
+      {loading ? (
+        <section className="planner-summary-grid">
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <article className="premium-card" key={`requests-skeleton-${idx}`}>
+              <div className="skeleton-line w-40" />
               <div className="skeleton-line w-70" />
-              <div className="skeleton-line w-50" />
             </article>
-          ))
-        ) : (
-          <>
+          ))}
+        </section>
+      ) : (
+        <>
+          <section className="planner-summary-grid">
             <article className="premium-card">
               <div className="status-label">Current plan</div>
-              <div className="status-value">{entitlementLabel}</div>
-              <div className="muted">Auto-locked from active subscription</div>
-            </article>
-            <article className="premium-card">
-              <div className="status-label">Allocation health</div>
-              <div className="status-value">{allocationHealth === "balanced" ? "Balanced" : "Needs attention"}</div>
+              <div className="status-value">{planner?.plan.name}</div>
               <div className="muted">
-                {selectedPhotos}/{allowedPhotos} photos · {selectedVideos}/{allowedVideos} videos
+                {planner?.plan.allowance.photos} photos + {planner?.plan.allowance.videos} videos / month
+              </div>
+              <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <span className="badge">{planner?.plan.status}</span>
+                <span className="badge badge-muted">{planner?.plan.billingCadence}</span>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <PremiumButton href="/upgrade" variant="secondary">
+                  Upgrade plan
+                </PremiumButton>
               </div>
             </article>
             <article className="premium-card">
-              <div className="status-label">Saved profile</div>
-              <div className="status-value">{hasSavedPreferences ? "Saved and reusable" : "Draft not saved"}</div>
-              <div className="muted">Use edit mode anytime to refine next cycle</div>
+              <div className="status-label">Next renewal date</div>
+              <div className="status-value">
+                {planner?.plan.nextRenewalAt ? new Date(planner.plan.nextRenewalAt).toLocaleString() : "Unavailable"}
+              </div>
+              <div className="muted">
+                Edits apply to{" "}
+                {savedState?.appliesTo === "following_cycle"
+                  ? "the following cycle"
+                  : planner?.timing.editsApplyTo === "following_cycle"
+                    ? "the following cycle"
+                    : "the next cycle"}
+              </div>
             </article>
-          </>
-        )}
-      </section>
+            <article className="premium-card">
+              <div className="status-label">Upgrade</div>
+              <div className="status-value">Need more volume?</div>
+              <div className="muted">Move to a higher allowance with Stripe proration preview.</div>
+              <div style={{ marginTop: 12 }}>
+                <PremiumButton href="/upgrade">Open upgrade flow</PremiumButton>
+              </div>
+            </article>
+          </section>
 
-      <article className="premium-card planner-config">
-        <h3 style={{ marginTop: 0 }}>Configure monthly output mix</h3>
+          <article className="premium-card planner-config">
+            <h3 style={{ marginTop: 0 }}>Remaining this cycle</h3>
+            <div className="planner-summary-grid">
+              <div>
+                <div className="status-label">Photos remaining</div>
+                <div className="status-value">
+                  {planner?.cycleUsage.photosRemaining}/{planner?.plan.allowance.photos}
+                </div>
+                <div className="status-progress" style={{ marginTop: 10 }}>
+                  <div
+                    className="status-progress-fill"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.max(
+                          0,
+                          ((planner?.cycleUsage.photosUsed ?? 0) / Math.max(1, planner?.plan.allowance.photos ?? 1)) * 100
+                        )
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="status-label">Videos remaining</div>
+                <div className="status-value">
+                  {planner?.cycleUsage.videosRemaining}/{planner?.plan.allowance.videos}
+                </div>
+                <div className="status-progress" style={{ marginTop: 10 }}>
+                  <div
+                    className="status-progress-fill"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.max(
+                          0,
+                          ((planner?.cycleUsage.videosUsed ?? 0) / Math.max(1, planner?.plan.allowance.videos ?? 1)) * 100
+                        )
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </article>
 
-        <div className="planner-config-grid">
-          <label className="wizard-label">
-            Monthly allotment
-            <select
-              className="input"
-              value={monthlyPlan}
-              onChange={(event) => setMonthlyPlan(event.target.value)}
-              disabled
-            >
-              <option value="45-5">45 photos + 5 videos</option>
-              <option value="90-15">90 photos + 15 videos</option>
-              <option value="200-35">200 photos + 35 videos</option>
-            </select>
-            <small style={{ display: "block", marginTop: 6, opacity: 0.75 }}>
-              Auto-filled from {entitlementLabel}.
-            </small>
-            <small style={{ display: "block", marginTop: 4, opacity: 0.75 }}>
-              Need a different allotment? Upgrade your plan in Billing.
-            </small>
-          </label>
-          <label className="wizard-label">
-            Default generation option
-            <div className="preset-segments">
-              {[
-                { key: "balanced", label: "Balanced" },
-                { key: "social", label: "Social-first" },
-                { key: "custom", label: "Custom" },
-              ].map((presetOpt) => (
-                <button
-                  key={presetOpt.key}
-                  type="button"
-                  className={`tab ${preset === presetOpt.key ? "tab-active" : ""}`.trim()}
-                  onClick={() => setPresetRows(presetOpt.key)}
-                  disabled={readOnly}
-                >
-                  {presetOpt.label}
-                </button>
+          <article className="premium-card planner-config">
+            <h3 style={{ marginTop: 0 }}>Recurring monthly mix</h3>
+            <p className="planner-copy">
+              Build your recurring request mix. The same themes/scenes/styles are regenerated as fresh content every cycle.
+            </p>
+            <div className="planner-line-items">
+              {mixLines.map((line) => (
+                <div key={line.id} className="planner-line-item">
+                  <select
+                    className="input"
+                    value={line.type}
+                    onChange={(event) => updateRow(line.id, { type: event.target.value as "photo" | "video" })}
+                  >
+                    <option value="photo">Photo</option>
+                    <option value="video">Video</option>
+                  </select>
+                  <input
+                    className="input"
+                    type="number"
+                    min={1}
+                    value={line.quantity}
+                    onChange={(event) => updateRow(line.id, { quantity: Math.max(1, Number(event.target.value) || 1) })}
+                  />
+                  <input
+                    className="input"
+                    value={line.prompt}
+                    placeholder="Scene/style prompt"
+                    onChange={(event) => updateRow(line.id, { prompt: event.target.value })}
+                  />
+                  <button type="button" onClick={() => removeRow(line.id)}>
+                    Remove
+                  </button>
+                </div>
               ))}
             </div>
-          </label>
-        </div>
-        {monthlyPlan !== entitlementPlan ? (
-          <p style={{ color: "var(--danger)", marginTop: 8 }}>
-            This allotment is above your current package. Upgrade your subscription in Billing to use this
-            amount.
-          </p>
-        ) : null}
-
-        <div className="planner-line-items">
-          {allocationRows.map((row) => (
-            <div
-              key={row.id}
-              className="planner-line-item"
-            >
-              <select
-                className="input"
-                value={row.kind}
-                onChange={(event) => updateRow(row.id, { kind: event.target.value as "photo" | "video" })}
-                disabled={readOnly}
-              >
-                <option value="photo">Photo</option>
-                <option value="video">Video</option>
-              </select>
-              <input
-                className="input"
-                type="number"
-                min={1}
-                value={row.count}
-                onChange={(event) => updateRow(row.id, { count: Math.max(1, Number(event.target.value) || 1) })}
-                disabled={readOnly}
-              />
-              <input
-                className="input"
-                placeholder='Direction or custom prompt (example: "10 with purple hair on the beach")'
-                value={row.direction}
-                onChange={(event) => updateRow(row.id, { direction: event.target.value })}
-                disabled={readOnly}
-              />
-              <button type="button" onClick={() => removeRow(row.id)} disabled={readOnly}>
-                Delete
+            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+              <button className="btn btn-ghost" type="button" onClick={addRow}>
+                Add line
               </button>
+              <button className="btn btn-primary" type="button" onClick={saveRecurringMix} disabled={!canSave || saving}>
+                {saving ? "Saving..." : "Save recurring preferences"}
+              </button>
+              <PremiumButton href="/upgrade" variant="secondary">
+                Upgrade plan
+              </PremiumButton>
             </div>
-          ))}
-        </div>
+            <div style={{ marginTop: 10, opacity: 0.9 }}>
+              Selected: {totals.photos}/{planner?.plan.allowance.photos ?? 0} photos · {totals.videos}/
+              {planner?.plan.allowance.videos ?? 0} videos
+            </div>
+            {!canSave ? (
+              <p style={{ color: "var(--danger)", marginBottom: 0 }}>
+                Ensure each line has prompt text and totals stay within your current plan allowance.
+              </p>
+            ) : null}
+          </article>
 
-        <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <button className="btn btn-ghost" type="button" onClick={addRow} disabled={readOnly}>
-            Add line item
-          </button>
-          {readOnly ? (
-            <button className="btn btn-secondary" type="button" onClick={() => setIsEditing(true)}>
-              Edit preferences
-            </button>
-          ) : (
-            <button className="btn btn-primary" type="button" onClick={savePlan} disabled={monthlyPlan !== entitlementPlan}>
-              {hasSavedPreferences ? "Re-save preferences" : "Save preferences"}
-            </button>
-          )}
-          {readOnly ? <span className="badge">Completed</span> : null}
-          {saved ? <span style={{ color: "var(--success)" }}>Saved.</span> : null}
-        </div>
+          <article className="premium-card">
+            <h3 style={{ marginTop: 0 }}>Timing rule notice</h3>
+            <p className="planner-copy">
+              Updates submitted 5+ days before renewal apply to the next cycle. Later updates apply to the following cycle.
+            </p>
+            <p className="planner-copy" style={{ marginBottom: 0 }}>
+              Renewal cutoff:{" "}
+              {savedState?.cutoffAt
+                ? new Date(savedState.cutoffAt).toLocaleString()
+                : planner?.timing.cutoffAt
+                  ? new Date(planner.timing.cutoffAt).toLocaleString()
+                  : "Unavailable"}
+            </p>
+          </article>
 
-        <div style={{ marginTop: 10, opacity: 0.9 }}>
-          Selected: {selectedPhotos}/{allowedPhotos} photos and {selectedVideos}/{allowedVideos} videos.
-        </div>
-        {selectedPhotos !== allowedPhotos || selectedVideos !== allowedVideos ? (
-          <p style={{ color: "var(--danger)", marginBottom: 0 }}>
-            Your allocation does not match your selected monthly allotment yet. Adjust counts until totals match.
-          </p>
-        ) : null}
-      </article>
-
-      {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
-
-      {loadingRequests || hydrating ? (
-        <article className="premium-card">
-          <div className="skeleton-line w-40" />
-          <div className="skeleton-line w-80" />
-          <div className="skeleton-line w-60" />
-        </article>
-      ) : rows.length === 0 ? (
-        <article className="premium-card">
-          <div className="empty-visual">P</div>
-          <h3 style={{ marginTop: 0 }}>No generation requests yet</h3>
-          <p className="planner-copy" style={{ margin: 0 }}>
-            Upload training photos first, then save your allocation profile to queue your first premium run.
-          </p>
-        </article>
-      ) : (
-        <div style={{ display: "grid", gap: 10 }}>
-          {rows.map((row, idx) => (
-            <motion.article
-              key={row.id}
-              className="premium-card planner-status-card"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.22, delay: idx * 0.04 }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                <strong>{row.scene_preset}</strong>
-                <span className="badge">{row.status}</span>
+          {planner?.recurringMix.lines.length ? (
+            <article className="premium-card">
+              <h3 style={{ marginTop: 0 }}>Currently saved recurring mix</h3>
+              <div className="planner-line-items">
+                {planner.recurringMix.lines.map((line) => (
+                  <div className="planner-line-item" key={`saved-${line.id}`}>
+                    <span className="badge">{line.type}</span>
+                    <strong>{line.quantity}</strong>
+                    <span>{line.prompt}</span>
+                  </div>
+                ))}
               </div>
-              <div style={{ marginTop: 6, opacity: 0.85 }}>
-                Progress: {row.progress_done}/{row.progress_total}
-              </div>
-              <div className="status-progress" style={{ marginTop: 8 }}>
-                <motion.div
-                  className="status-progress-fill"
-                  initial={{ width: 0 }}
-                  animate={{
-                    width:
-                      row.progress_total > 0
-                        ? `${Math.min(100, Math.max(0, (row.progress_done / row.progress_total) * 100))}%`
-                        : "0%",
-                  }}
-                  transition={{ duration: 0.45, ease: "easeOut" }}
-                />
-              </div>
-              <div style={{ marginTop: 6, opacity: 0.7, fontSize: 13 }}>
-                {new Date(row.created_at).toLocaleString()}
-              </div>
-            </motion.article>
-          ))}
-        </div>
+            </article>
+          ) : null}
+        </>
       )}
+      {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
     </div>
   );
 }
