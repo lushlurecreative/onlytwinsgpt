@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 export default async function UpgradePage() {
   await requireActiveSubscriber("/upgrade");
   return (
-    <main className="control-route-shell">
+    <main className="upgrade-route-shell">
       <UpgradePlanClient />
     </main>
   );

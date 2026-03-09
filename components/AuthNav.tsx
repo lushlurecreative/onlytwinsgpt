@@ -82,15 +82,23 @@ export default function AuthNav() {
           <div className="user-menu-head">
             <div className="user-menu-email">{user.email ?? "Account"}</div>
           </div>
-          <Link href="/billing" className="user-menu-item" onClick={() => setOpen(false)}>
-            Account
+          <div className="user-menu-divider" />
+          <Link href="/dashboard" className="user-menu-item" onClick={() => setOpen(false)}>
+            Dashboard
           </Link>
           <Link href="/requests" className="user-menu-item" onClick={() => setOpen(false)}>
             Requests
           </Link>
+          <Link href="/billing" className="user-menu-item" onClick={() => setOpen(false)}>
+            Billing
+          </Link>
           <Link href="/upgrade" className="user-menu-item" onClick={() => setOpen(false)}>
             Upgrade plan
           </Link>
+          <Link href="/me" className="user-menu-item" onClick={() => setOpen(false)}>
+            Account
+          </Link>
+          <div className="user-menu-divider" />
           <button onClick={onLogout} className="user-menu-item danger" type="button">
             Log out
           </button>

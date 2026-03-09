@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import PremiumCard from "@/components/PremiumCard";
 import BillingPortalButton from "./BillingPortalButton";
+import { getPlanKeyForStripePriceId } from "@/lib/plan-entitlements";
 
 type BillingSubscriptionRow = {
   id: string;
@@ -14,7 +15,6 @@ type BillingSubscriptionRow = {
   created_at: string;
   stripe_subscription_id: string | null;
   stripe_price_id: string | null;
-  stripe_customer_id?: string | null;
 };
 
 function statusBadge(status: string) {
@@ -60,32 +60,38 @@ export default async function BillingPage() {
   const { data, error } = await admin
     .from("subscriptions")
     .select(
-      "id, creator_id, status, current_period_end, canceled_at, created_at, stripe_subscription_id, stripe_price_id, stripe_customer_id"
+      "id, creator_id, status, current_period_end, canceled_at, created_at, stripe_subscription_id, stripe_price_id"
     )
     .eq("subscriber_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100);
 
-  let rows = (data ?? []) as BillingSubscriptionRow[];
-  if (!error && rows.length === 0) {
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("stripe_customer_id")
-      .eq("id", user.id)
-      .maybeSingle();
-    const customerId = (profile as { stripe_customer_id?: string | null } | null)?.stripe_customer_id ?? null;
-    if (customerId) {
-      const { data: byCustomer } = await admin
-        .from("subscriptions")
-        .select(
-          "id, creator_id, status, current_period_end, canceled_at, created_at, stripe_subscription_id, stripe_price_id, stripe_customer_id"
-        )
-        .eq("stripe_customer_id", customerId)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      rows = (byCustomer ?? []) as BillingSubscriptionRow[];
-    }
-  }
+  const rows = (data ?? []) as BillingSubscriptionRow[];
+  const latest = rows[0] ?? null;
+  const planKey = getPlanKeyForStripePriceId(latest?.stripe_price_id ?? null);
+  const planName =
+    planKey === "starter"
+      ? "Starter"
+      : planKey === "professional"
+        ? "Growth"
+        : planKey === "elite"
+          ? "Scale"
+          : "No active plan";
+  const allowanceSummary =
+    planKey === "starter"
+      ? "Includes 45 photos and 5 videos per month"
+      : planKey === "professional"
+        ? "Includes 90 photos and 15 videos per month"
+        : planKey === "elite"
+          ? "Includes 200 photos and 35 videos per month"
+          : "No monthly allowance available";
+  const renewalLabel = latest?.current_period_end
+    ? `Renews ${new Date(latest.current_period_end).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })}`
+    : "Renewal date unavailable";
   const activeCount = rows.filter((s) => s.status === "active").length;
   const trialingCount = rows.filter((s) => s.status === "trialing").length;
   const pastDueCount = rows.filter((s) => s.status === "past_due").length;
@@ -95,8 +101,24 @@ export default async function BillingPage() {
       <PremiumCard>
         <h1 style={{ marginTop: 0, fontSize: 34, letterSpacing: "-0.02em" }}>Account & Billing</h1>
         <p className="section-copy" style={{ marginTop: 8 }}>
-          Manage plan state, subscription health, and Stripe billing controls.
+          Review your current plan, renewal date, and billing controls.
         </p>
+        {!error ? (
+          <div
+            style={{
+              marginTop: 16,
+              padding: 16,
+              borderRadius: 16,
+              border: "1px solid var(--line)",
+              background: "rgba(255,255,255,0.74)",
+            }}
+          >
+            <p style={{ margin: 0, opacity: 0.75 }}>Your current plan</p>
+            <h2 style={{ margin: "6px 0 6px", fontSize: 24 }}>{planName}</h2>
+            <p style={{ margin: "0 0 4px", opacity: 0.82 }}>{renewalLabel}</p>
+            <p style={{ margin: 0, opacity: 0.82 }}>{allowanceSummary}</p>
+          </div>
+        ) : null}
         {!error ? (
           <div className="feature-grid" style={{ marginTop: 16 }}>
             <PremiumCard title="Active" subtitle={`${activeCount} subscription(s)`} />
@@ -161,7 +183,7 @@ export default async function BillingPage() {
       {!error ? (
         <PremiumCard style={{ marginTop: 14 }}>
           <BillingPortalButton />
-          <p style={{ marginTop: 14 }}>Use the billing portal to update payment method, invoices, and subscription status.</p>
+          <p style={{ marginTop: 14 }}>Use billing settings to update your payment method, invoices, and subscription details.</p>
         </PremiumCard>
       ) : null}
     </main>

@@ -5,6 +5,7 @@ import AuthNav from "@/components/AuthNav";
 import PrimaryNav from "@/components/PrimaryNav";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import PageTransition from "@/components/PageTransition";
+import OnlyTwinsAssistant from "@/components/OnlyTwinsAssistant";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata = {
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="main">
             <PageTransition>{children}</PageTransition>
           </main>
+          <OnlyTwinsAssistant />
 
           <footer className="footer">
             <div className="footer-grid">
