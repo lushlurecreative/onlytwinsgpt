@@ -161,9 +161,7 @@ export default async function BillingPage() {
       {!error ? (
         <PremiumCard style={{ marginTop: 14 }}>
           <BillingPortalButton />
-          <p style={{ marginTop: 14 }}>
-            Need changes? Open checkout again from any creator feed to renew or re-subscribe.
-          </p>
+          <p style={{ marginTop: 14 }}>Use the billing portal to update payment method, invoices, and subscription status.</p>
         </PremiumCard>
       ) : null}
     </main>

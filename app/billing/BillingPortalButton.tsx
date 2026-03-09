@@ -29,7 +29,7 @@ export default function BillingPortalButton() {
   return (
     <div style={{ marginTop: 10 }}>
       <PremiumButton onClick={openPortal} loading={loading}>
-        Manage Billing in Stripe
+        Open Stripe Billing Portal
       </PremiumButton>
       {error ? <p style={{ color: "var(--danger)", marginTop: 6 }}>{error}</p> : null}
     </div>

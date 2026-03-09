@@ -15,14 +15,14 @@ type AICapabilitiesGalleryProps = {
 
 function matchCategory(item: GalleryItem, selectedCategory: GalleryCategory) {
   if (selectedCategory === "All") return true;
-  if (selectedCategory === "SFW") return !item.nsfw;
-  if (selectedCategory === "NSFW") return item.nsfw;
+  if (selectedCategory === "SFW") return !isActuallyNSFW(item);
+  if (selectedCategory === "NSFW") return isActuallyNSFW(item);
   if (item.title === selectedCategory) return true;
   return item.tags.includes(selectedCategory);
 }
 
 function isActuallyNSFW(item: GalleryItem) {
-  return item.nsfw && (item.title === "NSFW" || item.tags.includes("NSFW"));
+  return item.title === "NSFW";
 }
 
 export default function AICapabilitiesGallery({
@@ -134,6 +134,9 @@ export default function AICapabilitiesGallery({
                       src={item.src}
                       className={`ai-gallery-image ${loadedGrid[index] ? "is-loaded" : ""}`.trim()}
                       muted
+                      autoPlay
+                      loop
+                      controls
                       playsInline
                       preload="metadata"
                       onLoadedData={() => setLoadedGrid((prev) => ({ ...prev, [index]: true }))}

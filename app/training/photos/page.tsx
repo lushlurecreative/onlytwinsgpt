@@ -37,22 +37,14 @@ export default async function TrainingPhotosPage() {
       <section style={{ marginTop: 16 }}>
         <PremiumCard>
           <h2 style={{ marginTop: 0 }}>Next Steps</h2>
-          <ol style={{ marginBottom: 0 }}>
-            <li>Set preferences</li>
-            <li>Upload training images</li>
-            <li>Choose selection of generation preferences</li>
-          </ol>
           <p style={{ marginTop: 12, marginBottom: 0 }}>
             Once your photos are uploaded, we review quality and begin training your twin pipeline.
           </p>
         </PremiumCard>
       </section>
 
-      <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <PremiumButton href="/onboarding/intake">Set Preferences</PremiumButton>
-        <PremiumButton href="/requests" variant="secondary">
-          Choose Generation Preferences
-        </PremiumButton>
+      <div style={{ marginTop: 16 }}>
+        <PremiumButton href="/requests">Next Step: Choose Generation Preferences</PremiumButton>
       </div>
     </main>
   );

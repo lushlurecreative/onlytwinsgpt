@@ -134,6 +134,11 @@ export default function StartDashboardClient() {
     };
 
     void load();
+    const refreshMs = 17000;
+    const timer = window.setInterval(() => {
+      void load();
+    }, refreshMs);
+    return () => window.clearInterval(timer);
   }, []);
 
   const completedCount = useMemo(

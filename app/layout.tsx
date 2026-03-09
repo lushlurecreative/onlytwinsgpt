@@ -69,7 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </div>
             <p className="copyright">
-              <BrandName /> © {new Date().getFullYear()}
+              <BrandName /> © 2023
             </p>
           </footer>
         </div>
