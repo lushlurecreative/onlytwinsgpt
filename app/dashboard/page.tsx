@@ -1,9 +1,5 @@
-import { requireActiveSubscriber } from "@/lib/require-active-subscriber";
-import StartDashboardClient from "@/app/start/StartDashboardClient";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function DashboardPage() {
-  await requireActiveSubscriber("/dashboard");
-  return <StartDashboardClient />;
+export default function DashboardPage() {
+  redirect("/start");
 }
