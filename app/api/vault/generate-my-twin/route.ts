@@ -9,7 +9,9 @@ import {
 } from "@/lib/generation-jobs";
 import { dispatchTrainingJobToRunPod } from "@/lib/runpod";
 import { sendAlert } from "@/lib/observability";
-import { createGenerationRequestWithUsage } from "@/lib/generation-request-intake";
+import { createCanonicalCustomerGenerationBatch } from "@/lib/customer-generation";
+import { getCurrentSubscriptionSummary } from "@/lib/request-planner";
+import { processPendingCustomerGeneration } from "@/lib/customer-generation-processor";
 
 const MIN_PHOTOS_TRAINING = 30;
 const MAX_PHOTOS_TRAINING = 60;
@@ -46,7 +48,6 @@ export async function POST(request: Request) {
   const sceneCounts = body.sceneCounts ?? { beach: 45 };
   const contentMode = body.contentMode === "mature" ? "mature" : "sfw";
   const videoCount = Math.max(0, Math.min(20, Number(body.videoCount ?? 0)));
-  const requestIdempotencyBase = crypto.randomUUID();
 
   const subjectId = await getApprovedSubjectIdForUser(user.id);
   if (!subjectId) {
@@ -118,54 +119,58 @@ export async function POST(request: Request) {
     }
   }
 
-  const requestIds: string[] = [];
   const sceneKeys = Object.keys(sceneCounts).filter((k) => Number(sceneCounts[k]) > 0);
-  for (const sceneKey of sceneKeys) {
+  const requestLines = sceneKeys.flatMap((sceneKey) => {
     const scene = getScenePresetByKey(sceneKey);
-    if (!scene) continue;
+    if (!scene) return [];
     const imageCount = Math.max(1, Math.min(250, Number(sceneCounts[sceneKey]) ?? 45));
-    const creation = await createGenerationRequestWithUsage(admin, {
-      userId: user.id,
-      samplePaths,
-      scenePreset: scene.key,
-      imageCount,
-      videoCount,
-      contentMode,
-      idempotencyKey: `${requestIdempotencyBase}:${scene.key}`,
+    return [
+      {
+        id: crypto.randomUUID(),
+        kind: "photo",
+        count: imageCount,
+        direction: `${scene.label} ${contentMode === "mature" ? "mature" : "sfw"} set`,
+      },
+    ];
+  });
+  if (videoCount > 0 && sceneKeys.length > 0) {
+    requestLines.push({
+      id: crypto.randomUUID(),
+      kind: "video",
+      count: videoCount,
+      direction: "Short social reel with natural camera movement",
     });
-    if (!creation.ok) {
-      if (creation.code?.startsWith("USAGE_LIMIT_EXCEEDED")) {
-        return NextResponse.json(
-          {
-            error: creation.error,
-            code: creation.code,
-          },
-          { status: creation.status }
-        );
-      }
-      continue;
-    }
-
-    const requestId = String(creation.request.id ?? "");
-    if (requestId) {
-      requestIds.push(requestId);
-      await sendAlert("generation_request_submitted", {
-        request_id: requestId,
-        user_id: user.id,
-        scene: scene.key,
-        content_mode: contentMode,
-        image_count: imageCount,
-        video_count: videoCount,
-      });
-    }
   }
-
-  if (requestIds.length === 0) {
+  if (requestLines.length === 0) {
     return NextResponse.json(
       { error: "No valid scenes with count > 0. Choose at least one scene and quantity." },
       { status: 400 }
     );
   }
+  const summary = await getCurrentSubscriptionSummary(admin, user.id);
+  const cycleEndIso = summary.nextRenewalAt ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const cycleStartIso = new Date(new Date(cycleEndIso).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const creation = await createCanonicalCustomerGenerationBatch(admin, {
+    userId: user.id,
+    rawLines: requestLines,
+    samplePaths,
+    source: "vault_generate",
+    idempotencyKey: `vault-generate:${user.id}:${cycleStartIso.slice(0, 10)}`,
+    cycleStartIso,
+    cycleEndIso,
+  });
+  if (!creation.ok) {
+    return NextResponse.json({ error: creation.error, code: creation.code }, { status: creation.status });
+  }
+  await sendAlert("generation_request_submitted", {
+    request_id: creation.generationRequestId,
+    user_id: user.id,
+    scene: sceneKeys.join(","),
+    content_mode: contentMode,
+    image_count: creation.totals.photos,
+    video_count: creation.totals.videos,
+  });
+  await processPendingCustomerGeneration(admin, 5);
 
   return NextResponse.json(
     {
@@ -174,7 +179,7 @@ export async function POST(request: Request) {
         ? "Training started and generation requests submitted. We'll notify you when your vault is ready."
         : "Generation requests submitted. We'll notify you when your vault is ready.",
       training_started: needsTraining,
-      request_ids: requestIds,
+      request_ids: [creation.generationRequestId],
     },
     { status: 201 }
   );

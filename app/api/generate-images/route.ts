@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getScenePresetByKey } from "@/lib/scene-presets";
-import {
-  getApprovedSubjectIdForUser,
-  getLoraReferenceForSubject,
-  getPresetIdBySceneKey,
-  createGenerationJob,
-  pollAllGenerationJobsUntilDone,
-} from "@/lib/generation-jobs";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { createCanonicalCustomerGenerationBatch } from "@/lib/customer-generation";
+import { getCurrentSubscriptionSummary } from "@/lib/request-planner";
+import { processPendingCustomerGeneration } from "@/lib/customer-generation-processor";
 
 type GenerateBody = {
   sourcePath?: string;
@@ -19,6 +16,7 @@ type GenerateBody = {
 
 export async function POST(request: Request) {
   const supabase = await createClient();
+  const admin = getSupabaseAdmin();
   const {
     data: { user },
     error: userError,
@@ -46,78 +44,43 @@ export async function POST(request: Request) {
 
   const count = Math.max(1, Math.min(10, Number(body.count ?? 1)));
   const visibility = body.visibility === "subscribers" ? "subscribers" : "public";
-
-  const subjectId = await getApprovedSubjectIdForUser(user.id);
-  if (!subjectId) {
-    return NextResponse.json(
-      { error: "No approved subject. Consent required for generation." },
-      { status: 400 }
-    );
+  const { data: uploadList } = await admin.storage.from("uploads").list(`${user.id}/training`, {
+    limit: 100,
+    offset: 0,
+    sortBy: { column: "created_at", order: "desc" },
+  });
+  const samplePaths = (uploadList ?? [])
+    .map((obj) => `${user.id}/training/${obj.name}`)
+    .filter((path) => /\.(jpg|jpeg|png|webp|gif)$/i.test(path));
+  if (!samplePaths.includes(sourcePath)) {
+    samplePaths.unshift(sourcePath);
   }
-
-  const presetId = await getPresetIdBySceneKey(scene.key);
-  if (!presetId) {
-    return NextResponse.json({ error: "Preset not found." }, { status: 400 });
+  const normalizedSamples = Array.from(new Set(samplePaths)).slice(0, 20);
+  if (normalizedSamples.length < 10) {
+    return NextResponse.json({ error: "Upload at least 10 training photos before generating." }, { status: 400 });
   }
-
-  const loraRef = await getLoraReferenceForSubject(subjectId);
-  const jobIds: string[] = [];
-  for (let i = 0; i < count; i++) {
-    const id = await createGenerationJob({
-      subject_id: subjectId,
-      preset_id: presetId,
-      reference_image_path: sourcePath,
-      lora_model_reference: loraRef,
-      generation_request_id: null,
-    });
-    if (id) jobIds.push(id);
+  const summary = await getCurrentSubscriptionSummary(admin, user.id);
+  const cycleEndIso = summary.nextRenewalAt ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const cycleStartIso = new Date(new Date(cycleEndIso).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const create = await createCanonicalCustomerGenerationBatch(admin, {
+    userId: user.id,
+    rawLines: [
+      {
+        id: crypto.randomUUID(),
+        kind: "photo",
+        count,
+        direction: `${scene.label} ${visibility} scene`,
+      },
+    ],
+    samplePaths: normalizedSamples,
+    source: "generate_images",
+    idempotencyKey: `generate-images:${user.id}:${cycleStartIso.slice(0, 10)}:${scene.key}`,
+    cycleStartIso,
+    cycleEndIso,
+  });
+  if (!create.ok) {
+    return NextResponse.json({ error: create.error, code: create.code }, { status: create.status });
   }
-
-  if (jobIds.length === 0) {
-    return NextResponse.json({ error: "Failed to create generation jobs" }, { status: 500 });
-  }
-
-  const { output_paths, allOk, firstError } = await pollAllGenerationJobsUntilDone(jobIds);
-  if (!allOk || output_paths.length === 0) {
-    return NextResponse.json(
-      { error: firstError ?? "Generation failed or timed out. Ensure the RunPod worker is running." },
-      { status: 500 }
-    );
-  }
-
-  const caption = `OnlyTwins ${scene.label} set`;
-  const created: Array<{ path: string; signedUrl: string | null; postId: string }> = [];
-
-  for (const objectPath of output_paths) {
-    const { data: post, error: postError } = await supabase
-      .from("posts")
-      .insert({
-        creator_id: user.id,
-        storage_path: objectPath,
-        caption,
-        visibility,
-      })
-      .select("id")
-      .single();
-
-    if (postError || !post?.id) {
-      continue;
-    }
-
-    const { data: signedData } = await supabase.storage
-      .from("uploads")
-      .createSignedUrl(objectPath, 60 * 60);
-
-    created.push({
-      path: objectPath,
-      signedUrl: signedData?.signedUrl ?? null,
-      postId: post.id,
-    });
-  }
-
-  if (created.length === 0) {
-    return NextResponse.json({ error: "Failed to create post records" }, { status: 500 });
-  }
-
-  return NextResponse.json({ generated: created }, { status: 201 });
+  await processPendingCustomerGeneration(admin, 5);
+  return NextResponse.json({ requestId: create.generationRequestId, queued: true }, { status: 201 });
 }

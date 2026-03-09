@@ -6,28 +6,13 @@ import {
   getCurrentSubscriptionSummary,
   normalizeMixLines,
 } from "@/lib/request-planner";
-import { createGenerationRequestWithUsage } from "@/lib/generation-request-intake";
+import {
+  createCanonicalCustomerGenerationBatch,
+  upsertRecurringMixForTargetCycle,
+} from "@/lib/customer-generation";
+import { processPendingCustomerGeneration } from "@/lib/customer-generation-processor";
 
 const SETTINGS_PREFIX = "request_mix:";
-
-function selectScenePreset(lines: ReturnType<typeof normalizeMixLines>) {
-  const text = lines.map((line) => line.prompt.toLowerCase()).join(" ");
-  if (text.includes("beach")) return "beach";
-  if (text.includes("camp") || text.includes("outdoor")) return "camping";
-  if (text.includes("coffee")) return "coffee_shop";
-  if (text.includes("swim")) return "swimsuit_try_on";
-  if (text.includes("street")) return "street_style";
-  if (text.includes("night")) return "nightlife";
-  if (text.includes("city")) return "city";
-  if (text.includes("home") || text.includes("bedroom")) return "casual_home";
-  return "gym";
-}
-
-function inferContentMode(lines: ReturnType<typeof normalizeMixLines>): "sfw" | "mature" {
-  const text = lines.map((line) => line.prompt.toLowerCase()).join(" ");
-  if (text.includes("nsfw") || text.includes("adult") || text.includes("explicit")) return "mature";
-  return "sfw";
-}
 
 async function getUserId() {
   const session = await createClient();
@@ -151,7 +136,8 @@ export async function PUT(request: Request) {
     ? new Date(nextRenewalAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : "your next cycle";
 
-  const eligibleStatus = ["active", "trialing"].includes(String(summary.status ?? "").toLowerCase());
+  const eligibleStatus = ["active", "trialing", "past_due"].includes(String(summary.status ?? "").toLowerCase());
+  const recurringTarget = await upsertRecurringMixForTargetCycle(admin, userId, lines, nextRenewalAt);
   if (!eligibleStatus) {
     generationState = "saved_pending_eligibility";
     generationMessage = "Saved. Your plan is not currently eligible for generation. Update billing to resume queueing.";
@@ -181,20 +167,21 @@ export async function PUT(request: Request) {
         generationState = "current_cycle_already_queued";
         generationMessage = `Saved. Current cycle already queued. Your updated mix is set for ${nextRenewalLabel}.`;
       } else {
-        const scenePreset = selectScenePreset(lines);
-        const contentMode = inferContentMode(lines);
-        const queued = await createGenerationRequestWithUsage(admin, {
+        const queued = await createCanonicalCustomerGenerationBatch(admin, {
           userId,
+          rawLines: lines,
           samplePaths,
-          scenePreset,
-          imageCount: totalPhotos,
-          videoCount: totalVideos,
-          contentMode,
-          idempotencyKey: `request-mix-save:${userId}:${new Date().toISOString().slice(0, 10)}`,
+          source: "manual_save",
+          cycleStartIso,
+          cycleEndIso,
+          idempotencyKey: `request-mix-save:${userId}:${cycleStartIso?.slice(0, 10) ?? "cycle"}`,
         });
         if (queued.ok) {
+          await processPendingCustomerGeneration(admin, 5);
           generationState = "queued_now";
-          generationMessage = "Your monthly content batch has been queued.";
+          generationMessage = queued.autoFilledLines.length
+            ? "Your monthly content batch has been queued. We auto-filled remaining allowance for this cycle."
+            : "Your monthly content batch has been queued.";
         } else {
           generationState = "saved_for_next_cycle";
           generationMessage =
@@ -213,6 +200,7 @@ export async function PUT(request: Request) {
       cycleEffectiveAt: nextRenewalAt,
       generationState,
       generationMessage,
+      recurringMixTarget: recurringTarget,
     },
     { status: 200 }
   );

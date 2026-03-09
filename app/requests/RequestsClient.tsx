@@ -50,16 +50,26 @@ export default function RequestsClient() {
   } | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState("");
+  const [recentRequests, setRecentRequests] = useState<
+    Array<{ id: string; status: string; progress_done: number; progress_total: number; created_at: string }>
+  >([]);
 
   const loadPlanner = useCallback(async () => {
-    const response = await fetch("/api/me/request-planner");
+    const [response, requestResponse] = await Promise.all([
+      fetch("/api/me/request-planner"),
+      fetch("/api/generation-requests"),
+    ]);
     const result = (await response.json().catch(() => ({}))) as PlannerResponse & { error?: string };
+    const requestResult = (await requestResponse.json().catch(() => ({}))) as {
+      requests?: Array<{ id: string; status: string; progress_done: number; progress_total: number; created_at: string }>;
+    };
     if (!response.ok || !result.plan) {
       setError(result.error ?? "Could not load request planner.");
       setLoading(false);
       return;
     }
     setPlanner(result);
+    setRecentRequests(requestResult.requests ?? []);
     setMixLines(result.recurringMix.lines.length > 0 ? result.recurringMix.lines : [
       { id: crypto.randomUUID(), type: "photo", quantity: 10, prompt: "Gym set with premium studio lighting" },
       { id: crypto.randomUUID(), type: "photo", quantity: 15, prompt: "Bedroom/lifestyle creator shots" },
@@ -345,6 +355,33 @@ export default function RequestsClient() {
             {saveFeedback ? (
               <p style={{ color: "var(--success)", marginBottom: 0 }}>{saveFeedback}</p>
             ) : null}
+          </article>
+
+          <article className="premium-card">
+            <h3 style={{ marginTop: 0 }}>Current batch status</h3>
+            {recentRequests.length === 0 ? (
+              <p className="planner-copy" style={{ marginBottom: 0 }}>No batch queued yet.</p>
+            ) : (
+              <div className="planner-line-items">
+                {recentRequests.slice(0, 5).map((row) => (
+                  <div className="planner-line-item" key={`req-${row.id}`}>
+                    <span className="badge">
+                      {row.status === "pending"
+                        ? "Queued"
+                        : row.status === "generating"
+                          ? "Processing"
+                          : row.status === "completed"
+                            ? "Completed"
+                            : row.status === "failed"
+                              ? "Failed"
+                              : "Saved"}
+                    </span>
+                    <span>{row.progress_done}/{row.progress_total}</span>
+                    <span>{new Date(row.created_at).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </article>
 
           <article className="premium-card">

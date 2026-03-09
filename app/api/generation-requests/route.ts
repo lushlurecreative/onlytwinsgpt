@@ -4,7 +4,9 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getScenePresetByKey } from "@/lib/scene-presets";
 import { sendAlert } from "@/lib/observability";
 import { isUserSuspended } from "@/lib/suspend";
-import { createGenerationRequestWithUsage } from "@/lib/generation-request-intake";
+import { createCanonicalCustomerGenerationBatch } from "@/lib/customer-generation";
+import { getCurrentSubscriptionSummary } from "@/lib/request-planner";
+import { processPendingCustomerGeneration } from "@/lib/customer-generation-processor";
 
 type CreateBody = {
   samplePaths?: string[];
@@ -78,39 +80,57 @@ export async function POST(request: Request) {
   const imageCount = Math.max(1, Math.min(250, Number(body.imageCount ?? 10)));
   const videoCount = Math.max(0, Math.min(20, Number(body.videoCount ?? 0)));
   const contentMode = body.contentMode === "mature" ? "mature" : "sfw";
-  const creation = await createGenerationRequestWithUsage(admin, {
+  const summary = await getCurrentSubscriptionSummary(admin, user.id);
+  const cycleEndIso = summary.nextRenewalAt ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const cycleStartIso = new Date(new Date(cycleEndIso).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const lines = [
+    {
+      id: crypto.randomUUID(),
+      kind: "photo",
+      count: imageCount,
+      direction: `${scene.label} ${contentMode === "mature" ? "mature" : "sfw"} set`,
+    },
+    ...(videoCount > 0
+      ? [
+          {
+            id: crypto.randomUUID(),
+            kind: "video",
+            count: videoCount,
+            direction: `${scene.label} motion video set`,
+          },
+        ]
+      : []),
+  ];
+  const creation = await createCanonicalCustomerGenerationBatch(admin, {
     userId: user.id,
+    rawLines: lines,
     samplePaths,
-    scenePreset: scene.key,
-    imageCount,
-    videoCount,
-    contentMode,
+    source: "api_generation_request",
     idempotencyKey,
+    cycleStartIso,
+    cycleEndIso,
   });
   if (!creation.ok) {
     return NextResponse.json(
       {
         error: creation.error,
         code: creation.code,
-        subscription_status: creation.subscriptionStatus,
       },
       { status: creation.status }
     );
   }
-  const inserted = creation.request;
-  if (!inserted?.id) {
-    return NextResponse.json({ error: "Failed to create request" }, { status: 400 });
-  }
+  const insertedId = creation.generationRequestId;
 
   await sendAlert("generation_request_submitted", {
-    request_id: inserted.id,
+    request_id: insertedId,
     user_id: user.id,
     scene: scene.key,
     content_mode: contentMode,
     image_count: imageCount,
     video_count: videoCount,
   });
+  await processPendingCustomerGeneration(admin, 5);
 
-  return NextResponse.json({ request: inserted }, { status: 201 });
+  return NextResponse.json({ request: { id: insertedId } }, { status: 201 });
 }
 

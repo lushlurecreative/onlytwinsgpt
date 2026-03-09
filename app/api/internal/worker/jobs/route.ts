@@ -14,6 +14,9 @@ export async function GET(request: Request) {
   }
 
   const admin = getSupabaseAdmin();
+  const workerId = request.headers.get("x-worker-id")?.trim() || `worker-${crypto.randomUUID()}`;
+  const leaseSeconds = Math.max(30, Math.min(600, Number(request.headers.get("x-lease-seconds") || "120")));
+  const leaseUntilIso = new Date(Date.now() + leaseSeconds * 1000).toISOString();
 
   // Record worker heartbeat for global health (ignore errors if table missing)
   try {
@@ -23,7 +26,7 @@ export async function GET(request: Request) {
   }
 
   // Only return jobs not yet dispatched to RunPod Serverless (runpod_job_id is null)
-  const [trainingRes, generationRes] = await Promise.all([
+  const [trainingRes, generationCandidatesRes] = await Promise.all([
     admin
       .from("training_jobs")
       .select("id, subject_id, sample_paths, status")
@@ -36,6 +39,7 @@ export async function GET(request: Request) {
       .select("id, subject_id, preset_id, reference_image_path, lora_model_reference, controlnet_input_path, status, job_type, lead_id")
       .eq("status", "pending")
       .is("runpod_job_id", null)
+      .or("lease_until.is.null,lease_until.lt.now()")
       .order("created_at", { ascending: true })
       .limit(50),
   ]);
@@ -46,7 +50,36 @@ export async function GET(request: Request) {
     sample_paths: string[];
     status: string;
   }>;
-  const generation = (generationRes.data ?? []) as Array<{
+  const generationCandidateRows = (generationCandidatesRes.data ?? []) as Array<{
+    id: string;
+    subject_id: string | null;
+    preset_id: string;
+    reference_image_path: string;
+    lora_model_reference: string | null;
+    controlnet_input_path: string | null;
+    status: GenerationJobStatus;
+    job_type: string;
+    lead_id: string | null;
+  }>;
+  const candidateIds = generationCandidateRows.map((row) => row.id);
+  if (candidateIds.length > 0) {
+    await admin
+      .from("generation_jobs")
+      .update({ lease_owner: workerId, lease_until: leaseUntilIso })
+      .in("id", candidateIds)
+      .eq("status", "pending")
+      .is("runpod_job_id", null);
+  }
+  const { data: claimedRows } = await admin
+    .from("generation_jobs")
+    .select("id, subject_id, preset_id, reference_image_path, lora_model_reference, controlnet_input_path, status, job_type, lead_id")
+    .eq("status", "pending")
+    .is("runpod_job_id", null)
+    .eq("lease_owner", workerId)
+    .gte("lease_until", new Date().toISOString())
+    .order("created_at", { ascending: true })
+    .limit(50);
+  const generation = (claimedRows ?? []) as Array<{
     id: string;
     subject_id: string | null;
     preset_id: string;

@@ -26,6 +26,10 @@ export async function PATCH(request: Request, { params }: Params) {
   const updates: Record<string, unknown> = {};
   if (body.status) updates.status = body.status;
   if (body.output_path !== undefined) updates.output_path = body.output_path;
+  if (body.status === "running" || body.status === "completed" || body.status === "failed") {
+    updates.lease_owner = null;
+    updates.lease_until = null;
+  }
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No updates" }, { status: 400 });
   }

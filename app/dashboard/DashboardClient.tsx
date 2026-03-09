@@ -15,14 +15,16 @@ export default function DashboardClient() {
   });
   const [samplePaths, setSamplePaths] = useState<string[]>([]);
   const [planLabel, setPlanLabel] = useState("Unknown");
+  const [latestBatchStatus, setLatestBatchStatus] = useState("No batch queued");
 
   useEffect(() => {
     const load = async () => {
-      const [intakeRes, uploadsRes, prefsRes, entitlementsRes] = await Promise.all([
+      const [intakeRes, uploadsRes, prefsRes, entitlementsRes, requestsRes] = await Promise.all([
         fetch("/api/me/onboarding-intake"),
         fetch("/api/uploads"),
         fetch("/api/me/request-preferences"),
         fetch("/api/me/entitlements"),
+        fetch("/api/generation-requests"),
       ]);
 
       const intakeJson = (await intakeRes.json().catch(() => ({}))) as {
@@ -46,6 +48,9 @@ export default function DashboardClient() {
           planKey?: string;
           planName?: string;
         } | null;
+      };
+      const requestsJson = (await requestsRes.json().catch(() => ({}))) as {
+        requests?: Array<{ status?: string }>;
       };
 
       let intake = intakeJson.intake;
@@ -88,6 +93,12 @@ export default function DashboardClient() {
       } else {
         setPlanLabel(entitlementsJson.entitlements?.planName ?? "Unknown");
       }
+      const latestStatus = String(requestsJson.requests?.[0]?.status ?? "");
+      if (latestStatus === "pending") setLatestBatchStatus("Queued");
+      else if (latestStatus === "generating") setLatestBatchStatus("Processing");
+      else if (latestStatus === "completed") setLatestBatchStatus("Completed");
+      else if (latestStatus === "failed") setLatestBatchStatus("Failed");
+      else setLatestBatchStatus("No batch queued");
 
       setCompleted({
         preferences: preferencesDone,
@@ -122,6 +133,7 @@ export default function DashboardClient() {
             <span className="dashboard-inline-pill">Profile: {completed.preferences ? "Complete" : "Incomplete"}</span>
             <span className="dashboard-inline-pill">Training photos: {samplePaths.length} uploaded</span>
             <span className="dashboard-inline-pill">Plan: {planLabel}</span>
+            <span className="dashboard-inline-pill">Batch: {latestBatchStatus}</span>
           </div>
         </div>
         <div>

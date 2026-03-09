@@ -30,7 +30,21 @@ export default function StatusClient() {
       setRows(result.requests ?? []);
     };
     void load();
+    const timer = window.setInterval(() => {
+      void load();
+    }, 6000);
+    return () => window.clearInterval(timer);
   }, []);
+
+  function customerStatusLabel(status: string) {
+    if (status === "pending") return "Queued";
+    if (status === "generating") return "Processing";
+    if (status === "completed") return "Completed";
+    if (status === "failed") return "Failed";
+    if (status === "rejected") return "Needs update";
+    if (status === "approved") return "Queued";
+    return "Saved";
+  }
 
   if (error) return <p style={{ color: "var(--danger)" }}>{error}</p>;
 
@@ -57,7 +71,7 @@ export default function StatusClient() {
         >
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
             <strong>{row.scene_preset}</strong>
-            <span className="badge">{row.status}</span>
+            <span className="badge">{customerStatusLabel(row.status)}</span>
           </div>
           <div style={{ marginTop: 6, opacity: 0.85 }}>
             Progress: {row.progress_done}/{row.progress_total}
