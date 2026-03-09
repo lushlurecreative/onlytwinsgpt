@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 export default function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const flowOrder = useMemo(
-    () => ["/dashboard", "/start", "/onboarding/intake", "/training/photos", "/requests"],
+    () => ["/dashboard", "/onboarding/intake", "/training/photos", "/requests"],
     []
   );
   const nextIndex = flowOrder.indexOf(pathname);

@@ -59,7 +59,7 @@ const steps: SetupStep[] = [
   },
 ];
 
-export default function StartDashboardClient() {
+export default function DashboardClient() {
   const INTAKE_LOCAL_KEY = "ot_onboarding_intake_v1";
   const PREFS_LOCAL_KEY = "ot_request_allocation_plan_v1";
   const AUTO_QUEUE_KEY = "ot_auto_queue_v1";
@@ -367,11 +367,11 @@ export default function StartDashboardClient() {
         <section className="section">
           <PremiumCard title="Ready to launch" subtitle="All setup steps are completed. Queue your first generation now.">
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-            <PremiumButton type="button" onClick={queueFirstJob} loading={queueing}>
-              Queue First Generation Job
-            </PremiumButton>
-            {queueMessage ? <span style={{ color: queueMessage.includes("success") ? "var(--success)" : "var(--danger)" }}>{queueMessage}</span> : null}
-          </div>
+              <PremiumButton type="button" onClick={queueFirstJob} loading={queueing}>
+                Queue First Generation Job
+              </PremiumButton>
+              {queueMessage ? <span style={{ color: queueMessage.includes("success") ? "var(--success)" : "var(--danger)" }}>{queueMessage}</span> : null}
+            </div>
           </PremiumCard>
         </section>
       ) : null}

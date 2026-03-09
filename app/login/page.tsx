@@ -9,8 +9,7 @@ import PremiumButton from "@/components/PremiumButton";
 
 function LoginPageInner() {
   const searchParams = useSearchParams();
-  const redirectToRaw = searchParams.get("redirectTo");
-  const redirectTo = redirectToRaw === "/start" ? "/dashboard" : (redirectToRaw ?? "/dashboard");
+  const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://onlytwins.dev";
 
   const [email, setEmail] = useState("");
