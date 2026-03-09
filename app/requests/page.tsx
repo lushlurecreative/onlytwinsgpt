@@ -9,19 +9,20 @@ export default async function RequestsPage() {
   await requireActiveSubscriber("/requests");
 
   return (
-    <main style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-      <PremiumCard className="hero-refined">
-        <h1 style={{ marginTop: 0, fontSize: 34, letterSpacing: "-0.02em" }}>View My Requests</h1>
-        <p style={{ opacity: 0.85, maxWidth: 680 }}>
-          Set your monthly output mix and track each stage from training prep to generation completion.
+    <main className="control-route-shell">
+      <PremiumCard className="hero-refined control-route-hero">
+        <p className="eyebrow">Generation planning</p>
+        <h1 style={{ marginTop: 0, fontSize: 36, letterSpacing: "-0.02em" }}>Configure your monthly AI output</h1>
+        <p className="wizard-copy">
+          Tune your photo and video mix, keep your recurring plan aligned, and monitor live generation status.
         </p>
       </PremiumCard>
-      <div style={{ marginTop: 16 }}>
-        <RequestsClient />
-      </div>
+      <RequestsClient />
 
       <div style={{ marginTop: 16 }}>
-        <PremiumButton href="/onboarding/intake">Set Preferences</PremiumButton>
+        <PremiumButton href="/onboarding/intake" variant="secondary">
+          Back to Setup Wizard
+        </PremiumButton>
       </div>
     </main>
   );

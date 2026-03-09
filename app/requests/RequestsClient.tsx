@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 
 type RequestRow = {
@@ -57,7 +57,6 @@ export default function RequestsClient() {
   const [error, setError] = useState("");
   const [entitlementPlan, setEntitlementPlan] = useState<string>("45-5");
   const [entitlementLabel, setEntitlementLabel] = useState("your package");
-  const [entitlementsLoading, setEntitlementsLoading] = useState(true);
   const [monthlyPlan, setMonthlyPlan] = useState("45-5");
   const [preset, setPreset] = useState("balanced");
   const [allocationRows, setAllocationRows] = useState<AllocationRow[]>(PRESET_ROWS.balanced);
@@ -95,7 +94,6 @@ export default function RequestsClient() {
         setMonthlyPlan("45-5");
         setEntitlementLabel("Current package");
       }
-      setEntitlementsLoading(false);
     };
 
     const loadSavedPreferences = async () => {
@@ -191,31 +189,58 @@ export default function RequestsClient() {
   };
 
   const readOnly = hasSavedPreferences && !isEditing;
+  const allocationHealth = useMemo(() => {
+    if (selectedPhotos === allowedPhotos && selectedVideos === allowedVideos) return "balanced";
+    return "needs_attention";
+  }, [selectedPhotos, selectedVideos, allowedPhotos, allowedVideos]);
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
-      <article className="premium-card" style={{ padding: 18 }}>
-        <h2 style={{ marginTop: 0 }}>Generation Allocation Preferences</h2>
-        <p style={{ opacity: 0.8 }}>
+    <div className="planner-stack">
+      <article className="premium-card planner-hero">
+        <h2 style={{ marginTop: 0 }}>AI Generation Planning Console</h2>
+        <p className="planner-copy">
           Choose a default mix or customize exactly how your monthly photo/video allotment should be used. You
           can type your own directions in every text box.
         </p>
-        <p style={{ opacity: 0.85, marginTop: 8 }}>
+        <p className="planner-copy">
           Monthly plans repeat the same saved allocation each cycle unless you update preferences at least 5
           days before your next generation cycle.
         </p>
-        <p style={{ opacity: 0.85, marginTop: 6, marginBottom: 0 }}>
+        <p className="planner-copy" style={{ marginBottom: 0 }}>
           Generation delivery target: 2 days after request submission.
         </p>
-        <div style={{ height: 14 }} />
+      </article>
 
-        <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-          <label>
+      <section className="planner-summary-grid">
+        <article className="premium-card">
+          <div className="status-label">Current plan</div>
+          <div className="status-value">{entitlementLabel}</div>
+          <div className="muted">Auto-locked from active subscription</div>
+        </article>
+        <article className="premium-card">
+          <div className="status-label">Allocation health</div>
+          <div className="status-value">{allocationHealth === "balanced" ? "Balanced" : "Needs attention"}</div>
+          <div className="muted">
+            {selectedPhotos}/{allowedPhotos} photos · {selectedVideos}/{allowedVideos} videos
+          </div>
+        </article>
+        <article className="premium-card">
+          <div className="status-label">Saved profile</div>
+          <div className="status-value">{hasSavedPreferences ? "Saved and reusable" : "Draft not saved"}</div>
+          <div className="muted">Use edit mode anytime to refine next cycle</div>
+        </article>
+      </section>
+
+      <article className="premium-card planner-config">
+        <h3 style={{ marginTop: 0 }}>Configure monthly output mix</h3>
+
+        <div className="planner-config-grid">
+          <label className="wizard-label">
             Monthly allotment
             <select
+              className="input"
               value={monthlyPlan}
               onChange={(event) => setMonthlyPlan(event.target.value)}
-              style={{ width: "100%" }}
               disabled
             >
               <option value="45-5">45 photos + 5 videos</option>
@@ -229,18 +254,25 @@ export default function RequestsClient() {
               Need a different allotment? Upgrade your plan in Billing.
             </small>
           </label>
-          <label>
+          <label className="wizard-label">
             Default generation option
-            <select
-              value={preset}
-              onChange={(event) => setPresetRows(event.target.value)}
-              style={{ width: "100%" }}
-              disabled={readOnly}
-            >
-              <option value="balanced">Balanced (gym/bedroom/nsfw mix)</option>
-              <option value="social">Social-first (instagram/tiktok mix)</option>
-              <option value="custom">Custom starting template</option>
-            </select>
+            <div className="preset-segments">
+              {[
+                { key: "balanced", label: "Balanced" },
+                { key: "social", label: "Social-first" },
+                { key: "custom", label: "Custom" },
+              ].map((presetOpt) => (
+                <button
+                  key={presetOpt.key}
+                  type="button"
+                  className={`tab ${preset === presetOpt.key ? "tab-active" : ""}`.trim()}
+                  onClick={() => setPresetRows(presetOpt.key)}
+                  disabled={readOnly}
+                >
+                  {presetOpt.label}
+                </button>
+              ))}
+            </div>
           </label>
         </div>
         {monthlyPlan !== entitlementPlan ? (
@@ -250,13 +282,14 @@ export default function RequestsClient() {
           </p>
         ) : null}
 
-        <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
+        <div className="planner-line-items">
           {allocationRows.map((row) => (
             <div
               key={row.id}
-              style={{ display: "grid", gap: 8, gridTemplateColumns: "120px 90px 1fr auto", alignItems: "center" }}
+              className="planner-line-item"
             >
               <select
+                className="input"
                 value={row.kind}
                 onChange={(event) => updateRow(row.id, { kind: event.target.value as "photo" | "video" })}
                 disabled={readOnly}
@@ -265,6 +298,7 @@ export default function RequestsClient() {
                 <option value="video">Video</option>
               </select>
               <input
+                className="input"
                 type="number"
                 min={1}
                 value={row.count}
@@ -272,6 +306,7 @@ export default function RequestsClient() {
                 disabled={readOnly}
               />
               <input
+                className="input"
                 placeholder='Direction or custom prompt (example: "10 with purple hair on the beach")'
                 value={row.direction}
                 onChange={(event) => updateRow(row.id, { direction: event.target.value })}
@@ -284,16 +319,16 @@ export default function RequestsClient() {
           ))}
         </div>
 
-        <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <button type="button" onClick={addRow} disabled={readOnly}>
+        <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <button className="btn btn-ghost" type="button" onClick={addRow} disabled={readOnly}>
             Add line item
           </button>
           {readOnly ? (
-            <button type="button" onClick={() => setIsEditing(true)}>
+            <button className="btn btn-secondary" type="button" onClick={() => setIsEditing(true)}>
               Edit preferences
             </button>
           ) : (
-            <button type="button" onClick={savePlan} disabled={monthlyPlan !== entitlementPlan}>
+            <button className="btn btn-primary" type="button" onClick={savePlan} disabled={monthlyPlan !== entitlementPlan}>
               {hasSavedPreferences ? "Re-save preferences" : "Save preferences"}
             </button>
           )}
@@ -314,8 +349,8 @@ export default function RequestsClient() {
       {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
 
       {rows.length === 0 ? (
-        <article className="premium-card" style={{ padding: 18 }}>
-          <p style={{ margin: 0, opacity: 0.8 }}>
+        <article className="premium-card">
+          <p className="planner-copy" style={{ margin: 0 }}>
             No requests yet. Upload training photos first, then complete onboarding preferences to queue your
             first run.
           </p>
@@ -325,8 +360,7 @@ export default function RequestsClient() {
           {rows.map((row, idx) => (
             <motion.article
               key={row.id}
-              className="premium-card"
-              style={{ padding: 14 }}
+              className="premium-card planner-status-card"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22, delay: idx * 0.04 }}

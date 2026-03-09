@@ -8,12 +8,13 @@ export default async function OnboardingIntakePage() {
   await requireActiveSubscriber("/onboarding/intake");
 
   return (
-    <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
-      <PremiumCard className="hero-refined">
-        <h1 style={{ marginTop: 0, fontSize: 34, letterSpacing: "-0.02em" }}>Onboarding Intake</h1>
-        <p style={{ opacity: 0.86, maxWidth: 760 }}>
-          Add everything your team should know before generation starts. Include identity details, bio
-          direction, hard rules, and any custom style guidance.
+    <main className="control-route-shell">
+      <PremiumCard className="hero-refined control-route-hero">
+        <p className="eyebrow">Guided setup wizard</p>
+        <h1 style={{ marginTop: 0, fontSize: 36, letterSpacing: "-0.02em" }}>Configure your twin profile</h1>
+        <p className="wizard-copy">
+          Complete your premium setup once. This information powers identity consistency, generation quality, and
+          delivery precision.
         </p>
       </PremiumCard>
       <OnboardingIntakeClient />

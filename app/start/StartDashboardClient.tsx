@@ -20,6 +20,16 @@ type SetupStep = {
   editHref: string;
 };
 
+type UtilityCard = {
+  key: "status" | "library" | "billing";
+  title: string;
+  description: string;
+  buttonText: string;
+  href: string;
+};
+
+type ActionCard = SetupStep | UtilityCard;
+
 const steps: SetupStep[] = [
   {
     key: "preferences",
@@ -63,13 +73,16 @@ export default function StartDashboardClient() {
   const [requestCount, setRequestCount] = useState(0);
   const [queueing, setQueueing] = useState(false);
   const [queueMessage, setQueueMessage] = useState("");
+  const [planLabel, setPlanLabel] = useState("Active Plan");
+  const [latestSyncAt, setLatestSyncAt] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
-      const [intakeRes, uploadsRes, prefsRes] = await Promise.all([
+      const [intakeRes, uploadsRes, prefsRes, entitlementsRes] = await Promise.all([
         fetch("/api/me/onboarding-intake"),
         fetch("/api/uploads"),
         fetch("/api/me/request-preferences"),
+        fetch("/api/me/entitlements"),
       ]);
 
       const intakeJson = (await intakeRes.json().catch(() => ({}))) as {
@@ -87,6 +100,11 @@ export default function StartDashboardClient() {
       };
       const prefsJson = (await prefsRes.json().catch(() => ({}))) as {
         preferences?: { allocationRows?: Array<{ direction?: string; count?: number }> } | null;
+      };
+      const entitlementsJson = (await entitlementsRes.json().catch(() => ({}))) as {
+        entitlements?: {
+          planKey?: string;
+        } | null;
       };
       const requestsRes = await fetch("/api/generation-requests");
       const requestsJson = (await requestsRes.json().catch(() => ({}))) as {
@@ -125,12 +143,23 @@ export default function StartDashboardClient() {
       );
       const photosDone = files.length >= 10;
       const generationDone = prefRows.length > 0 && prefRows.some((row) => (row.direction ?? "").trim().length > 0);
+      const entitlementPlan = entitlementsJson.entitlements?.planKey ?? "";
+      if (entitlementPlan === "starter") {
+        setPlanLabel("Starter · 45 photos + 5 videos");
+      } else if (entitlementPlan === "professional") {
+        setPlanLabel("Professional · 90 photos + 15 videos");
+      } else if (entitlementPlan === "elite") {
+        setPlanLabel("Elite · 200 photos + 35 videos");
+      } else {
+        setPlanLabel("Active Plan · Syncing entitlements");
+      }
 
       setCompleted({
         preferences: preferencesDone,
         photos: photosDone,
         generation: generationDone,
       });
+      setLatestSyncAt(new Date().toISOString());
       setLoading(false);
     };
 
@@ -148,6 +177,13 @@ export default function StartDashboardClient() {
   );
   const allStepsDone = completedCount === 3;
   const progressPct = Math.round((completedCount / 3) * 100);
+  const nextStep = !completed.preferences
+    ? steps[0]
+    : !completed.photos
+      ? steps[1]
+      : !completed.generation
+        ? steps[2]
+        : null;
 
   const statusCards: StatusCard[] = [
     {
@@ -172,7 +208,7 @@ export default function StartDashboardClient() {
     },
   ];
 
-  const actionCards = [
+  const actionCards: ActionCard[] = [
     ...steps,
     {
       key: "status",
@@ -195,7 +231,7 @@ export default function StartDashboardClient() {
       buttonText: "Open Account",
       href: "/billing",
     },
-  ] as const;
+  ];
 
   const queueFirstJob = useCallback(async () => {
     if (queueing) return;
@@ -243,56 +279,75 @@ export default function StartDashboardClient() {
   }, [allStepsDone, loading, queueing, requestCount, samplePaths.length, queueFirstJob]);
 
   return (
-    <div className="premium-dashboard">
-      <section className="premium-hero" style={{ display: "grid", gap: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+    <div className="premium-dashboard control-shell">
+      <section className="premium-hero control-hero">
+        <div className="control-hero-top">
           <div>
-            <p className="eyebrow">AI Control Center</p>
-            <h1>Welcome to OnlyTwins</h1>
+            <p className="eyebrow">Customer Command Center</p>
+            <h1>Welcome back to your AI control center</h1>
             <p>
-              Your subscription is active. Complete setup once, then monitor generation status from one place.
+              Calm, guided setup with real-time status. Complete your onboarding once, then run generation from
+              one premium workspace.
             </p>
+            <div className="control-pill-row">
+              <span className="badge">Subscription Active</span>
+              <span className="badge">Progress {progressPct}%</span>
+              <span className="badge">{planLabel}</span>
+            </div>
           </div>
-          <div
-            style={{
-              width: 110,
-              height: 110,
-              borderRadius: "50%",
-              display: "grid",
-              placeItems: "center",
-              background: `conic-gradient(var(--accent) ${progressPct}%, rgba(255,255,255,0.14) ${progressPct}% 100%)`,
-            }}
-          >
+          <div className="ring-wrap">
             <div
+              className="ring-track"
               style={{
-                width: 84,
-                height: 84,
-                borderRadius: "50%",
-                background: "rgba(14,16,24,0.95)",
-                display: "grid",
-                placeItems: "center",
-                fontWeight: 800,
+                background: `conic-gradient(var(--accent) ${progressPct}%, rgba(255,255,255,0.14) ${progressPct}% 100%)`,
               }}
             >
-              {progressPct}%
+              <div className="ring-core">{progressPct}%</div>
             </div>
           </div>
         </div>
-        <div className="cta-row" style={{ marginTop: 2 }}>
-          <PremiumButton href="/training/photos">Start Creating My Twin</PremiumButton>
-          <PremiumButton href="/dashboard" variant="secondary">
-            Set Preferences
+        <div className="cta-row">
+          <PremiumButton href={nextStep?.editHref ?? "/status"}>
+            {nextStep?.key === "photos"
+              ? "Upload Photos To Start"
+              : nextStep?.key === "preferences"
+                ? "Continue Setup"
+                : nextStep?.key === "generation"
+                  ? "Finalize Generation Plan"
+                  : "Open Live Status"}
+          </PremiumButton>
+          <PremiumButton href="/status" variant="secondary">
+            View Generation Status
           </PremiumButton>
         </div>
-        {allStepsDone && requestCount === 0 ? (
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+      </section>
+
+      <section className="control-grid section">
+        <PremiumCard title="Twin Status" subtitle={completed.preferences ? "Identity profile configured" : "Identity profile pending"} />
+        <PremiumCard
+          title="Training Status"
+          subtitle={completed.photos ? `${photoCount} photos uploaded and ready` : `${photoCount}/10 minimum uploaded`}
+        />
+        <PremiumCard title="Current Plan" subtitle={planLabel} />
+        <PremiumCard title="Generation Queue" subtitle={requestCount > 0 ? `${requestCount} request(s) in pipeline` : "No active requests yet"} />
+        <PremiumCard
+          title="Latest Activity"
+          subtitle={latestSyncAt ? `Synced ${new Date(latestSyncAt).toLocaleString()}` : "Syncing dashboard state..."}
+        />
+      </section>
+
+      {allStepsDone && requestCount === 0 ? (
+        <section className="section">
+          <PremiumCard title="Ready to launch" subtitle="All setup steps are completed. Queue your first generation now.">
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <PremiumButton type="button" onClick={queueFirstJob} loading={queueing}>
               Queue First Generation Job
             </PremiumButton>
             {queueMessage ? <span style={{ color: queueMessage.includes("success") ? "var(--success)" : "var(--danger)" }}>{queueMessage}</span> : null}
           </div>
-        ) : null}
-      </section>
+          </PremiumCard>
+        </section>
+      ) : null}
 
       <section className="premium-status-grid section">
         {statusCards.map((card, idx) => (
@@ -320,8 +375,7 @@ export default function StartDashboardClient() {
             transition={{ duration: 0.28, delay: idx * 0.04 }}
           >
             <PremiumCard title={card.title} subtitle={card.description}>
-              {"key" in card &&
-              (card.key === "preferences" || card.key === "photos" || card.key === "generation") ? (
+              {"viewHref" in card ? (
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <span className="badge">
                     {loading

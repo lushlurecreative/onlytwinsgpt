@@ -205,38 +205,42 @@ export default function TrainingPhotosClient() {
   };
 
   return (
-    <PremiumCard style={{ marginTop: 20 }}>
-      <h2 style={{ marginTop: 0 }}>Upload area</h2>
-      <p style={{ opacity: 0.8 }}>
-        Select multiple photos from your device, then upload. Minimum {MIN_PHOTOS}, maximum {MAX_PHOTOS}.
-      </p>
-      <p style={{ marginTop: 8, color: remainingToMinimum > 0 ? "var(--warning)" : "var(--success)" }}>
-        {minimumStatusText}
-      </p>
+    <div className="training-stack">
+      <PremiumCard className="training-dropzone-card">
+        <h2 style={{ marginTop: 0 }}>Training Photo Uploader</h2>
+        <p className="wizard-copy">
+          Upload a curated set of photos. The system uses these images for twin training and generation quality.
+        </p>
+        <p style={{ marginTop: 8, color: remainingToMinimum > 0 ? "var(--danger)" : "var(--success)" }}>
+          {minimumStatusText}
+        </p>
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          multiple
-          onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))}
-          disabled={status === "uploading" || remainingCapacity === 0}
-        />
-        <PremiumButton
-          type="button"
-          onClick={onUpload}
-          loading={status === "uploading"}
-          disabled={selectedFiles.length === 0 || remainingCapacity === 0}
-        >
-          Upload Photos
-        </PremiumButton>
-      </div>
+        <div className="training-dropzone">
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            multiple
+            onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))}
+            disabled={status === "uploading" || remainingCapacity === 0}
+          />
+          <div className="muted">Drag or browse · Min {MIN_PHOTOS} · Max {MAX_PHOTOS}</div>
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <PremiumButton
+            type="button"
+            onClick={onUpload}
+            loading={status === "uploading"}
+            disabled={selectedFiles.length === 0 || remainingCapacity === 0}
+          >
+            Upload Photos
+          </PremiumButton>
+        </div>
+      </PremiumCard>
       {selectedFiles.length > 0 ? (
         <p style={{ marginTop: 8, opacity: 0.8 }}>
           Ready to upload: {selectedFiles.length} selected photo{selectedFiles.length === 1 ? "" : "s"}.
         </p>
       ) : null}
-
       {message ? (
         <motion.p
           style={{ marginTop: 10, color: status === "error" ? "var(--danger)" : "var(--success)" }}
@@ -249,17 +253,11 @@ export default function TrainingPhotosClient() {
       ) : null}
 
       {uploadedFiles.length > 0 ? (
-        <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
+        <PremiumCard>
           <h3 style={{ margin: 0 }}>Uploaded photos ({uploadedFiles.length})</h3>
-          <div
-            style={{
-              display: "grid",
-              gap: 12,
-              gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-            }}
-          >
+          <div className="training-gallery-grid">
             {uploadedFiles.map((item) => (
-              <article key={item.objectPath} className="premium-card" style={{ padding: 10 }}>
+              <article key={item.objectPath} className="premium-card training-photo-card">
                 {item.signedUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -269,8 +267,9 @@ export default function TrainingPhotosClient() {
                   />
                 ) : null}
                 <input
+                  className="input"
                   type="text"
-                  placeholder="Edit notes (optional)"
+                  placeholder="Optional notes"
                   value={notes[item.objectPath] ?? ""}
                   onChange={(event) =>
                     persistNotes({
@@ -278,36 +277,36 @@ export default function TrainingPhotosClient() {
                       [item.objectPath]: event.target.value,
                     })
                   }
-                  style={{ marginTop: 8, width: "100%" }}
                 />
-                <button
-                  type="button"
-                  onClick={() => onDelete(item.objectPath)}
-                  disabled={busyPath === item.objectPath || replacingPath === item.objectPath}
-                  style={{ marginTop: 8 }}
-                >
-                  {busyPath === item.objectPath ? "Deleting..." : "Delete"}
-                </button>
-                <label style={{ display: "block", marginTop: 8 }}>
-                  <span style={{ display: "block", fontSize: 12, opacity: 0.8, marginBottom: 4 }}>
-                    Replace photo
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      void onReplace(item.objectPath, file);
-                      event.currentTarget.value = "";
-                    }}
+                <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                  <button
+                    className="btn btn-ghost"
+                    type="button"
+                    onClick={() => onDelete(item.objectPath)}
                     disabled={busyPath === item.objectPath || replacingPath === item.objectPath}
-                  />
-                </label>
+                  >
+                    {busyPath === item.objectPath ? "Deleting..." : "Delete"}
+                  </button>
+                  <label className="btn btn-secondary" style={{ cursor: "pointer" }}>
+                    Replace
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] ?? null;
+                        void onReplace(item.objectPath, file);
+                        event.currentTarget.value = "";
+                      }}
+                      disabled={busyPath === item.objectPath || replacingPath === item.objectPath}
+                      style={{ display: "none" }}
+                    />
+                  </label>
+                </div>
               </article>
             ))}
           </div>
-        </div>
+        </PremiumCard>
       ) : null}
-    </PremiumCard>
+    </div>
   );
 }
