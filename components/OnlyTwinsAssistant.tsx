@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -8,34 +9,15 @@ type ChatMessage = {
   id: string;
   role: "assistant" | "user";
   text: string;
+  links?: Array<{ label: string; href: string }>;
 };
 
-const QUICK_ACTIONS: Array<{ label: string; answer: string }> = [
-  {
-    label: "How do I upload training photos?",
-    answer:
-      "Open Training Photos from your dashboard, upload at least 10 clear source images, then save. We recommend front, left, right, full-body, and waist-up angles.",
-  },
-  {
-    label: "How do recurring requests work?",
-    answer:
-      "Your saved monthly request mix repeats each cycle unless you update it at least 5 days before renewal. You can update anytime on the Requests page.",
-  },
-  {
-    label: "How do I change my plan?",
-    answer:
-      "Open Upgrade Plan, choose the target plan, review the due-today summary, and confirm. Your new allowance starts immediately.",
-  },
-  {
-    label: "Where will I receive my content?",
-    answer:
-      "Delivered content appears in your Content Library as requests complete. You can open files there and monitor progress from Requests.",
-  },
-  {
-    label: "What should I upload?",
-    answer:
-      "Upload clean, well-lit photos with your face visible. Include varied angles and outfits. Avoid heavy filters, hats, phones, and other people in frame.",
-  },
+const QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
+  { label: "How do I upload training photos?", prompt: "How do I upload training photos?" },
+  { label: "How do recurring requests work?", prompt: "How do recurring requests work?" },
+  { label: "How do I change my plan?", prompt: "How do I change my plan?" },
+  { label: "Where will I receive my content?", prompt: "Where will I receive my content?" },
+  { label: "What should I upload?", prompt: "What should I upload?" },
 ];
 
 function shouldShowOnRoute(pathname: string) {
@@ -60,6 +42,10 @@ export default function OnlyTwinsAssistant() {
       id: "intro",
       role: "assistant",
       text: "I can help with setup, uploads, billing, and recurring monthly requests.",
+      links: [
+        { label: "Dashboard", href: "/dashboard" },
+        { label: "Requests", href: "/requests" },
+      ],
     },
   ]);
 
@@ -79,11 +65,33 @@ export default function OnlyTwinsAssistant() {
     return null;
   }
 
-  const pushAssistant = (text: string) => {
+  const pushAssistant = (text: string, links?: Array<{ label: string; href: string }>) => {
     setMessages((prev) => [
       ...prev,
-      { id: `assistant-${crypto.randomUUID()}`, role: "assistant", text },
+      { id: `assistant-${crypto.randomUUID()}`, role: "assistant", text, links },
     ]);
+  };
+
+  const askAssistant = async (promptText: string) => {
+    const clean = promptText.trim();
+    if (!clean) return;
+    const response = await fetch("/api/assistant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: clean }),
+    });
+    const result = (await response.json().catch(() => ({}))) as {
+      answer?: string;
+      links?: Array<{ label: string; href: string }>;
+      error?: string;
+    };
+    if (!response.ok) {
+      pushAssistant("I couldn’t process that right now. Please try again.", [
+        { label: "Dashboard", href: "/dashboard" },
+      ]);
+      return;
+    }
+    pushAssistant(result.answer ?? "I can help with plans, setup, and requests.", result.links ?? []);
   };
 
   const onSend = () => {
@@ -91,7 +99,7 @@ export default function OnlyTwinsAssistant() {
     if (!clean) return;
     setMessages((prev) => [...prev, { id: `user-${crypto.randomUUID()}`, role: "user", text: clean }]);
     setInput("");
-    pushAssistant("Thanks. A full assistant backend can be connected here next. For now, use the quick actions for instant help.");
+    void askAssistant(clean);
   };
 
   return (
@@ -117,7 +125,10 @@ export default function OnlyTwinsAssistant() {
                 <button
                   key={action.label}
                   type="button"
-                  onClick={() => pushAssistant(action.answer)}
+                  onClick={() => {
+                    setMessages((prev) => [...prev, { id: `user-${crypto.randomUUID()}`, role: "user", text: action.prompt }]);
+                    void askAssistant(action.prompt);
+                  }}
                 >
                   {action.label}
                 </button>
@@ -131,6 +142,15 @@ export default function OnlyTwinsAssistant() {
                   className={`assistant-message ${message.role === "assistant" ? "assistant-message-ai" : "assistant-message-user"}`}
                 >
                   {message.text}
+                  {message.links && message.links.length > 0 ? (
+                    <div className="assistant-link-row">
+                      {message.links.map((link) => (
+                        <Link key={`${message.id}-${link.href}-${link.label}`} href={link.href} className="assistant-link-chip">
+                          {link.label}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

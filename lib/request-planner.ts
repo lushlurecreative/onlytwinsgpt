@@ -82,7 +82,7 @@ export async function getCurrentSubscriptionSummary(
   status: string;
 }> {
   const serviceCreatorId = getServiceCreatorId();
-  const { data: row } = await admin
+  const { data: scopedRow } = await admin
     .from("subscriptions")
     .select("status, stripe_price_id, stripe_subscription_id, current_period_end, created_at")
     .eq("subscriber_id", userId)
@@ -90,6 +90,43 @@ export async function getCurrentSubscriptionSummary(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  let row =
+    (scopedRow as {
+      status?: string | null;
+      stripe_price_id?: string | null;
+      stripe_subscription_id?: string | null;
+      current_period_end?: string | null;
+      created_at?: string | null;
+    } | null) ?? null;
+
+  if (!row) {
+    const { data: fallbackRows } = await admin
+      .from("subscriptions")
+      .select("status, stripe_price_id, stripe_subscription_id, current_period_end, created_at")
+      .eq("subscriber_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(25);
+    const rows = (fallbackRows ?? []) as Array<{
+      status?: string | null;
+      stripe_price_id?: string | null;
+      stripe_subscription_id?: string | null;
+      current_period_end?: string | null;
+      created_at?: string | null;
+    }>;
+    row =
+      rows.find((r) => {
+        const status = (r.status ?? "").toLowerCase();
+        return (status === "active" || status === "trialing") && !!r.stripe_price_id;
+      }) ??
+      rows.find((r) => {
+        const status = (r.status ?? "").toLowerCase();
+        return status === "active" || status === "trialing";
+      }) ??
+      rows.find((r) => !!r.stripe_price_id) ??
+      rows[0] ??
+      null;
+  }
 
   const planKey = getPlanKeyForStripePriceId((row as { stripe_price_id?: string | null } | null)?.stripe_price_id ?? null);
   const base =

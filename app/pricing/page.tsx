@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase-server";
-import { redirect } from "next/navigation";
 import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BrandName from "@/app/components/BrandName";
 import PremiumCard from "@/components/PremiumCard";
@@ -10,10 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    redirect("/dashboard");
-  }
+  await supabase.auth.getUser();
 
   return (
     <div>

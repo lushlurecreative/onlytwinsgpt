@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { getServiceCreatorId } from "@/lib/service-creator";
 import { ENTITLEMENTS_BY_PLAN, getPlanKeyForStripePriceId } from "@/lib/plan-entitlements";
 
 export async function GET() {
@@ -16,29 +15,57 @@ export async function GET() {
   }
 
   const admin = getSupabaseAdmin();
-  const serviceCreatorId = getServiceCreatorId();
-
   const { data, error } = await admin
     .from("subscriptions")
-    .select("id, status, stripe_price_id, current_period_end, canceled_at, created_at")
+    .select("id, status, stripe_price_id, current_period_end, canceled_at, created_at, creator_id")
     .eq("subscriber_id", user.id)
-    .eq("creator_id", serviceCreatorId)
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(50);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  const planKey = getPlanKeyForStripePriceId(data?.stripe_price_id ?? null);
+  const rows = (data ?? []) as Array<{
+    id?: string;
+    status?: string | null;
+    stripe_price_id?: string | null;
+    current_period_end?: string | null;
+    canceled_at?: string | null;
+    created_at?: string;
+    creator_id?: string | null;
+  }>;
+  const preferred =
+    rows.find((row) => {
+      const status = (row.status ?? "").toLowerCase();
+      return (status === "active" || status === "trialing") && !!getPlanKeyForStripePriceId(row.stripe_price_id ?? null);
+    }) ??
+    rows.find((row) => {
+      const status = (row.status ?? "").toLowerCase();
+      return status === "active" || status === "trialing";
+    }) ??
+    rows.find((row) => !!getPlanKeyForStripePriceId(row.stripe_price_id ?? null)) ??
+    rows[0] ??
+    null;
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("stripe_customer_id, subscription_status")
+    .eq("id", user.id)
+    .maybeSingle();
+  const profileRow = (profile ?? null) as { stripe_customer_id?: string | null; subscription_status?: string | null } | null;
+  const paidAccount =
+    rows.length > 0 ||
+    !!profileRow?.stripe_customer_id ||
+    ["active", "trialing", "past_due", "canceled"].includes(String(profileRow?.subscription_status ?? "").toLowerCase());
+
+  const planKey = getPlanKeyForStripePriceId(preferred?.stripe_price_id ?? null);
   if (!planKey) {
     return NextResponse.json(
       {
         entitlements: null,
-        subscription: data ?? null,
-        error:
-          "No plan entitlements found. If you just purchased, wait 1-2 minutes for Stripe webhook to sync.",
+        subscription: preferred ?? null,
+        paidAccount,
       },
       { status: 200 }
     );
@@ -48,7 +75,8 @@ export async function GET() {
   return NextResponse.json(
     {
       entitlements: { planKey, ...base },
-      subscription: data ?? null,
+      subscription: preferred ?? null,
+      paidAccount,
     },
     { status: 200 }
   );

@@ -378,16 +378,20 @@ export default function OnboardingIntakeClient() {
       )}
 
       <PremiumCard className="wizard-save-bar">
-        <h3 style={{ marginTop: 0 }}>Save and continue</h3>
-        <p className="wizard-copy">Save your setup, then return to dashboard command center.</p>
+        <h3 style={{ marginTop: 0 }}>{showReadOnly ? "Edit intake" : "Save and continue"}</h3>
+        <p className="wizard-copy">
+          {showReadOnly
+            ? "Your intake is complete. Switch to edit mode to update your setup."
+            : "Save your setup, then return to your dashboard."}
+        </p>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           {showReadOnly ? (
             <PremiumButton type="button" onClick={() => setIsEditing(true)}>
-              Edit Intake
+              Edit intake
             </PremiumButton>
           ) : (
             <PremiumButton type="button" onClick={onSave}>
-              {hasSavedIntake ? "Re-save Intake" : "Save Intake"}
+              Save and continue
             </PremiumButton>
           )}
           {saved ? <span style={{ color: "var(--success)" }}>Saved. Redirecting...</span> : null}

@@ -13,6 +13,7 @@ type EntitlementsResponse = {
   subscription?: {
     current_period_end?: string | null;
   } | null;
+  paidAccount?: boolean;
 };
 
 type UpgradePreview = {
@@ -126,6 +127,8 @@ export default function UpgradePlanClient() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [upgrading, setUpgrading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [paidAccount, setPaidAccount] = useState(false);
+  const [modalMode, setModalMode] = useState<"upgradeable" | "paid_no_upgrade_record" | "no_paid_plan">("upgradeable");
   const [error, setError] = useState("");
 
   const loadPreview = useCallback(async (planKey: PlanKey) => {
@@ -135,7 +138,13 @@ export default function UpgradePlanClient() {
     const response = await fetch(`/api/billing/upgrade-preview?targetPlan=${encodeURIComponent(planKey)}`);
     const result = (await response.json().catch(() => ({}))) as UpgradePreview & { error?: string };
     if (!response.ok || !result.preview) {
-      setError(result.error ?? "Could not load upgrade preview.");
+      const apiError = (result.error ?? "").toLowerCase();
+      if (apiError.includes("no active stripe subscription found")) {
+        setModalMode("paid_no_upgrade_record");
+        setError("");
+      } else {
+        setError(result.error ?? "Could not load upgrade preview.");
+      }
       setPreview(null);
       setLoadingPreview(false);
       return;
@@ -155,6 +164,7 @@ export default function UpgradePlanClient() {
       const key = (entitlementsJson.entitlements?.planKey ?? "") as PlanKey | "";
       setCurrentPlanKey(key);
       setRenewalDate(entitlementsJson.subscription?.current_period_end ?? null);
+      setPaidAccount(Boolean(entitlementsJson.paidAccount || key));
       const requests = requestsJson.requests ?? [];
       setUsedPhotos(
         requests.reduce((sum, row) => sum + Math.max(0, Number(row.image_count ?? 0)), 0)
@@ -167,7 +177,7 @@ export default function UpgradePlanClient() {
       );
       const defaultTarget = (options[0]?.key ?? "") as PlanKey | "";
       setSelectedPlanKey(defaultTarget);
-      if (defaultTarget) {
+      if (defaultTarget && key) {
         await loadPreview(defaultTarget);
       }
     })();
@@ -177,13 +187,15 @@ export default function UpgradePlanClient() {
     if (!selectedPlanKey) return;
     setUpgrading(true);
     setError("");
-    const response = await fetch("/api/billing/upgrade-checkout", {
+    const endpoint = modalMode === "paid_no_upgrade_record" ? "/api/billing/checkout" : "/api/billing/upgrade-checkout";
+    const payload =
+      modalMode === "paid_no_upgrade_record"
+        ? { plan: selectedPlanKey }
+        : { targetPlan: selectedPlanKey, returnUrl: `${window.location.origin}/upgrade` };
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        targetPlan: selectedPlanKey,
-        returnUrl: `${window.location.origin}/upgrade`,
-      }),
+      body: JSON.stringify(payload),
     });
     const result = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
     if (!response.ok || !result.url) {
@@ -208,14 +220,6 @@ export default function UpgradePlanClient() {
   return (
     <>
       <section className="upgrade-shell">
-        <article className="upgrade-hero">
-          <h1 style={{ margin: 0, fontSize: "clamp(2rem, 3.4vw, 3rem)" }}>Plans &amp; billing</h1>
-          <p style={{ margin: "12px 0 0", color: "rgba(217,236,255,0.86)", maxWidth: 880 }}>
-            Change your plan anytime. If you upgrade mid-cycle, we automatically apply credit for the unused portion
-            of your current plan.
-          </p>
-        </article>
-
         <section className="upgrade-summary-grid">
           <article className="upgrade-summary-card">
             <p className="upgrade-card-title">Your current plan</p>
@@ -231,10 +235,7 @@ export default function UpgradePlanClient() {
             ) : (
               <>
                 <h2>No active plan</h2>
-                <p>Choose a plan to start monthly generation.</p>
-                <div style={{ marginTop: 18 }}>
-                  <PremiumButton href="/pricing">Choose a plan</PremiumButton>
-                </div>
+                <p>{paidAccount ? "We’re finalizing your plan details." : "Choose a plan to get started."}</p>
               </>
             )}
           </article>
@@ -286,7 +287,21 @@ export default function UpgradePlanClient() {
                     type="button"
                     onClick={() => {
                       setSelectedPlanKey(plan.key);
-                      void loadPreview(plan.key);
+                      if (!currentPlan && !paidAccount) {
+                        setModalMode("no_paid_plan");
+                        setPreview(null);
+                        setError("");
+                        setShowModal(true);
+                        return;
+                      }
+                      if (currentPlan) {
+                        setModalMode("upgradeable");
+                        void loadPreview(plan.key);
+                      } else {
+                        setModalMode("paid_no_upgrade_record");
+                        setPreview(null);
+                        setError("");
+                      }
                       setShowModal(true);
                     }}
                   >
@@ -307,32 +322,50 @@ export default function UpgradePlanClient() {
               <p>Here&apos;s what changes if you upgrade today.</p>
             </header>
 
-            <section className="upgrade-due-card">
-              <p className="upgrade-card-title">Due today</p>
-              <div className="upgrade-due-amount">{preview?.preview.dueTodayFormatted ?? "$0.00"}</div>
-              <p>Current plan credit applied: {preview?.preview.customerCreditFormatted ?? "$0.00"}</p>
-              <p>New plan charge today: {preview?.preview.prorationChargeFormatted ?? "$0.00"}</p>
-              <p>
-                New monthly renewal:{" "}
-                {preview
-                  ? new Intl.NumberFormat("en-US", {
-                      style: "currency",
-                      currency: preview.preview.currency || "USD",
-                    }).format(preview.targetPlan.monthlyPriceCents / 100)
-                  : "$0.00"}{" "}
-                starting {formatDate(renewalDate)}
-              </p>
-            </section>
+            {modalMode === "no_paid_plan" ? (
+              <section className="upgrade-due-card">
+                <p style={{ marginTop: 0 }}>Choose a plan to get started.</p>
+                <div style={{ marginTop: 12 }}>
+                  <PremiumButton href="/pricing">View plans</PremiumButton>
+                </div>
+              </section>
+            ) : modalMode === "paid_no_upgrade_record" ? (
+              <section className="upgrade-due-card">
+                <p style={{ marginTop: 0 }}>
+                  We couldn&apos;t load your live upgrade details yet. You can still continue and we&apos;ll calculate any
+                  applicable credit during checkout.
+                </p>
+              </section>
+            ) : (
+              <>
+                <section className="upgrade-due-card">
+                  <p className="upgrade-card-title">Due today</p>
+                  <div className="upgrade-due-amount">{preview?.preview.dueTodayFormatted ?? "$0.00"}</div>
+                  <p>Current plan credit applied: {preview?.preview.customerCreditFormatted ?? "$0.00"}</p>
+                  <p>New plan charge today: {preview?.preview.prorationChargeFormatted ?? "$0.00"}</p>
+                  <p>
+                    New monthly renewal:{" "}
+                    {preview
+                      ? new Intl.NumberFormat("en-US", {
+                          style: "currency",
+                          currency: preview.preview.currency || "USD",
+                        }).format(preview.targetPlan.monthlyPriceCents / 100)
+                      : "$0.00"}{" "}
+                    starting {formatDate(renewalDate)}
+                  </p>
+                </section>
 
-            <section>
-              <h4 style={{ margin: "0 0 8px" }}>What changes</h4>
-              <ul className="upgrade-change-list">
-                <li>Your upgraded plan starts immediately</li>
-                <li>Unused value from your current plan is automatically applied</li>
-                <li>Your monthly allowance increases with the new plan</li>
-                <li>Your next renewal will be on {formatDate(renewalDate)}</li>
-              </ul>
-            </section>
+                <section>
+                  <h4 style={{ margin: "0 0 8px" }}>What changes</h4>
+                  <ul className="upgrade-change-list">
+                    <li>Your upgraded plan starts immediately</li>
+                    <li>Unused value from your current plan is automatically applied</li>
+                    <li>Your monthly allowance increases with the new plan</li>
+                    <li>Your next renewal will be on {formatDate(renewalDate)}</li>
+                  </ul>
+                </section>
+              </>
+            )}
 
             {error ? <p style={{ color: "var(--danger)", margin: 0 }}>{error}</p> : null}
             {loadingPreview ? <p style={{ margin: 0, opacity: 0.8 }}>Loading pricing details...</p> : null}
@@ -341,9 +374,11 @@ export default function UpgradePlanClient() {
               <PremiumButton type="button" variant="secondary" onClick={() => setShowModal(false)}>
                 Cancel
               </PremiumButton>
-              <PremiumButton type="button" onClick={startUpgrade} loading={upgrading} disabled={!selectedPlanKey}>
-                Confirm upgrade
-              </PremiumButton>
+              {modalMode !== "no_paid_plan" ? (
+                <PremiumButton type="button" onClick={startUpgrade} loading={upgrading} disabled={!selectedPlanKey}>
+                  {modalMode === "paid_no_upgrade_record" ? "Continue to upgrade" : "Confirm upgrade"}
+                </PremiumButton>
+              ) : null}
             </footer>
           </div>
         </div>

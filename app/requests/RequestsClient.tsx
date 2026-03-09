@@ -195,10 +195,13 @@ export default function RequestsClient() {
             </article>
             <article className="premium-card">
               <div className="status-label">Upgrade</div>
-              <div className="status-value">Need more volume?</div>
-              <div className="muted">Move to a higher allowance with Stripe proration preview.</div>
+              <div className="status-value">Need more monthly output?</div>
+              <div className="muted">
+                You can upgrade your plan anytime. If you upgrade mid-cycle, we automatically apply credit for the unused
+                portion of your current plan.
+              </div>
               <div style={{ marginTop: 12 }}>
-                <PremiumButton href="/upgrade">Open upgrade flow</PremiumButton>
+                <PremiumButton href="/upgrade">Upgrade plan</PremiumButton>
               </div>
             </article>
           </section>
