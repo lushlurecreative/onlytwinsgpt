@@ -47,12 +47,6 @@ function LoginPageInner() {
     setTimeout(doRedirect, 400);
   }
 
-  async function signOut() {
-    setMsg("Working...");
-    const { error } = await supabase.auth.signOut();
-    setMsg(error ? `❌ ${error.message}` : "✅ Signed out.");
-  }
-
   async function continueWithGoogle() {
     setMsg("Redirecting to Google...");
     const { error } = await supabase.auth.signInWithOAuth({
@@ -98,9 +92,6 @@ function LoginPageInner() {
           </PremiumButton>
           <PremiumButton variant="secondary" onClick={continueWithGoogle}>
             Sign up with Google
-          </PremiumButton>
-          <PremiumButton variant="secondary" onClick={signOut}>
-            Sign out
           </PremiumButton>
         </div>
 
