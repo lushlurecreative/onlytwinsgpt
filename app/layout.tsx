@@ -2,6 +2,7 @@ import "./globals.css";
 import Link from "next/link";
 import BrandName from "@/app/components/BrandName";
 import AuthNav from "@/components/AuthNav";
+import PrimaryNav from "@/components/PrimaryNav";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import PageTransition from "@/components/PageTransition";
 import { Analytics } from "@vercel/analytics/next";
@@ -24,27 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <BrandName />
               </Link>
               <nav className="nav" aria-label="Primary">
-                <Link href="/how-it-works" className="nav-link">
-                  How It Works
-                </Link>
-                <Link href="/results" className="nav-link">
-                  Results
-                </Link>
-                <Link href="/gallery" className="nav-link">
-                  Gallery
-                </Link>
-                <Link href="/pricing" className="nav-link">
-                  Pricing
-                </Link>
-                <Link href="/about" className="nav-link">
-                  About
-                </Link>
-                <Link href="/faq" className="nav-link">
-                  FAQ
-                </Link>
-                <Link href="/contact" className="nav-link">
-                  Contact
-                </Link>
+                <PrimaryNav />
                 <AuthNav />
               </nav>
             </div>

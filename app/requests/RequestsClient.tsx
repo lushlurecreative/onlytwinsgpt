@@ -19,6 +19,14 @@ type AllocationRow = {
   direction: string;
 };
 
+type EntitlementResponse = {
+  entitlements?: {
+    planKey: string;
+    imageLimit?: number;
+    videoLimit?: number;
+  } | null;
+};
+
 const PRESET_ROWS: Record<string, AllocationRow[]> = {
   balanced: [
     { id: "a1", kind: "photo", count: 10, direction: "Gym" },
@@ -38,6 +46,9 @@ const PRESET_ROWS: Record<string, AllocationRow[]> = {
 export default function RequestsClient() {
   const [rows, setRows] = useState<RequestRow[]>([]);
   const [error, setError] = useState("");
+  const [entitlementPlan, setEntitlementPlan] = useState<string>("45-5");
+  const [entitlementLabel, setEntitlementLabel] = useState("your package");
+  const [entitlementsLoading, setEntitlementsLoading] = useState(true);
   const [monthlyPlan, setMonthlyPlan] = useState("45-5");
   const [preset, setPreset] = useState("balanced");
   const [allocationRows, setAllocationRows] = useState<AllocationRow[]>(PRESET_ROWS.balanced);
@@ -52,6 +63,30 @@ export default function RequestsClient() {
     .reduce((sum, row) => sum + row.count, 0);
 
   useEffect(() => {
+    const loadEntitlements = async () => {
+      const response = await fetch("/api/me/entitlements");
+      const result = (await response.json().catch(() => ({}))) as EntitlementResponse;
+      const planKey = result.entitlements?.planKey ?? "";
+      if (planKey === "starter") {
+        setEntitlementPlan("45-5");
+        setMonthlyPlan("45-5");
+        setEntitlementLabel("Starter (45 photos + 5 videos)");
+      } else if (planKey === "professional") {
+        setEntitlementPlan("90-15");
+        setMonthlyPlan("90-15");
+        setEntitlementLabel("Professional (90 photos + 15 videos)");
+      } else if (planKey === "elite") {
+        setEntitlementPlan("200-35");
+        setMonthlyPlan("200-35");
+        setEntitlementLabel("Elite (200 photos + 35 videos)");
+      } else {
+        setEntitlementPlan("45-5");
+        setMonthlyPlan("45-5");
+        setEntitlementLabel("Current package");
+      }
+      setEntitlementsLoading(false);
+    };
+
     const load = async () => {
       const response = await fetch("/api/generation-requests");
       const result = (await response.json().catch(() => ({}))) as {
@@ -64,6 +99,7 @@ export default function RequestsClient() {
       }
       setRows(result.requests ?? []);
     };
+    void loadEntitlements();
     void load();
   }, []);
 
@@ -89,6 +125,7 @@ export default function RequestsClient() {
   };
 
   const savePlan = () => {
+    if (monthlyPlan !== entitlementPlan) return;
     const payload = {
       monthlyPlan,
       preset,
@@ -105,17 +142,33 @@ export default function RequestsClient() {
       <article className="premium-card" style={{ padding: 18 }}>
         <h2 style={{ marginTop: 0 }}>Generation Allocation Preferences</h2>
         <p style={{ opacity: 0.8 }}>
-          Choose a default mix or customize exactly how your monthly photo/video allotment should be used.
+          Choose a default mix or customize exactly how your monthly photo/video allotment should be used. You
+          can type your own directions in every text box.
+        </p>
+        <p style={{ opacity: 0.85, marginTop: 8 }}>
+          Monthly plans repeat the same saved allocation each cycle unless you update preferences at least 5
+          days before your next generation cycle.
+        </p>
+        <p style={{ opacity: 0.85, marginTop: 6, marginBottom: 0 }}>
+          Generation delivery target: 2 days after request submission.
         </p>
 
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
           <label>
             Monthly allotment
-            <select value={monthlyPlan} onChange={(event) => setMonthlyPlan(event.target.value)} style={{ width: "100%" }}>
+            <select
+              value={monthlyPlan}
+              onChange={(event) => setMonthlyPlan(event.target.value)}
+              style={{ width: "100%" }}
+              disabled={entitlementsLoading}
+            >
               <option value="45-5">45 photos + 5 videos</option>
               <option value="90-15">90 photos + 15 videos</option>
               <option value="200-35">200 photos + 35 videos</option>
             </select>
+            <small style={{ display: "block", marginTop: 6, opacity: 0.75 }}>
+              Auto-filled from {entitlementLabel}.
+            </small>
           </label>
           <label>
             Default generation option
@@ -126,6 +179,12 @@ export default function RequestsClient() {
             </select>
           </label>
         </div>
+        {monthlyPlan !== entitlementPlan ? (
+          <p style={{ color: "var(--danger)", marginTop: 8 }}>
+            This allotment is above your current package. Upgrade your subscription in Billing to use this
+            amount.
+          </p>
+        ) : null}
 
         <div style={{ marginTop: 12, display: "grid", gap: 8 }}>
           {allocationRows.map((row) => (
@@ -159,7 +218,7 @@ export default function RequestsClient() {
           <button type="button" onClick={addRow}>
             Add line item
           </button>
-          <button type="button" onClick={savePlan}>
+          <button type="button" onClick={savePlan} disabled={monthlyPlan !== entitlementPlan}>
             Save preferences
           </button>
           {saved ? <span style={{ color: "var(--success)" }}>Saved.</span> : null}
