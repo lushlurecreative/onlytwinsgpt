@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { checkRateLimit, getClientIpFromHeaders } from "@/lib/rate-limit";
 import {
   detectMimeTypeFromBytes,
@@ -11,41 +12,52 @@ import { getMaxUploadBytes, RATE_LIMITS } from "@/lib/security-config";
 
 export const runtime = "nodejs";
 
+function isImageObjectName(name: string) {
+  const lower = name.toLowerCase();
+  return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp") || lower.endsWith(".gif");
+}
+
 export async function GET() {
   try {
-    const supabase = await createClient();
+    const session = await createClient();
+    const admin = getSupabaseAdmin();
     const {
       data: { user },
       error: userError,
-    } = await supabase.auth.getUser();
+    } = await session.auth.getUser();
 
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: objects, error: listError } = await supabase.storage.from("uploads").list(user.id, {
+    const { data: rootObjects, error: rootListError } = await admin.storage.from("uploads").list(user.id, {
       limit: 100,
       sortBy: { column: "created_at", order: "desc" },
     });
 
-    if (listError) {
-      return NextResponse.json({ error: listError.message }, { status: 400 });
+    if (rootListError) {
+      return NextResponse.json({ error: rootListError.message }, { status: 400 });
     }
 
-    const files = await Promise.all(
-      (objects ?? [])
-        .filter((item) => !!item.name)
-        .map(async (item) => {
-          const objectPath = `${user.id}/${item.name}`;
-          const { data: signedData } = await supabase.storage.from("uploads").createSignedUrl(objectPath, 3600);
-          return {
-            objectPath,
-            name: item.name,
-            createdAt: item.created_at ?? null,
-            signedUrl: signedData?.signedUrl ?? null,
-          };
-        })
+    const { data: trainingObjects } = await admin.storage.from("uploads").list(`${user.id}/training`, {
+      limit: 100,
+      sortBy: { column: "created_at", order: "desc" },
+    });
+
+    const merged = [...(rootObjects ?? []), ...(trainingObjects ?? [])].filter(
+      (item) => !!item.name && isImageObjectName(item.name)
     );
+    const files = await Promise.all(merged.map(async (item) => {
+      const fromTrainingFolder = (trainingObjects ?? []).some((obj) => obj.name === item.name);
+      const objectPath = fromTrainingFolder ? `${user.id}/training/${item.name}` : `${user.id}/${item.name}`;
+      const { data: signedData } = await admin.storage.from("uploads").createSignedUrl(objectPath, 3600);
+      return {
+        objectPath,
+        name: item.name,
+        createdAt: item.created_at ?? null,
+        signedUrl: signedData?.signedUrl ?? null,
+      };
+    }));
 
     return NextResponse.json({ files }, { status: 200 });
   } catch (error) {
@@ -69,11 +81,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createClient();
+    const session = await createClient();
+    const admin = getSupabaseAdmin();
     const {
       data: { user },
       error: userError,
-    } = await supabase.auth.getUser();
+    } = await session.auth.getUser();
 
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -123,9 +136,9 @@ export async function POST(request: Request) {
     }
 
     const safeName = sanitizeFilename(fileValue.name);
-    const objectPath = `${user.id}/${crypto.randomUUID()}-${safeName}`;
+    const objectPath = `${user.id}/training/${crypto.randomUUID()}-${safeName}`;
 
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await admin.storage
       .from("uploads")
       .upload(objectPath, fileBuffer, {
         upsert: false,
@@ -136,7 +149,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: uploadError.message }, { status: 400 });
     }
 
-    const { data: signedData, error: signedError } = await supabase.storage
+    const { data: signedData, error: signedError } = await admin.storage
       .from("uploads")
       .createSignedUrl(objectPath, 60);
 
@@ -156,11 +169,12 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const supabase = await createClient();
+    const session = await createClient();
+    const admin = getSupabaseAdmin();
     const {
       data: { user },
       error: userError,
-    } = await supabase.auth.getUser();
+    } = await session.auth.getUser();
 
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -172,7 +186,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Invalid object path" }, { status: 400 });
     }
 
-    const { error: removeError } = await supabase.storage.from("uploads").remove([objectPath]);
+    const { error: removeError } = await admin.storage.from("uploads").remove([objectPath]);
     if (removeError) {
       return NextResponse.json({ error: removeError.message }, { status: 400 });
     }

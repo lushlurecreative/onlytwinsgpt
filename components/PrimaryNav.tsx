@@ -51,6 +51,9 @@ export default function PrimaryNav() {
         <Link href="/requests" className="nav-link">
           Requests
         </Link>
+        <Link href="/status" className="nav-link">
+          Status
+        </Link>
         <Link href="/library" className="nav-link">
           Library
         </Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import PremiumCard from "@/components/PremiumCard";
 import PremiumButton from "@/components/PremiumButton";
@@ -22,6 +22,9 @@ export default function OnboardingIntakeClient() {
   const [rules, setRules] = useState("");
   const [extras, setExtras] = useState<ExtraField[]>([]);
   const [saved, setSaved] = useState(false);
+  const [loadingSaved, setLoadingSaved] = useState(true);
+  const [saveError, setSaveError] = useState("");
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const addExtra = () => {
@@ -36,7 +39,40 @@ export default function OnboardingIntakeClient() {
     setExtras((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const onSave = () => {
+  useEffect(() => {
+    const loadSaved = async () => {
+      const response = await fetch("/api/me/onboarding-intake", { method: "GET" });
+      const result = (await response.json().catch(() => ({}))) as {
+        intake?: {
+          name?: string;
+          age?: string;
+          email?: string;
+          whatsapp?: string;
+          realBio?: string;
+          desiredBio?: string;
+          rules?: string;
+          extras?: ExtraField[];
+          updatedAt?: string;
+        } | null;
+      };
+      const intake = result.intake;
+      if (intake) {
+        setName(intake.name ?? "");
+        setAge(intake.age ?? "");
+        setEmail(intake.email ?? "");
+        setWhatsapp(intake.whatsapp ?? "");
+        setRealBio(intake.realBio ?? "");
+        setDesiredBio(intake.desiredBio ?? "");
+        setRules(intake.rules ?? "");
+        setExtras(Array.isArray(intake.extras) ? intake.extras : []);
+        setLastSavedAt(intake.updatedAt ?? null);
+      }
+      setLoadingSaved(false);
+    };
+    void loadSaved();
+  }, []);
+
+  const onSave = async () => {
     const nextErrors: Record<string, string> = {};
     if (!name.trim()) nextErrors.name = "Name is required.";
     if (!age.trim()) nextErrors.age = "Age is required.";
@@ -56,6 +92,7 @@ export default function OnboardingIntakeClient() {
     }
 
     setErrors({});
+    setSaveError("");
     const payload = {
       name,
       age,
@@ -65,18 +102,49 @@ export default function OnboardingIntakeClient() {
       desiredBio,
       rules,
       extras,
-      updatedAt: new Date().toISOString(),
     };
-    window.localStorage.setItem("ot_onboarding_intake_v1", JSON.stringify(payload));
+    const response = await fetch("/api/me/onboarding-intake", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const result = (await response.json().catch(() => ({}))) as { error?: string };
+    if (!response.ok) {
+      setSaveError(result.error ?? "Could not save intake.");
+      return;
+    }
     setSaved(true);
+    setLastSavedAt(new Date().toISOString());
     setTimeout(() => {
       setSaved(false);
-      router.push("/training/photos");
+      router.push("/start");
     }, 600);
   };
 
+  const identityComplete = !!(name.trim() && age.trim() && email.trim() && whatsapp.trim());
+  const bioComplete = !!(realBio.trim() && desiredBio.trim());
+  const rulesComplete = !!rules.trim();
+  const sectionsDone = [identityComplete, bioComplete, rulesComplete].filter(Boolean).length;
+
   return (
     <section style={{ marginTop: 16, display: "grid", gap: 14 }}>
+      <PremiumCard>
+        <h2 style={{ marginTop: 0 }}>Onboarding progress</h2>
+        {loadingSaved ? (
+          <p style={{ marginBottom: 0, opacity: 0.8 }}>Loading saved intake...</p>
+        ) : (
+          <>
+            <p style={{ marginBottom: 8, opacity: 0.85 }}>
+              Completed sections: {sectionsDone}/3
+              {lastSavedAt ? ` - Last saved ${new Date(lastSavedAt).toLocaleString()}` : ""}
+            </p>
+            <p style={{ marginBottom: 0, opacity: 0.8 }}>
+              Completed sections remain editable so you can update details anytime.
+            </p>
+          </>
+        )}
+      </PremiumCard>
+
       <PremiumCard>
         <h2 style={{ marginTop: 0 }}>Required intake fields</h2>
         <p style={{ opacity: 0.8, marginTop: 0 }}>
@@ -186,13 +254,14 @@ export default function OnboardingIntakeClient() {
       <PremiumCard>
         <h2 style={{ marginTop: 0 }}>Save intake and continue</h2>
         <p style={{ opacity: 0.8 }}>
-          Save your required intake details, then continue to upload training photos.
+          Save your required intake details, then continue from your dashboard.
         </p>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <PremiumButton type="button" onClick={onSave}>
             Save Intake
           </PremiumButton>
-          {saved ? <span style={{ color: "var(--success)" }}>Saved. Redirecting…</span> : null}
+          {saved ? <span style={{ color: "var(--success)" }}>Saved. Redirecting...</span> : null}
+          {saveError ? <span style={{ color: "var(--danger)" }}>{saveError}</span> : null}
         </div>
       </PremiumCard>
     </section>

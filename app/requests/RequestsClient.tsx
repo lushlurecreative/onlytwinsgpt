@@ -27,6 +27,14 @@ type EntitlementResponse = {
   } | null;
 };
 
+type RequestPreferencesResponse = {
+  preferences?: {
+    monthlyPlan?: string;
+    preset?: string;
+    allocationRows?: AllocationRow[];
+  } | null;
+};
+
 const PRESET_ROWS: Record<string, AllocationRow[]> = {
   balanced: [
     { id: "a1", kind: "photo", count: 10, direction: "Gym" },
@@ -87,6 +95,18 @@ export default function RequestsClient() {
       setEntitlementsLoading(false);
     };
 
+    const loadSavedPreferences = async () => {
+      const response = await fetch("/api/me/request-preferences");
+      const result = (await response.json().catch(() => ({}))) as RequestPreferencesResponse;
+      const savedPrefs = result.preferences;
+      if (!savedPrefs) return;
+      if (typeof savedPrefs.monthlyPlan === "string") setMonthlyPlan(savedPrefs.monthlyPlan);
+      if (typeof savedPrefs.preset === "string") setPreset(savedPrefs.preset);
+      if (Array.isArray(savedPrefs.allocationRows) && savedPrefs.allocationRows.length > 0) {
+        setAllocationRows(savedPrefs.allocationRows);
+      }
+    };
+
     const load = async () => {
       const response = await fetch("/api/generation-requests");
       const result = (await response.json().catch(() => ({}))) as {
@@ -100,6 +120,7 @@ export default function RequestsClient() {
       setRows(result.requests ?? []);
     };
     void loadEntitlements();
+    void loadSavedPreferences();
     void load();
   }, []);
 
@@ -130,11 +151,17 @@ export default function RequestsClient() {
       monthlyPlan,
       preset,
       allocationRows,
-      updatedAt: new Date().toISOString(),
     };
-    window.localStorage.setItem("ot_request_allocation_plan_v1", JSON.stringify(payload));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2200);
+    void (async () => {
+      const response = await fetch("/api/me/request-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) return;
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
+    })();
   };
 
   return (
@@ -152,6 +179,7 @@ export default function RequestsClient() {
         <p style={{ opacity: 0.85, marginTop: 6, marginBottom: 0 }}>
           Generation delivery target: 2 days after request submission.
         </p>
+        <div style={{ height: 14 }} />
 
         <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
           <label>
