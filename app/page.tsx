@@ -39,14 +39,6 @@ function HomeContent() {
         <p className="eyebrow">{MARKETING_MESSAGE_MAP.positioning.eyebrow}</p>
         <h1>{MARKETING_MESSAGE_MAP.positioning.headline}</h1>
         <p>{MARKETING_MESSAGE_MAP.positioning.subheadline}</p>
-        <div className="hero-slider-wrap">
-          <BeforeAfterSlider
-            beforeSrc="/hero-before.svg"
-            afterSrc="/hero-after.svg"
-            beforeLabel="Original"
-            afterLabel="Twin"
-          />
-        </div>
         <div className="cta-row">
           {hasSession ? (
             <PremiumButton href="/start">Open Dashboard</PremiumButton>
@@ -124,6 +116,11 @@ function HomeContent() {
           <p className="section-copy">
             Calm operations, predictable quality, and a cleaner workflow than ad-hoc AI tool chains.
           </p>
+          <div className="cta-row" style={{ marginTop: 12 }}>
+            <PremiumButton href="/market-ad-hoc" variant="secondary">
+              See Typical Market AI Quality
+            </PremiumButton>
+          </div>
         </PremiumCard>
         <PremiumCard title="Production visibility">
           <p className="section-copy">

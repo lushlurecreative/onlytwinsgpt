@@ -63,9 +63,10 @@ export const resultsItems: ResultsItem[] = [
     id: "result-6",
     before: "/results/before/Slider%206.jpg",
     after: "/results/after/Slider%206.jpg",
-    title: "Social Media Transformation",
-    category: "Instagram",
-    description: "Platform-ready social media style tuned for feed consistency and polished output.",
+    title: "NSFW Variation Transformation",
+    category: "NSFW",
+    description: "Adult-oriented variation that remains identity-consistent with controlled output styling.",
+    nsfw: true,
   },
 ];
 

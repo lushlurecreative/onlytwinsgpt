@@ -1765,12 +1765,5 @@ export const galleryItems: GalleryItem[] = [
 ];
 
 export const homeGalleryPreviewItems: GalleryItem[] = [
-  galleryItems.find((item) => item.src === "/gallery/cars/photo_2025-09-27_04-36-10 (2).jpg")!,
-  galleryItems.find((item) => item.src === "/gallery/cars/photo_2026-02-07_20-33-59 (2).jpg")!,
-  galleryItems.find((item) => item.src === "/gallery/exercise/photo_2025-01-29_06-48-24.jpg")!,
-  galleryItems.find((item) => item.src === "/gallery/exercise/photo_2026-02-24_15-18-23.jpg")!,
-  galleryItems.find((item) => item.src === "/gallery/goth/0223.mp4")!,
-  galleryItems.find((item) => item.src === "/gallery/influencer/photo_2025-08-20_16-53-34 (2).jpg")!,
-  galleryItems.find((item) => item.src === "/gallery/influencer/photo_2025-09-27_04-36-11.jpg")!,
-  galleryItems.find((item) => item.src === "/gallery/influencer/photo_2025-10-04_18-18-22 (2).jpg")!,
+  ...galleryItems.filter((item) => !item.nsfw).slice(0, 8),
 ];

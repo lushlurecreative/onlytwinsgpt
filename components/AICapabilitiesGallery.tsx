@@ -21,6 +21,10 @@ function matchCategory(item: GalleryItem, selectedCategory: GalleryCategory) {
   return item.tags.includes(selectedCategory);
 }
 
+function isActuallyNSFW(item: GalleryItem) {
+  return item.nsfw && (item.title === "NSFW" || item.tags.includes("NSFW"));
+}
+
 export default function AICapabilitiesGallery({
   items,
   maxItems,
@@ -102,7 +106,7 @@ export default function AICapabilitiesGallery({
             type="button"
             className="ai-gallery-card"
             onClick={() => {
-              const hiddenNSFW = item.nsfw && !showNSFWPreviews && !revealedNSFW[item.src];
+              const hiddenNSFW = isActuallyNSFW(item) && !showNSFWPreviews && !revealedNSFW[item.src];
               if (hiddenNSFW) {
                 revealNSFW(item);
                 return;
@@ -116,7 +120,7 @@ export default function AICapabilitiesGallery({
             transition={{ duration: 0.22, delay: index * 0.02 }}
           >
             <BlurredNSFWCard
-              isNSFW={item.nsfw}
+              isNSFW={isActuallyNSFW(item)}
               revealed={!!revealedNSFW[item.src]}
               showPreview={showNSFWPreviews}
               onReveal={() => revealNSFW(item)}
