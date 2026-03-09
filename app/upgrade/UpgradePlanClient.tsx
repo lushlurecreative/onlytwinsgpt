@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import PremiumButton from "@/components/PremiumButton";
+import { ENTITLEMENTS_BY_PLAN } from "@/lib/plan-entitlements";
+import { type PlanKey } from "@/lib/package-plans";
 
 type EntitlementsResponse = {
   entitlements?: {
@@ -37,8 +39,6 @@ type UpgradePreview = {
     dueTodayFormatted: string;
   };
 };
-
-type PlanKey = "starter" | "professional" | "elite";
 
 type GenerationRow = {
   image_count?: number | null;
@@ -95,6 +95,48 @@ const PLAN_OPTIONS: Array<{
       "35 videos per month",
       "Built for team-level output",
       "Best for high-frequency campaigns",
+    ],
+  },
+  {
+    key: "single_batch",
+    displayName: "Single Content Batch",
+    description: "One-time delivery for campaigns needing immediate output.",
+    monthlyPrice: "$399 one-time",
+    photos: ENTITLEMENTS_BY_PLAN.single_batch.includedImages,
+    videos: ENTITLEMENTS_BY_PLAN.single_batch.includedVideos,
+    bullets: [
+      "One-time package",
+      "Fast campaign output",
+      "No recurring billing commitment",
+      "Same private delivery workflow",
+    ],
+  },
+  {
+    key: "partner_70_30",
+    displayName: "Partner 70/30",
+    description: "Lower upfront monthly cost with revenue-share structure.",
+    monthlyPrice: "$100/month + rev share",
+    photos: ENTITLEMENTS_BY_PLAN.partner_70_30.includedImages,
+    videos: ENTITLEMENTS_BY_PLAN.partner_70_30.includedVideos,
+    bullets: [
+      "Shared-growth partnership",
+      "Monthly recurring package",
+      "Great for growth-stage creators",
+      "Managed private content pipeline",
+    ],
+  },
+  {
+    key: "partner_50_50",
+    displayName: "Partner 50/50",
+    description: "Deep partnership model for select strategic accounts.",
+    monthlyPrice: "$1/month + rev share",
+    photos: ENTITLEMENTS_BY_PLAN.partner_50_50.includedImages,
+    videos: ENTITLEMENTS_BY_PLAN.partner_50_50.includedVideos,
+    bullets: [
+      "Strategic revenue-share model",
+      "High-collaboration workflow",
+      "Recurring monthly generation",
+      "For qualified partner accounts",
     ],
   },
 ];
@@ -261,7 +303,10 @@ export default function UpgradePlanClient() {
         <section className="upgrade-plan-grid">
           {PLAN_OPTIONS.map((plan) => {
             const isCurrent = currentPlanKey === plan.key;
-            const isEnterpriseStyle = plan.key === "elite";
+            const isStandardUpgradeTier = plan.key === "starter" || plan.key === "professional" || plan.key === "elite";
+            const canUpgradeFromCurrent =
+              (currentPlanKey === "starter" && (plan.key === "professional" || plan.key === "elite")) ||
+              (currentPlanKey === "professional" && plan.key === "elite");
             return (
               <article key={plan.key} className={`upgrade-plan-card ${isCurrent ? "is-current" : ""}`.trim()}>
                 <div className="upgrade-plan-head">
@@ -280,7 +325,11 @@ export default function UpgradePlanClient() {
                   <PremiumButton type="button" disabled>
                     Current plan
                   </PremiumButton>
-                ) : isEnterpriseStyle ? (
+                ) : !isStandardUpgradeTier ? (
+                  <PremiumButton href="/pricing" variant="secondary">
+                    View plans
+                  </PremiumButton>
+                ) : !canUpgradeFromCurrent ? (
                   <PremiumButton href="/contact">Contact sales</PremiumButton>
                 ) : (
                   <PremiumButton

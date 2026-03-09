@@ -49,6 +49,7 @@ export default function RequestsClient() {
     cutoffAt?: string | null;
   } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveFeedback, setSaveFeedback] = useState("");
 
   const loadPlanner = useCallback(async () => {
     const response = await fetch("/api/me/request-planner");
@@ -101,11 +102,13 @@ export default function RequestsClient() {
     mixLines.every((line) => line.prompt.trim().length > 0) &&
     totals.photos <= planner.plan.allowance.photos &&
     totals.videos <= planner.plan.allowance.videos;
+  const overLimit = !!planner && (totals.photos > planner.plan.allowance.photos || totals.videos > planner.plan.allowance.videos);
 
   async function saveRecurringMix() {
     if (!canSave) return;
     setSaving(true);
     setError("");
+    setSaveFeedback("");
     const payload = {
       preset: "custom",
       allocationRows: mixLines.map((line) => ({
@@ -124,6 +127,8 @@ export default function RequestsClient() {
       error?: string;
       appliesTo?: "next_cycle" | "following_cycle";
       cutoffAt?: string | null;
+      generationState?: string;
+      generationMessage?: string;
     };
     if (!response.ok) {
       setError(result.error ?? "Could not save recurring mix.");
@@ -132,6 +137,7 @@ export default function RequestsClient() {
     }
     setLoading(true);
     setSavedState({ appliesTo: result.appliesTo, cutoffAt: result.cutoffAt });
+    setSaveFeedback(result.generationMessage ?? "Your recurring request mix has been saved.");
     setSaving(false);
     await loadPlanner();
   }
@@ -148,6 +154,23 @@ export default function RequestsClient() {
         </p>
         <p className="planner-copy" style={{ marginBottom: 0 }}>
           Your next cycle generates fresh content based on your saved recurring request mix.
+        </p>
+      </article>
+
+      <article className="premium-card planner-hero">
+        <h3 style={{ marginTop: 0 }}>How your monthly generation works</h3>
+        <p className="planner-copy">
+          Your plan includes a fixed monthly number of photos and videos. Each billing cycle, we generate your content
+          as a complete batch based on your saved request mix.
+        </p>
+        <p className="planner-copy">You do not generate single items one-by-one whenever you want.</p>
+        <p className="planner-copy">
+          If you leave part of your monthly allowance unassigned, OnlyTwins will automatically select the remaining
+          scenes and styles for you.
+        </p>
+        <p className="planner-copy" style={{ marginBottom: 0 }}>
+          If you do not update your request mix before the cycle cutoff, your previous mix will repeat for the next
+          cycle with newly generated content.
         </p>
       </article>
 
@@ -299,13 +322,28 @@ export default function RequestsClient() {
               </PremiumButton>
             </div>
             <div style={{ marginTop: 10, opacity: 0.9 }}>
-              Selected: {totals.photos}/{planner?.plan.allowance.photos ?? 0} photos · {totals.videos}/
-              {planner?.plan.allowance.videos ?? 0} videos
+              Photos selected: {totals.photos} / {planner?.plan.allowance.photos ?? 0}
+              {" · "}
+              Videos selected: {totals.videos} / {planner?.plan.allowance.videos ?? 0}
             </div>
-            {!canSave ? (
+            {overLimit ? (
               <p style={{ color: "var(--danger)", marginBottom: 0 }}>
-                Ensure each line has prompt text and totals stay within your current plan allowance.
+                Your current plan includes up to {planner?.plan.allowance.photos ?? 0} photos and{" "}
+                {planner?.plan.allowance.videos ?? 0} videos per month. To request more than that, upgrade your plan.
               </p>
+            ) : null}
+            {overLimit ? (
+              <div style={{ marginTop: 10 }}>
+                <PremiumButton href="/upgrade">Upgrade plan</PremiumButton>
+              </div>
+            ) : null}
+            {!overLimit && !canSave ? (
+              <p style={{ color: "var(--danger)", marginBottom: 0 }}>
+                Ensure each line has prompt text before saving.
+              </p>
+            ) : null}
+            {saveFeedback ? (
+              <p style={{ color: "var(--success)", marginBottom: 0 }}>{saveFeedback}</p>
             ) : null}
           </article>
 

@@ -6,8 +6,28 @@ import {
   getCurrentSubscriptionSummary,
   normalizeMixLines,
 } from "@/lib/request-planner";
+import { createGenerationRequestWithUsage } from "@/lib/generation-request-intake";
 
 const SETTINGS_PREFIX = "request_mix:";
+
+function selectScenePreset(lines: ReturnType<typeof normalizeMixLines>) {
+  const text = lines.map((line) => line.prompt.toLowerCase()).join(" ");
+  if (text.includes("beach")) return "beach";
+  if (text.includes("camp") || text.includes("outdoor")) return "camping";
+  if (text.includes("coffee")) return "coffee_shop";
+  if (text.includes("swim")) return "swimsuit_try_on";
+  if (text.includes("street")) return "street_style";
+  if (text.includes("night")) return "nightlife";
+  if (text.includes("city")) return "city";
+  if (text.includes("home") || text.includes("bedroom")) return "casual_home";
+  return "gym";
+}
+
+function inferContentMode(lines: ReturnType<typeof normalizeMixLines>): "sfw" | "mature" {
+  const text = lines.map((line) => line.prompt.toLowerCase()).join(" ");
+  if (text.includes("nsfw") || text.includes("adult") || text.includes("explicit")) return "mature";
+  return "sfw";
+}
 
 async function getUserId() {
   const session = await createClient();
@@ -112,6 +132,78 @@ export async function PUT(request: Request) {
     .upsert({ key, value: serialized, updated_at: new Date().toISOString() }, { onConflict: "key" });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
+  const cycleEndIso = nextRenewalAt;
+  let cycleStartIso: string | null = null;
+  if (cycleEndIso) {
+    const end = new Date(cycleEndIso);
+    cycleStartIso = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  }
+
+  let generationState:
+    | "queued_now"
+    | "saved_for_next_cycle"
+    | "current_cycle_already_queued"
+    | "saved_pending_training"
+    | "saved_pending_eligibility" = "saved_for_next_cycle";
+  let generationMessage =
+    "Your recurring request mix has been saved. If you do not update before cutoff, this mix repeats next cycle.";
+  const nextRenewalLabel = nextRenewalAt
+    ? new Date(nextRenewalAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "your next cycle";
+
+  const eligibleStatus = ["active", "trialing"].includes(String(summary.status ?? "").toLowerCase());
+  if (!eligibleStatus) {
+    generationState = "saved_pending_eligibility";
+    generationMessage = "Saved. Your plan is not currently eligible for generation. Update billing to resume queueing.";
+  } else {
+    const { data: uploadList } = await admin.storage.from("uploads").list(`${userId}/training`, {
+      limit: 100,
+      offset: 0,
+      sortBy: { column: "created_at", order: "desc" },
+    });
+    const samplePaths = (uploadList ?? [])
+      .map((obj) => `${userId}/training/${obj.name}`)
+      .filter((path) => /\.(jpg|jpeg|png|webp|gif)$/i.test(path))
+      .slice(0, 10);
+
+    if (samplePaths.length < 10) {
+      generationState = "saved_pending_training";
+      generationMessage = `Saved. Upload at least 10 training photos before your monthly batch can be queued for ${nextRenewalLabel}.`;
+    } else if (cycleStartIso && cycleEndIso) {
+      const { data: existingRows } = await admin
+        .from("generation_requests")
+        .select("id")
+        .eq("user_id", userId)
+        .gte("created_at", cycleStartIso)
+        .lt("created_at", cycleEndIso)
+        .limit(1);
+      if ((existingRows ?? []).length > 0) {
+        generationState = "current_cycle_already_queued";
+        generationMessage = `Saved. Current cycle already queued. Your updated mix is set for ${nextRenewalLabel}.`;
+      } else {
+        const scenePreset = selectScenePreset(lines);
+        const contentMode = inferContentMode(lines);
+        const queued = await createGenerationRequestWithUsage(admin, {
+          userId,
+          samplePaths,
+          scenePreset,
+          imageCount: totalPhotos,
+          videoCount: totalVideos,
+          contentMode,
+          idempotencyKey: `request-mix-save:${userId}:${new Date().toISOString().slice(0, 10)}`,
+        });
+        if (queued.ok) {
+          generationState = "queued_now";
+          generationMessage = "Your monthly content batch has been queued.";
+        } else {
+          generationState = "saved_for_next_cycle";
+          generationMessage =
+            `Saved. We could not queue this cycle immediately, but your mix is saved for ${nextRenewalLabel}.`;
+        }
+      }
+    }
+  }
+
   return NextResponse.json(
     {
       ok: true,
@@ -119,6 +211,8 @@ export async function PUT(request: Request) {
       cutoffAt: timing.cutoffAt,
       nextRenewalAt,
       cycleEffectiveAt: nextRenewalAt,
+      generationState,
+      generationMessage,
     },
     { status: 200 }
   );
