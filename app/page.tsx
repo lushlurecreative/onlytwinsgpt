@@ -41,7 +41,7 @@ function HomeContent() {
         <p>{MARKETING_MESSAGE_MAP.positioning.subheadline}</p>
         <div className="cta-row">
           {hasSession ? (
-            <PremiumButton href="/start">Open Dashboard</PremiumButton>
+            <PremiumButton href="/dashboard">Open Dashboard</PremiumButton>
           ) : (
             <PremiumButton href={MARKETING_MESSAGE_MAP.cta.primaryHref}>
               {MARKETING_MESSAGE_MAP.cta.primaryLabel}
@@ -136,9 +136,13 @@ function HomeContent() {
           Subscribe, upload photos, and let the system run quietly in the background.
         </p>
         <div className="cta-row">
-          <PremiumButton href={MARKETING_MESSAGE_MAP.cta.primaryHref}>
-            {MARKETING_MESSAGE_MAP.cta.primaryLabel}
-          </PremiumButton>
+          {hasSession ? (
+            <PremiumButton href="/dashboard">Open Dashboard</PremiumButton>
+          ) : (
+            <PremiumButton href={MARKETING_MESSAGE_MAP.cta.primaryHref}>
+              {MARKETING_MESSAGE_MAP.cta.primaryLabel}
+            </PremiumButton>
+          )}
           <PremiumButton href="/results" variant="secondary">
             See Results
           </PremiumButton>

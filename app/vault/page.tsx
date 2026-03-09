@@ -19,7 +19,7 @@ export default async function VaultPage() {
 
   const role = await getUserRole(supabase, user.id);
   if (role !== "creator") {
-    redirect("/start");
+    redirect("/dashboard");
   }
 
   return (

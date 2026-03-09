@@ -39,7 +39,7 @@ export default function PrimaryNav() {
   if (user) {
     return (
       <>
-        <Link href="/start" className="nav-link">
+        <Link href="/dashboard" className="nav-link">
           Dashboard
         </Link>
         <Link href="/onboarding/intake" className="nav-link">

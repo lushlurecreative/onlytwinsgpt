@@ -156,7 +156,7 @@ export default function OnboardingIntakeClient() {
     setIsEditing(false);
     setTimeout(() => {
       setSaved(false);
-      router.push("/start");
+      router.push("/dashboard");
     }, 600);
   };
 

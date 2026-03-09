@@ -3,5 +3,5 @@ import { requireActiveSubscriber } from "@/lib/require-active-subscriber";
 
 export default async function TrainingVaultPage() {
   await requireActiveSubscriber("/training-vault");
-  redirect("/start");
+  redirect("/dashboard");
 }

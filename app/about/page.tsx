@@ -1,5 +1,5 @@
-import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BrandName from "@/app/components/BrandName";
+import AuthAwarePrimaryCta from "@/components/AuthAwarePrimaryCta";
 
 export default function AboutPage() {
   return (
@@ -38,9 +38,7 @@ export default function AboutPage() {
           <li>Partnership packages with low upfront cost and revenue share</li>
         </ul>
         <div className="cta-row">
-          <a href={MARKETING_MESSAGE_MAP.cta.primaryHref} className="btn btn-primary">
-            {MARKETING_MESSAGE_MAP.cta.primaryLabel}
-          </a>
+          <AuthAwarePrimaryCta className="btn btn-primary" />
         </div>
       </section>
     </div>

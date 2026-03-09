@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import PremiumCard from "@/components/PremiumCard";
 import PremiumButton from "@/components/PremiumButton";
@@ -26,7 +26,7 @@ const steps: SetupStep[] = [
     title: "Step 1: Set Preferences",
     description: "Complete onboarding intake with your identity details, bio, constraints, and style rules.",
     buttonText: "Set Preferences",
-    viewHref: "/start",
+    viewHref: "/dashboard",
     editHref: "/onboarding/intake",
   },
   {
@@ -50,6 +50,7 @@ const steps: SetupStep[] = [
 export default function StartDashboardClient() {
   const INTAKE_LOCAL_KEY = "ot_onboarding_intake_v1";
   const PREFS_LOCAL_KEY = "ot_request_allocation_plan_v1";
+  const AUTO_QUEUE_KEY = "ot_auto_queue_v1";
 
   const [loading, setLoading] = useState(true);
   const [completed, setCompleted] = useState({
@@ -196,7 +197,7 @@ export default function StartDashboardClient() {
     },
   ] as const;
 
-  const queueFirstJob = async () => {
+  const queueFirstJob = useCallback(async () => {
     if (queueing) return;
     if (samplePaths.length < 10) {
       setQueueMessage("Upload at least 10 photos before queueing.");
@@ -222,8 +223,24 @@ export default function StartDashboardClient() {
       return;
     }
     setQueueMessage("Generation job queued successfully.");
+    try {
+      window.localStorage.setItem(AUTO_QUEUE_KEY, "queued");
+    } catch {}
     setQueueing(false);
-  };
+  }, [AUTO_QUEUE_KEY, queueing, samplePaths]);
+
+  useEffect(() => {
+    if (loading || queueing) return;
+    if (!allStepsDone || requestCount > 0 || samplePaths.length < 10) return;
+    try {
+      const queued = window.localStorage.getItem(AUTO_QUEUE_KEY);
+      if (queued === "queued") return;
+    } catch {}
+    const timer = window.setTimeout(() => {
+      void queueFirstJob();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [allStepsDone, loading, queueing, requestCount, samplePaths.length, queueFirstJob]);
 
   return (
     <div className="premium-dashboard">
@@ -263,7 +280,7 @@ export default function StartDashboardClient() {
         </div>
         <div className="cta-row" style={{ marginTop: 2 }}>
           <PremiumButton href="/training/photos">Start Creating My Twin</PremiumButton>
-          <PremiumButton href="/start" variant="secondary">
+          <PremiumButton href="/dashboard" variant="secondary">
             Set Preferences
           </PremiumButton>
         </div>

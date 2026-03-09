@@ -134,7 +134,7 @@ export default async function CreatorDashboardPage() {
         <Link href="/vault">Open Vault (uploads &amp; generation)</Link>
         <Link href={`/feed/creator/${user.id}`}>Open Creator Feed View</Link>
         <Link href="/billing">Billing &amp; subscribers</Link>
-        <Link href="/start">My subscriptions</Link>
+        <Link href="/dashboard">My subscriptions</Link>
         <Link href="/onboarding/creator">Onboarding checklist</Link>
         <Link href="/feed">Open Public Feed</Link>
       </div>

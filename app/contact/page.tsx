@@ -1,4 +1,4 @@
-import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
+import AuthAwarePrimaryCta from "@/components/AuthAwarePrimaryCta";
 
 export default function ContactPage() {
   return (
@@ -35,9 +35,7 @@ export default function ContactPage() {
           <a href="mailto:hello@onlytwins.dev?subject=OnlyTwins%20Support" className="btn btn-primary">
             Email Support
           </a>
-          <a href={MARKETING_MESSAGE_MAP.cta.primaryHref} className="btn btn-secondary">
-            {MARKETING_MESSAGE_MAP.cta.primaryLabel}
-          </a>
+          <AuthAwarePrimaryCta className="btn btn-secondary" />
         </div>
       </section>
     </div>

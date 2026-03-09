@@ -890,7 +890,7 @@ export default function VaultClient({ userId }: VaultClientProps) {
           </div>
 
           <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginTop: 18 }}>
-            <Link className="btn btn-primary" href="/start">
+            <Link className="btn btn-primary" href="/dashboard">
               Start Here
             </Link>
             <Link className="btn btn-ghost" href="/">

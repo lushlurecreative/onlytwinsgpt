@@ -9,7 +9,7 @@ import PremiumButton from "@/components/PremiumButton";
 
 function LoginPageInner() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") ?? "/start";
+  const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://onlytwins.dev";
 
   const [email, setEmail] = useState("");
@@ -97,7 +97,7 @@ function LoginPageInner() {
 
         <p>{msg}</p>
 
-        {redirectTo !== "/start" ? (
+        {redirectTo !== "/dashboard" ? (
           <p style={{ marginTop: 18, opacity: 0.8 }}>
             You will be taken to your destination after signing in.
           </p>

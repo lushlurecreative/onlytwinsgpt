@@ -1,5 +1,5 @@
-import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
 import BrandName from "@/app/components/BrandName";
+import AuthAwarePrimaryCta from "@/components/AuthAwarePrimaryCta";
 
 const faqs = [
   {
@@ -62,9 +62,7 @@ export default function FaqPage() {
           <a href="/contact" className="btn btn-secondary">
             Contact Us
           </a>
-          <a href={MARKETING_MESSAGE_MAP.cta.primaryHref} className="btn btn-primary">
-            {MARKETING_MESSAGE_MAP.cta.primaryLabel}
-          </a>
+          <AuthAwarePrimaryCta className="btn btn-primary" />
         </div>
       </section>
     </div>

@@ -1,4 +1,5 @@
 import { MARKETING_MESSAGE_MAP } from "@/lib/marketing-message-map";
+import AuthAwarePrimaryCta from "@/components/AuthAwarePrimaryCta";
 
 export default function HowItWorksPage() {
   return (
@@ -35,9 +36,7 @@ export default function HowItWorksPage() {
           <li>Review and use the delivered content</li>
         </ul>
         <div className="cta-row">
-          <a href={MARKETING_MESSAGE_MAP.cta.primaryHref} className="btn btn-primary">
-            {MARKETING_MESSAGE_MAP.cta.primaryLabel}
-          </a>
+          <AuthAwarePrimaryCta className="btn btn-primary" />
           <a href="/results" className="btn btn-secondary">
             See Sample Results
           </a>
