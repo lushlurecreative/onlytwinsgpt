@@ -12,6 +12,7 @@ type ExtraField = {
 };
 
 export default function OnboardingIntakeClient() {
+  const LOCAL_KEY = "ot_onboarding_intake_v1";
   const router = useRouter();
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
@@ -25,6 +26,7 @@ export default function OnboardingIntakeClient() {
   const [loadingSaved, setLoadingSaved] = useState(true);
   const [saveError, setSaveError] = useState("");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const addExtra = () => {
@@ -41,6 +43,34 @@ export default function OnboardingIntakeClient() {
 
   useEffect(() => {
     const loadSaved = async () => {
+      let loadedFromLocal = false;
+      try {
+        const raw = window.localStorage.getItem(LOCAL_KEY);
+        if (raw) {
+          const local = JSON.parse(raw) as {
+            name?: string;
+            age?: string;
+            email?: string;
+            whatsapp?: string;
+            realBio?: string;
+            desiredBio?: string;
+            rules?: string;
+            extras?: ExtraField[];
+            updatedAt?: string;
+          };
+          setName(local.name ?? "");
+          setAge(local.age ?? "");
+          setEmail(local.email ?? "");
+          setWhatsapp(local.whatsapp ?? "");
+          setRealBio(local.realBio ?? "");
+          setDesiredBio(local.desiredBio ?? "");
+          setRules(local.rules ?? "");
+          setExtras(Array.isArray(local.extras) ? local.extras : []);
+          setLastSavedAt(local.updatedAt ?? null);
+          loadedFromLocal = true;
+        }
+      } catch {}
+
       const response = await fetch("/api/me/onboarding-intake", { method: "GET" });
       const result = (await response.json().catch(() => ({}))) as {
         intake?: {
@@ -56,7 +86,7 @@ export default function OnboardingIntakeClient() {
         } | null;
       };
       const intake = result.intake;
-      if (intake) {
+      if (intake && !loadedFromLocal) {
         setName(intake.name ?? "");
         setAge(intake.age ?? "");
         setEmail(intake.email ?? "");
@@ -67,6 +97,7 @@ export default function OnboardingIntakeClient() {
         setExtras(Array.isArray(intake.extras) ? intake.extras : []);
         setLastSavedAt(intake.updatedAt ?? null);
       }
+      if (intake?.updatedAt) setLastSavedAt(intake.updatedAt);
       setLoadingSaved(false);
     };
     void loadSaved();
@@ -103,18 +134,26 @@ export default function OnboardingIntakeClient() {
       rules,
       extras,
     };
+
+    try {
+      window.localStorage.setItem(
+        LOCAL_KEY,
+        JSON.stringify({ ...payload, updatedAt: new Date().toISOString() })
+      );
+    } catch {}
+
     const response = await fetch("/api/me/onboarding-intake", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const result = (await response.json().catch(() => ({}))) as { error?: string };
     if (!response.ok) {
-      setSaveError(result.error ?? "Could not save intake.");
-      return;
+      const result = (await response.json().catch(() => ({}))) as { error?: string };
+      setSaveError(result.error ?? "Saved locally. Cloud save not available right now.");
     }
     setSaved(true);
     setLastSavedAt(new Date().toISOString());
+    setIsEditing(false);
     setTimeout(() => {
       setSaved(false);
       router.push("/start");
@@ -125,6 +164,8 @@ export default function OnboardingIntakeClient() {
   const bioComplete = !!(realBio.trim() && desiredBio.trim());
   const rulesComplete = !!rules.trim();
   const sectionsDone = [identityComplete, bioComplete, rulesComplete].filter(Boolean).length;
+  const fullyCompleted = identityComplete && bioComplete;
+  const showReadOnly = fullyCompleted && !isEditing;
 
   return (
     <section style={{ marginTop: 16, display: "grid", gap: 14 }}>
@@ -153,17 +194,32 @@ export default function OnboardingIntakeClient() {
         <div style={{ display: "grid", gap: 10 }}>
           <label>
             Name *
-            <input value={name} onChange={(event) => setName(event.target.value)} style={{ width: "100%" }} />
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              style={{ width: "100%" }}
+              disabled={showReadOnly}
+            />
             {errors.name ? <small style={{ color: "var(--danger)" }}>{errors.name}</small> : null}
           </label>
           <label>
             Age *
-            <input value={age} onChange={(event) => setAge(event.target.value)} style={{ width: "100%" }} />
+            <input
+              value={age}
+              onChange={(event) => setAge(event.target.value)}
+              style={{ width: "100%" }}
+              disabled={showReadOnly}
+            />
             {errors.age ? <small style={{ color: "var(--danger)" }}>{errors.age}</small> : null}
           </label>
           <label>
             Email *
-            <input value={email} onChange={(event) => setEmail(event.target.value)} style={{ width: "100%" }} />
+            <input
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              style={{ width: "100%" }}
+              disabled={showReadOnly}
+            />
             {errors.email ? <small style={{ color: "var(--danger)" }}>{errors.email}</small> : null}
           </label>
           <label>
@@ -172,6 +228,7 @@ export default function OnboardingIntakeClient() {
               value={whatsapp}
               onChange={(event) => setWhatsapp(event.target.value)}
               style={{ width: "100%" }}
+              disabled={showReadOnly}
             />
             {errors.whatsapp ? <small style={{ color: "var(--danger)" }}>{errors.whatsapp}</small> : null}
           </label>
@@ -187,6 +244,7 @@ export default function OnboardingIntakeClient() {
             onChange={(event) => setRealBio(event.target.value)}
             rows={5}
             style={{ width: "100%" }}
+            disabled={showReadOnly}
           />
           {errors.realBio ? <small style={{ color: "var(--danger)" }}>{errors.realBio}</small> : null}
         </label>
@@ -197,6 +255,7 @@ export default function OnboardingIntakeClient() {
             onChange={(event) => setDesiredBio(event.target.value)}
             rows={5}
             style={{ width: "100%" }}
+            disabled={showReadOnly}
           />
           {errors.desiredBio ? <small style={{ color: "var(--danger)" }}>{errors.desiredBio}</small> : null}
         </label>
@@ -213,6 +272,7 @@ export default function OnboardingIntakeClient() {
           onChange={(event) => setRules(event.target.value)}
           rows={6}
           style={{ width: "100%" }}
+          disabled={showReadOnly}
         />
       </PremiumCard>
 
@@ -232,22 +292,27 @@ export default function OnboardingIntakeClient() {
                 placeholder="Field name"
                 value={item.label}
                 onChange={(event) => updateExtra(item.id, "label", event.target.value)}
+                disabled={showReadOnly}
               />
               <input
                 placeholder="Field value"
                 value={item.value}
                 onChange={(event) => updateExtra(item.id, "value", event.target.value)}
+                disabled={showReadOnly}
               />
-              <button type="button" onClick={() => removeExtra(item.id)}>
+              <button type="button" onClick={() => removeExtra(item.id)} disabled={showReadOnly}>
                 Delete
               </button>
             </div>
           ))}
         </div>
         <div style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center" }}>
-          <button type="button" onClick={addExtra}>
+          <button type="button" onClick={addExtra} disabled={showReadOnly}>
             Add Field
           </button>
+          {showReadOnly ? (
+            <span className="badge">Completed</span>
+          ) : null}
         </div>
       </PremiumCard>
 
@@ -257,9 +322,15 @@ export default function OnboardingIntakeClient() {
           Save your required intake details, then continue from your dashboard.
         </p>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <PremiumButton type="button" onClick={onSave}>
-            Save Intake
-          </PremiumButton>
+          {showReadOnly ? (
+            <PremiumButton type="button" onClick={() => setIsEditing(true)}>
+              Edit Intake
+            </PremiumButton>
+          ) : (
+            <PremiumButton type="button" onClick={onSave}>
+              {fullyCompleted ? "Re-save Intake" : "Save Intake"}
+            </PremiumButton>
+          )}
           {saved ? <span style={{ color: "var(--success)" }}>Saved. Redirecting...</span> : null}
           {saveError ? <span style={{ color: "var(--danger)" }}>{saveError}</span> : null}
         </div>

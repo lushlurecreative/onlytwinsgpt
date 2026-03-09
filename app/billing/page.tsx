@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import PremiumCard from "@/components/PremiumCard";
 import BillingPortalButton from "./BillingPortalButton";
 
@@ -13,6 +14,7 @@ type BillingSubscriptionRow = {
   created_at: string;
   stripe_subscription_id: string | null;
   stripe_price_id: string | null;
+  stripe_customer_id?: string | null;
 };
 
 function statusBadge(status: string) {
@@ -45,25 +47,45 @@ function statusBadge(status: string) {
 }
 
 export default async function BillingPage() {
-  const supabase = await createClient();
+  const session = await createClient();
+  const admin = getSupabaseAdmin();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await session.auth.getUser();
 
   if (!user) {
     redirect("/login?redirectTo=/billing");
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await admin
     .from("subscriptions")
     .select(
-      "id, creator_id, status, current_period_end, canceled_at, created_at, stripe_subscription_id, stripe_price_id"
+      "id, creator_id, status, current_period_end, canceled_at, created_at, stripe_subscription_id, stripe_price_id, stripe_customer_id"
     )
     .eq("subscriber_id", user.id)
     .order("created_at", { ascending: false })
     .limit(100);
 
-  const rows = (data ?? []) as BillingSubscriptionRow[];
+  let rows = (data ?? []) as BillingSubscriptionRow[];
+  if (!error && rows.length === 0) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("stripe_customer_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    const customerId = (profile as { stripe_customer_id?: string | null } | null)?.stripe_customer_id ?? null;
+    if (customerId) {
+      const { data: byCustomer } = await admin
+        .from("subscriptions")
+        .select(
+          "id, creator_id, status, current_period_end, canceled_at, created_at, stripe_subscription_id, stripe_price_id, stripe_customer_id"
+        )
+        .eq("stripe_customer_id", customerId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      rows = (byCustomer ?? []) as BillingSubscriptionRow[];
+    }
+  }
   const activeCount = rows.filter((s) => s.status === "active").length;
   const trialingCount = rows.filter((s) => s.status === "trialing").length;
   const pastDueCount = rows.filter((s) => s.status === "past_due").length;

@@ -52,6 +52,7 @@ const PRESET_ROWS: Record<string, AllocationRow[]> = {
 };
 
 export default function RequestsClient() {
+  const LOCAL_KEY = "ot_request_allocation_plan_v1";
   const [rows, setRows] = useState<RequestRow[]>([]);
   const [error, setError] = useState("");
   const [entitlementPlan, setEntitlementPlan] = useState<string>("45-5");
@@ -61,6 +62,8 @@ export default function RequestsClient() {
   const [preset, setPreset] = useState("balanced");
   const [allocationRows, setAllocationRows] = useState<AllocationRow[]>(PRESET_ROWS.balanced);
   const [saved, setSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [hasSavedPreferences, setHasSavedPreferences] = useState(false);
 
   const [allowedPhotos, allowedVideos] = monthlyPlan.split("-").map((x) => Number(x));
   const selectedPhotos = allocationRows
@@ -96,14 +99,34 @@ export default function RequestsClient() {
     };
 
     const loadSavedPreferences = async () => {
+      let loadedFromLocal = false;
+      try {
+        const raw = window.localStorage.getItem(LOCAL_KEY);
+        if (raw) {
+          const local = JSON.parse(raw) as {
+            monthlyPlan?: string;
+            preset?: string;
+            allocationRows?: AllocationRow[];
+          };
+          if (typeof local.monthlyPlan === "string") setMonthlyPlan(local.monthlyPlan);
+          if (typeof local.preset === "string") setPreset(local.preset);
+          if (Array.isArray(local.allocationRows) && local.allocationRows.length > 0) {
+            setAllocationRows(local.allocationRows);
+            setHasSavedPreferences(true);
+            loadedFromLocal = true;
+          }
+        }
+      } catch {}
+
       const response = await fetch("/api/me/request-preferences");
       const result = (await response.json().catch(() => ({}))) as RequestPreferencesResponse;
       const savedPrefs = result.preferences;
       if (!savedPrefs) return;
-      if (typeof savedPrefs.monthlyPlan === "string") setMonthlyPlan(savedPrefs.monthlyPlan);
-      if (typeof savedPrefs.preset === "string") setPreset(savedPrefs.preset);
-      if (Array.isArray(savedPrefs.allocationRows) && savedPrefs.allocationRows.length > 0) {
+      if (!loadedFromLocal && typeof savedPrefs.monthlyPlan === "string") setMonthlyPlan(savedPrefs.monthlyPlan);
+      if (!loadedFromLocal && typeof savedPrefs.preset === "string") setPreset(savedPrefs.preset);
+      if (!loadedFromLocal && Array.isArray(savedPrefs.allocationRows) && savedPrefs.allocationRows.length > 0) {
         setAllocationRows(savedPrefs.allocationRows);
+        setHasSavedPreferences(true);
       }
     };
 
@@ -152,6 +175,9 @@ export default function RequestsClient() {
       preset,
       allocationRows,
     };
+    try {
+      window.localStorage.setItem(LOCAL_KEY, JSON.stringify(payload));
+    } catch {}
     void (async () => {
       const response = await fetch("/api/me/request-preferences", {
         method: "PUT",
@@ -159,10 +185,14 @@ export default function RequestsClient() {
         body: JSON.stringify(payload),
       });
       if (!response.ok) return;
+      setHasSavedPreferences(true);
+      setIsEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2200);
     })();
   };
+
+  const readOnly = hasSavedPreferences && !isEditing;
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -188,7 +218,7 @@ export default function RequestsClient() {
               value={monthlyPlan}
               onChange={(event) => setMonthlyPlan(event.target.value)}
               style={{ width: "100%" }}
-              disabled={entitlementsLoading}
+              disabled={entitlementsLoading || readOnly}
             >
               <option value="45-5">45 photos + 5 videos</option>
               <option value="90-15">90 photos + 15 videos</option>
@@ -200,7 +230,12 @@ export default function RequestsClient() {
           </label>
           <label>
             Default generation option
-            <select value={preset} onChange={(event) => setPresetRows(event.target.value)} style={{ width: "100%" }}>
+            <select
+              value={preset}
+              onChange={(event) => setPresetRows(event.target.value)}
+              style={{ width: "100%" }}
+              disabled={readOnly}
+            >
               <option value="balanced">Balanced (gym/bedroom/nsfw mix)</option>
               <option value="social">Social-first (instagram/tiktok mix)</option>
               <option value="custom">Custom starting template</option>
@@ -220,7 +255,11 @@ export default function RequestsClient() {
               key={row.id}
               style={{ display: "grid", gap: 8, gridTemplateColumns: "120px 90px 1fr auto", alignItems: "center" }}
             >
-              <select value={row.kind} onChange={(event) => updateRow(row.id, { kind: event.target.value as "photo" | "video" })}>
+              <select
+                value={row.kind}
+                onChange={(event) => updateRow(row.id, { kind: event.target.value as "photo" | "video" })}
+                disabled={readOnly}
+              >
                 <option value="photo">Photo</option>
                 <option value="video">Video</option>
               </select>
@@ -229,13 +268,15 @@ export default function RequestsClient() {
                 min={1}
                 value={row.count}
                 onChange={(event) => updateRow(row.id, { count: Math.max(1, Number(event.target.value) || 1) })}
+                disabled={readOnly}
               />
               <input
                 placeholder='Direction or custom prompt (example: "10 with purple hair on the beach")'
                 value={row.direction}
                 onChange={(event) => updateRow(row.id, { direction: event.target.value })}
+                disabled={readOnly}
               />
-              <button type="button" onClick={() => removeRow(row.id)}>
+              <button type="button" onClick={() => removeRow(row.id)} disabled={readOnly}>
                 Delete
               </button>
             </div>
@@ -243,12 +284,19 @@ export default function RequestsClient() {
         </div>
 
         <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <button type="button" onClick={addRow}>
+          <button type="button" onClick={addRow} disabled={readOnly}>
             Add line item
           </button>
-          <button type="button" onClick={savePlan} disabled={monthlyPlan !== entitlementPlan}>
-            Save preferences
-          </button>
+          {readOnly ? (
+            <button type="button" onClick={() => setIsEditing(true)}>
+              Edit preferences
+            </button>
+          ) : (
+            <button type="button" onClick={savePlan} disabled={monthlyPlan !== entitlementPlan}>
+              {hasSavedPreferences ? "Re-save preferences" : "Save preferences"}
+            </button>
+          )}
+          {readOnly ? <span className="badge">Completed</span> : null}
           {saved ? <span style={{ color: "var(--success)" }}>Saved.</span> : null}
         </div>
 

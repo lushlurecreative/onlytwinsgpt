@@ -16,7 +16,7 @@ type SetupStep = {
   title: string;
   description: string;
   buttonText: string;
-  href: string;
+  viewHref: string;
   editHref: string;
 };
 
@@ -26,7 +26,7 @@ const steps: SetupStep[] = [
     title: "Step 1: Set Preferences",
     description: "Complete onboarding intake with your identity details, bio, constraints, and style rules.",
     buttonText: "Set Preferences",
-    href: "/start",
+    viewHref: "/start",
     editHref: "/onboarding/intake",
   },
   {
@@ -34,7 +34,7 @@ const steps: SetupStep[] = [
     title: "Step 2: Upload Training Photos",
     description: "Upload approved training images so we can start model training with clean source data.",
     buttonText: "Upload Photos",
-    href: "/training/photos",
+    viewHref: "/training/photos",
     editHref: "/training/photos",
   },
   {
@@ -42,18 +42,26 @@ const steps: SetupStep[] = [
     title: "Step 3: Choose Generation Preferences",
     description: "Choose your monthly photo/video mix and exact prompt directions for default generations.",
     buttonText: "Choose Preferences",
-    href: "/requests",
+    viewHref: "/requests",
     editHref: "/requests",
   },
 ];
 
 export default function StartDashboardClient() {
+  const INTAKE_LOCAL_KEY = "ot_onboarding_intake_v1";
+  const PREFS_LOCAL_KEY = "ot_request_allocation_plan_v1";
+
   const [loading, setLoading] = useState(true);
   const [completed, setCompleted] = useState({
     preferences: false,
     photos: false,
     generation: false,
   });
+  const [photoCount, setPhotoCount] = useState(0);
+  const [samplePaths, setSamplePaths] = useState<string[]>([]);
+  const [requestCount, setRequestCount] = useState(0);
+  const [queueing, setQueueing] = useState(false);
+  const [queueMessage, setQueueMessage] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -79,9 +87,33 @@ export default function StartDashboardClient() {
       const prefsJson = (await prefsRes.json().catch(() => ({}))) as {
         preferences?: { allocationRows?: Array<{ direction?: string; count?: number }> } | null;
       };
+      const requestsRes = await fetch("/api/generation-requests");
+      const requestsJson = (await requestsRes.json().catch(() => ({}))) as {
+        requests?: Array<{ id: string }>;
+      };
 
-      const intake = intakeJson.intake;
-      const prefRows = prefsJson.preferences?.allocationRows ?? [];
+      let intake = intakeJson.intake;
+      let prefRows = prefsJson.preferences?.allocationRows ?? [];
+
+      try {
+        const intakeLocalRaw = window.localStorage.getItem(INTAKE_LOCAL_KEY);
+        if (!intake && intakeLocalRaw) {
+          intake = JSON.parse(intakeLocalRaw) as typeof intake;
+        }
+      } catch {}
+      try {
+        const prefsLocalRaw = window.localStorage.getItem(PREFS_LOCAL_KEY);
+        if ((!prefRows || prefRows.length === 0) && prefsLocalRaw) {
+          const local = JSON.parse(prefsLocalRaw) as { allocationRows?: Array<{ direction?: string; count?: number }> };
+          prefRows = local.allocationRows ?? [];
+        }
+      } catch {}
+
+      const files = uploadsJson.files ?? [];
+      setPhotoCount(files.length);
+      setSamplePaths(files.map((file) => file.objectPath));
+      setRequestCount((requestsJson.requests ?? []).length);
+
       const preferencesDone = !!(
         intake?.name?.trim() &&
         intake?.age?.trim() &&
@@ -90,7 +122,7 @@ export default function StartDashboardClient() {
         intake?.realBio?.trim() &&
         intake?.desiredBio?.trim()
       );
-      const photosDone = (uploadsJson.files?.length ?? 0) >= 10;
+      const photosDone = files.length >= 10;
       const generationDone = prefRows.length > 0 && prefRows.some((row) => (row.direction ?? "").trim().length > 0);
 
       setCompleted({
@@ -108,12 +140,14 @@ export default function StartDashboardClient() {
     () => [completed.preferences, completed.photos, completed.generation].filter(Boolean).length,
     [completed]
   );
+  const allStepsDone = completedCount === 3;
+  const progressPct = Math.round((completedCount / 3) * 100);
 
   const statusCards: StatusCard[] = [
     {
       label: "Setup Progress",
       value: `${completedCount}/3 steps completed`,
-      progress: Math.round((completedCount / 3) * 100),
+      progress: progressPct,
     },
     {
       label: "Preferences",
@@ -122,8 +156,8 @@ export default function StartDashboardClient() {
     },
     {
       label: "Training Photos",
-      value: completed.photos ? "Completed" : "Pending",
-      progress: completed.photos ? 100 : 20,
+      value: completed.photos ? `Completed (${photoCount})` : `In progress (${photoCount}/10 minimum)`,
+      progress: Math.max(10, Math.min(100, Math.round((photoCount / 10) * 100))),
     },
     {
       label: "Generation Preferences",
@@ -157,21 +191,85 @@ export default function StartDashboardClient() {
     },
   ] as const;
 
+  const queueFirstJob = async () => {
+    if (queueing) return;
+    if (samplePaths.length < 10) {
+      setQueueMessage("Upload at least 10 photos before queueing.");
+      return;
+    }
+    setQueueing(true);
+    setQueueMessage("");
+    const response = await fetch("/api/generation-requests", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        samplePaths: samplePaths.slice(0, 10),
+        scenePreset: "gym",
+        imageCount: 10,
+        videoCount: 0,
+        contentMode: "sfw",
+      }),
+    });
+    const result = (await response.json().catch(() => ({}))) as { error?: string };
+    if (!response.ok) {
+      setQueueMessage(result.error ?? "Could not queue generation job.");
+      setQueueing(false);
+      return;
+    }
+    setQueueMessage("Generation job queued successfully.");
+    setQueueing(false);
+  };
+
   return (
     <div className="premium-dashboard">
-      <section className="premium-hero">
-        <p className="eyebrow">AI Control Center</p>
-        <h1>Welcome to OnlyTwins</h1>
-        <p>
-          Your subscription is active. Start by uploading your training photos so we can generate your twin
-          images.
-        </p>
-        <div className="cta-row" style={{ marginTop: 4 }}>
+      <section className="premium-hero" style={{ display: "grid", gap: 18 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <p className="eyebrow">AI Control Center</p>
+            <h1>Welcome to OnlyTwins</h1>
+            <p>
+              Your subscription is active. Complete setup once, then monitor generation status from one place.
+            </p>
+          </div>
+          <div
+            style={{
+              width: 110,
+              height: 110,
+              borderRadius: "50%",
+              display: "grid",
+              placeItems: "center",
+              background: `conic-gradient(var(--accent) ${progressPct}%, rgba(255,255,255,0.14) ${progressPct}% 100%)`,
+            }}
+          >
+            <div
+              style={{
+                width: 84,
+                height: 84,
+                borderRadius: "50%",
+                background: "rgba(14,16,24,0.95)",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 800,
+              }}
+            >
+              {progressPct}%
+            </div>
+          </div>
+        </div>
+        <div className="cta-row" style={{ marginTop: 2 }}>
           <PremiumButton href="/training/photos">Start Creating My Twin</PremiumButton>
           <PremiumButton href="/start" variant="secondary">
             Set Preferences
           </PremiumButton>
         </div>
+        {allStepsDone && requestCount === 0 ? (
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <PremiumButton type="button" onClick={queueFirstJob} loading={queueing}>
+              Queue First Generation Job
+            </PremiumButton>
+            {queueMessage ? <span style={{ color: queueMessage.includes("success") ? "var(--success)" : "var(--danger)" }}>{queueMessage}</span> : null}
+          </div>
+        ) : null}
       </section>
 
       <section className="premium-status-grid section">
@@ -210,7 +308,7 @@ export default function StartDashboardClient() {
                         ? "Completed"
                         : "Pending"}
                   </span>
-                  <PremiumButton href={card.href} variant={completed[card.key] ? "secondary" : "primary"}>
+                  <PremiumButton href={card.viewHref} variant={completed[card.key] ? "secondary" : "primary"}>
                     {completed[card.key] ? "View" : card.buttonText}
                   </PremiumButton>
                   {completed[card.key] ? (
