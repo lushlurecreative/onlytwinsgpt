@@ -9,8 +9,8 @@ export const MARKETING_MESSAGE_MAP = {
   cta: {
     primaryLabel: "Start Subscription",
     primaryHref: "/pricing",
-    secondaryLabel: "Contact Us",
-    secondaryHref: "/contact",
+    secondaryLabel: "See How It Works",
+    secondaryHref: "/how-it-works",
   },
   process: [
     {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import BrandName from "@/app/components/BrandName";
 import PremiumCard from "@/components/PremiumCard";
@@ -9,12 +9,23 @@ import PremiumButton from "@/components/PremiumButton";
 
 function LoginPageInner() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
+  const redirectToRaw = searchParams.get("redirectTo");
+  const redirectTo = redirectToRaw === "/start" ? "/dashboard" : (redirectToRaw ?? "/dashboard");
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://onlytwins.dev";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<string>("");
+
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        window.location.replace("/dashboard");
+      }
+    };
+    void checkExistingSession();
+  }, []);
 
   function doRedirect() {
     const url = redirectTo + (redirectTo.includes("?") ? "&" : "?") + "_=" + Date.now();

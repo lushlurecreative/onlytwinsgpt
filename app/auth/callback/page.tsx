@@ -11,7 +11,8 @@ export default function AuthCallback() {
   useEffect(() => {
     const supabase = createClient();
     const params = new URLSearchParams(window.location.search);
-    const next = params.get("next") || "/dashboard";
+    const nextRaw = params.get("next");
+    const next = nextRaw === "/start" ? "/dashboard" : (nextRaw || "/dashboard");
 
     const finishLogin = async () => {
       const { data } = await supabase.auth.getSession();

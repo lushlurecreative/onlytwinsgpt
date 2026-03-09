@@ -37,8 +37,16 @@ function HomeContent() {
     <div>
       <section className="hero hero-refined">
         <p className="eyebrow">{MARKETING_MESSAGE_MAP.positioning.eyebrow}</p>
-        <h1>{MARKETING_MESSAGE_MAP.positioning.headline}</h1>
-        <p>{MARKETING_MESSAGE_MAP.positioning.subheadline}</p>
+        <h1>
+          {hasSession
+            ? "Your OnlyTwins control center is ready."
+            : MARKETING_MESSAGE_MAP.positioning.headline}
+        </h1>
+        <p>
+          {hasSession
+            ? "Your workspace is active. Open your dashboard to manage onboarding, training, and generation."
+            : MARKETING_MESSAGE_MAP.positioning.subheadline}
+        </p>
         <div className="cta-row">
           {hasSession ? (
             <PremiumButton href="/dashboard">Open Dashboard</PremiumButton>
@@ -130,10 +138,12 @@ function HomeContent() {
       </section>
 
       <section className="section hero hero-refined">
-        <p className="eyebrow">Ready To Start</p>
-        <h2>Start your AI production system in minutes.</h2>
+        <p className="eyebrow">{hasSession ? "Welcome Back" : "Ready To Start"}</p>
+        <h2>{hasSession ? "Continue in your dashboard." : "Start your AI production system in minutes."}</h2>
         <p>
-          Subscribe, upload photos, and let the system run quietly in the background.
+          {hasSession
+            ? "Your subscription is active. Continue your setup and monitor progress from one place."
+            : "Subscribe, upload photos, and let the system run quietly in the background."}
         </p>
         <div className="cta-row">
           {hasSession ? (

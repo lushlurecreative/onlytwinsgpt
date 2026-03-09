@@ -11,6 +11,28 @@ type ExtraField = {
   value: string;
 };
 
+function hasAnySavedIntake(data: {
+  name?: string;
+  age?: string;
+  email?: string;
+  whatsapp?: string;
+  realBio?: string;
+  desiredBio?: string;
+  rules?: string;
+  extras?: ExtraField[];
+}) {
+  return !!(
+    data.name?.trim() ||
+    data.age?.trim() ||
+    data.email?.trim() ||
+    data.whatsapp?.trim() ||
+    data.realBio?.trim() ||
+    data.desiredBio?.trim() ||
+    data.rules?.trim() ||
+    (Array.isArray(data.extras) && data.extras.length > 0)
+  );
+}
+
 export default function OnboardingIntakeClient() {
   const LOCAL_KEY = "ot_onboarding_intake_v1";
   const router = useRouter();
@@ -27,6 +49,7 @@ export default function OnboardingIntakeClient() {
   const [saveError, setSaveError] = useState("");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [hasSavedIntake, setHasSavedIntake] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const addExtra = () => {
@@ -67,6 +90,7 @@ export default function OnboardingIntakeClient() {
           setRules(local.rules ?? "");
           setExtras(Array.isArray(local.extras) ? local.extras : []);
           setLastSavedAt(local.updatedAt ?? null);
+          setHasSavedIntake(hasAnySavedIntake(local));
           loadedFromLocal = true;
         }
       } catch {}
@@ -96,6 +120,10 @@ export default function OnboardingIntakeClient() {
         setRules(intake.rules ?? "");
         setExtras(Array.isArray(intake.extras) ? intake.extras : []);
         setLastSavedAt(intake.updatedAt ?? null);
+        setHasSavedIntake(hasAnySavedIntake(intake));
+      }
+      if (intake && loadedFromLocal && hasAnySavedIntake(intake)) {
+        setHasSavedIntake(true);
       }
       if (intake?.updatedAt) setLastSavedAt(intake.updatedAt);
       setLoadingSaved(false);
@@ -152,6 +180,7 @@ export default function OnboardingIntakeClient() {
       setSaveError(result.error ?? "Saved locally. Cloud save not available right now.");
     }
     setSaved(true);
+    setHasSavedIntake(true);
     setLastSavedAt(new Date().toISOString());
     setIsEditing(false);
     setTimeout(() => {
@@ -164,8 +193,7 @@ export default function OnboardingIntakeClient() {
   const bioComplete = !!(realBio.trim() && desiredBio.trim());
   const rulesComplete = !!rules.trim();
   const sectionsDone = [identityComplete, bioComplete, rulesComplete].filter(Boolean).length;
-  const fullyCompleted = identityComplete && bioComplete;
-  const showReadOnly = fullyCompleted && !isEditing;
+  const showReadOnly = hasSavedIntake && !isEditing;
 
   return (
     <section style={{ marginTop: 16, display: "grid", gap: 14 }}>
@@ -328,7 +356,7 @@ export default function OnboardingIntakeClient() {
             </PremiumButton>
           ) : (
             <PremiumButton type="button" onClick={onSave}>
-              {fullyCompleted ? "Re-save Intake" : "Save Intake"}
+              {hasSavedIntake ? "Re-save Intake" : "Save Intake"}
             </PremiumButton>
           )}
           {saved ? <span style={{ color: "var(--success)" }}>Saved. Redirecting...</span> : null}

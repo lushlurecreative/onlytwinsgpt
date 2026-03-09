@@ -881,7 +881,7 @@ export default function VaultClient({ userId }: VaultClientProps) {
           </p>
 
           <div className="card" style={{ maxWidth: 720, margin: "18px auto 0 auto", textAlign: "left" }}>
-            <h3 style={{ marginTop: 0 }}>What happens next?</h3>
+            <h3 style={{ marginTop: 0 }}>Set Preferences</h3>
             <ul style={{ marginBottom: 0 }}>
               <li>We validate and process your photos</li>
               <li>We review the request and approve it</li>

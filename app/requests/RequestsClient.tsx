@@ -108,7 +108,6 @@ export default function RequestsClient() {
             preset?: string;
             allocationRows?: AllocationRow[];
           };
-          if (typeof local.monthlyPlan === "string") setMonthlyPlan(local.monthlyPlan);
           if (typeof local.preset === "string") setPreset(local.preset);
           if (Array.isArray(local.allocationRows) && local.allocationRows.length > 0) {
             setAllocationRows(local.allocationRows);
@@ -122,7 +121,6 @@ export default function RequestsClient() {
       const result = (await response.json().catch(() => ({}))) as RequestPreferencesResponse;
       const savedPrefs = result.preferences;
       if (!savedPrefs) return;
-      if (!loadedFromLocal && typeof savedPrefs.monthlyPlan === "string") setMonthlyPlan(savedPrefs.monthlyPlan);
       if (!loadedFromLocal && typeof savedPrefs.preset === "string") setPreset(savedPrefs.preset);
       if (!loadedFromLocal && Array.isArray(savedPrefs.allocationRows) && savedPrefs.allocationRows.length > 0) {
         setAllocationRows(savedPrefs.allocationRows);
@@ -218,7 +216,7 @@ export default function RequestsClient() {
               value={monthlyPlan}
               onChange={(event) => setMonthlyPlan(event.target.value)}
               style={{ width: "100%" }}
-              disabled={entitlementsLoading || readOnly}
+              disabled
             >
               <option value="45-5">45 photos + 5 videos</option>
               <option value="90-15">90 photos + 15 videos</option>
@@ -226,6 +224,9 @@ export default function RequestsClient() {
             </select>
             <small style={{ display: "block", marginTop: 6, opacity: 0.75 }}>
               Auto-filled from {entitlementLabel}.
+            </small>
+            <small style={{ display: "block", marginTop: 4, opacity: 0.75 }}>
+              Need a different allotment? Upgrade your plan in Billing.
             </small>
           </label>
           <label>

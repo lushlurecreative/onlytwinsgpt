@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AuthNav() {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = useMemo(() => createClient(), []);
 
   const [user, setUser] = useState<User | null>(null);
@@ -50,6 +51,11 @@ export default function AuthNav() {
         Log in
       </Link>
     );
+  }
+
+  // Keep /login focused on authentication actions only.
+  if (pathname === "/login") {
+    return null;
   }
 
   return (

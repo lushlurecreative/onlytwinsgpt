@@ -32,6 +32,7 @@ export default function TrainingPhotosClient() {
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
   const [busyPath, setBusyPath] = useState<string | null>(null);
+  const [replacingPath, setReplacingPath] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -143,6 +144,66 @@ export default function TrainingPhotosClient() {
     setMessage("Photo deleted.");
   };
 
+  const onReplace = async (objectPath: string, file: File | null) => {
+    if (!file || busyPath || replacingPath) return;
+    setReplacingPath(objectPath);
+    setStatus("uploading");
+    setMessage("");
+
+    const formData = new FormData();
+    formData.append("file", file);
+    const uploadResponse = await fetch("/api/uploads", {
+      method: "POST",
+      body: formData,
+    });
+    const uploadResult = (await uploadResponse.json().catch(() => ({}))) as {
+      error?: string;
+      signedUrl?: string | null;
+      objectPath?: string;
+    };
+    if (!uploadResponse.ok || !uploadResult.objectPath) {
+      setStatus("error");
+      setMessage(uploadResult.error ?? "Could not replace photo.");
+      setReplacingPath(null);
+      return;
+    }
+
+    const deleteResponse = await fetch("/api/uploads", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ objectPath }),
+    });
+    const deleteResult = (await deleteResponse.json().catch(() => ({}))) as { error?: string };
+    if (!deleteResponse.ok) {
+      setStatus("error");
+      setMessage(deleteResult.error ?? "Uploaded replacement, but failed to remove previous photo.");
+      setReplacingPath(null);
+      return;
+    }
+
+    setUploadedFiles((prev) =>
+      prev.map((item) =>
+        item.objectPath === objectPath
+          ? {
+              ...item,
+              objectPath: uploadResult.objectPath!,
+              name: uploadResult.objectPath!.split("/").pop() ?? item.name,
+              signedUrl: uploadResult.signedUrl ?? item.signedUrl,
+              createdAt: new Date().toISOString(),
+            }
+          : item
+      )
+    );
+    const nextNotes = { ...notes };
+    const oldNote = nextNotes[objectPath];
+    delete nextNotes[objectPath];
+    if (oldNote) nextNotes[uploadResult.objectPath] = oldNote;
+    persistNotes(nextNotes);
+    setReplacingPath(null);
+    setStatus("done");
+    setMessage("Photo replaced.");
+  };
+
   return (
     <PremiumCard style={{ marginTop: 20 }}>
       <h2 style={{ marginTop: 0 }}>Upload area</h2>
@@ -222,11 +283,26 @@ export default function TrainingPhotosClient() {
                 <button
                   type="button"
                   onClick={() => onDelete(item.objectPath)}
-                  disabled={busyPath === item.objectPath}
+                  disabled={busyPath === item.objectPath || replacingPath === item.objectPath}
                   style={{ marginTop: 8 }}
                 >
                   {busyPath === item.objectPath ? "Deleting..." : "Delete"}
                 </button>
+                <label style={{ display: "block", marginTop: 8 }}>
+                  <span style={{ display: "block", fontSize: 12, opacity: 0.8, marginBottom: 4 }}>
+                    Replace photo
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      void onReplace(item.objectPath, file);
+                      event.currentTarget.value = "";
+                    }}
+                    disabled={busyPath === item.objectPath || replacingPath === item.objectPath}
+                  />
+                </label>
               </article>
             ))}
           </div>
