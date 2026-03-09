@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import PremiumCard from "@/components/PremiumCard";
 import PremiumButton from "@/components/PremiumButton";
-import ControlIcon from "@/components/ControlIcon";
 
 type Status = "idle" | "uploading" | "done" | "error";
 type UploadedFile = {
@@ -211,7 +210,6 @@ export default function TrainingPhotosClient() {
   return (
     <div className="training-stack">
       <PremiumCard className="training-dropzone-card">
-        <ControlIcon glyph="T" label="Training uploader" />
         <h2 style={{ marginTop: 0 }}>Training Photo Uploader</h2>
         <p className="wizard-copy">
           Upload a curated set of photos. The system uses these images for twin training and generation quality.

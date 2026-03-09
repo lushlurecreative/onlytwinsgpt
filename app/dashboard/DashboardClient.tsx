@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import PremiumCard from "@/components/PremiumCard";
 import PremiumButton from "@/components/PremiumButton";
-import ControlIcon from "@/components/ControlIcon";
 
 type StatusCard = {
   label: string;
@@ -27,7 +26,6 @@ type UtilityCard = {
   description: string;
   buttonText: string;
   href: string;
-  icon: string;
 };
 
 type ActionCard = SetupStep | UtilityCard;
@@ -218,7 +216,6 @@ export default function DashboardClient() {
       description: "Track your training and generation progress.",
       buttonText: "View Status",
       href: "/status",
-      icon: "Q",
     },
     {
       key: "library",
@@ -226,7 +223,6 @@ export default function DashboardClient() {
       description: "View and download your completed images.",
       buttonText: "Open Library",
       href: "/library",
-      icon: "L",
     },
     {
       key: "billing",
@@ -234,7 +230,6 @@ export default function DashboardClient() {
       description: "Manage your plan, email, and billing details.",
       buttonText: "Open Account",
       href: "/billing",
-      icon: "B",
     },
   ];
 
@@ -342,23 +337,19 @@ export default function DashboardClient() {
           <PremiumCard
             title="Twin Status"
             subtitle={completed.preferences ? "Identity profile configured" : "Identity profile pending"}
-            action={<ControlIcon glyph="T" label="Twin Status" />}
           />
           <PremiumCard
             title="Training Status"
             subtitle={completed.photos ? `${photoCount} photos uploaded and ready` : `${photoCount}/10 minimum uploaded`}
-            action={<ControlIcon glyph="P" label="Training Status" />}
           />
-          <PremiumCard title="Current Plan" subtitle={planLabel} action={<ControlIcon glyph="$" label="Current Plan" />} />
+          <PremiumCard title="Current Plan" subtitle={planLabel} />
           <PremiumCard
             title="Generation Queue"
             subtitle={requestCount > 0 ? `${requestCount} request(s) in pipeline` : "No active requests yet"}
-            action={<ControlIcon glyph="Q" label="Generation Queue" />}
           />
           <PremiumCard
             title="Latest Activity"
             subtitle={latestSyncAt ? `Synced ${new Date(latestSyncAt).toLocaleString()}` : "Syncing dashboard state..."}
-            action={<ControlIcon glyph="A" label="Latest Activity" />}
           />
         </section>
       )}
@@ -412,7 +403,6 @@ export default function DashboardClient() {
             <PremiumCard
               title={card.title}
               subtitle={card.description}
-              action={<ControlIcon glyph={"icon" in card ? card.icon : card.key === "preferences" ? "1" : card.key === "photos" ? "2" : "3"} label={card.title} />}
             >
               {"viewHref" in card ? (
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>

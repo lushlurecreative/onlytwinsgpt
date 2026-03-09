@@ -1370,19 +1370,6 @@ a {
   background: rgba(247, 252, 255, 0.95);
 }
 
-.control-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  border: 1px solid rgba(173, 210, 236, 0.9);
-  background: linear-gradient(145deg, rgba(244, 251, 255, 0.95), rgba(234, 246, 255, 0.96));
-  display: inline-grid;
-  place-items: center;
-  font-size: 12px;
-  font-weight: 800;
-  color: #1f5b88;
-}
-
 .premium-empty {
   text-align: center;
   display: grid;

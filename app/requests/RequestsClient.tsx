@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import ControlIcon from "@/components/ControlIcon";
 
 type RequestRow = {
   id: string;
@@ -229,13 +228,11 @@ export default function RequestsClient() {
         ) : (
           <>
             <article className="premium-card">
-              <ControlIcon glyph="$" label="Current plan" />
               <div className="status-label">Current plan</div>
               <div className="status-value">{entitlementLabel}</div>
               <div className="muted">Auto-locked from active subscription</div>
             </article>
             <article className="premium-card">
-              <ControlIcon glyph="H" label="Allocation health" />
               <div className="status-label">Allocation health</div>
               <div className="status-value">{allocationHealth === "balanced" ? "Balanced" : "Needs attention"}</div>
               <div className="muted">
@@ -243,7 +240,6 @@ export default function RequestsClient() {
               </div>
             </article>
             <article className="premium-card">
-              <ControlIcon glyph="S" label="Saved profile" />
               <div className="status-label">Saved profile</div>
               <div className="status-value">{hasSavedPreferences ? "Saved and reusable" : "Draft not saved"}</div>
               <div className="muted">Use edit mode anytime to refine next cycle</div>
