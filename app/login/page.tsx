@@ -10,6 +10,7 @@ import PremiumButton from "@/components/PremiumButton";
 function LoginPageInner() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? "/start";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://onlytwins.dev";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,6 +53,19 @@ function LoginPageInner() {
     setMsg(error ? `❌ ${error.message}` : "✅ Signed out.");
   }
 
+  async function continueWithGoogle() {
+    setMsg("Redirecting to Google...");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+      },
+    });
+    if (error) {
+      setMsg(`❌ ${error.message}`);
+    }
+  }
+
   return (
     <main style={{ padding: 24, maxWidth: 520, margin: "0 auto" }}>
       <PremiumCard>
@@ -79,6 +93,12 @@ function LoginPageInner() {
         <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
           <PremiumButton onClick={signUp}>Sign up</PremiumButton>
           <PremiumButton onClick={signIn}>Sign in</PremiumButton>
+          <PremiumButton variant="secondary" onClick={continueWithGoogle}>
+            Log in with Google
+          </PremiumButton>
+          <PremiumButton variant="secondary" onClick={continueWithGoogle}>
+            Sign up with Google
+          </PremiumButton>
           <PremiumButton variant="secondary" onClick={signOut}>
             Sign out
           </PremiumButton>

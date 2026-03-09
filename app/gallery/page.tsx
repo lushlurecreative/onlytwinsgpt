@@ -1,4 +1,3 @@
-import PremiumButton from "@/components/PremiumButton";
 import AICapabilitiesGallery from "@/components/AICapabilitiesGallery";
 import { galleryItems } from "@/lib/gallery-data";
 import GalleryCapabilitiesRow from "@/components/GalleryCapabilitiesRow";
@@ -28,11 +27,6 @@ export default function GalleryPage() {
           Built for individual creators, agencies, and custom brand aesthetics. Train for the look, mood,
           niche, and content style you actually want.
         </p>
-        <div className="cta-row">
-          <PremiumButton href="/start" variant="secondary">
-            Open Dashboard
-          </PremiumButton>
-        </div>
       </section>
 
       <section className="section">
