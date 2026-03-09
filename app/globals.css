@@ -1370,6 +1370,101 @@ a {
   background: rgba(247, 252, 255, 0.95);
 }
 
+.control-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  border: 1px solid rgba(173, 210, 236, 0.9);
+  background: linear-gradient(145deg, rgba(244, 251, 255, 0.95), rgba(234, 246, 255, 0.96));
+  display: inline-grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #1f5b88;
+}
+
+.premium-empty {
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  background:
+    radial-gradient(360px 140px at 50% -15%, rgba(84, 206, 255, 0.2), transparent 74%),
+    rgba(255, 255, 255, 0.82);
+}
+
+.empty-visual {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  border: 1px solid rgba(157, 206, 239, 0.9);
+  background: linear-gradient(145deg, rgba(227, 244, 255, 0.96), rgba(205, 234, 255, 0.95));
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 800;
+  color: #1f5b88;
+  box-shadow: 0 16px 36px -26px rgba(22, 95, 162, 0.52);
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(100deg, rgba(218, 236, 251, 0.9), rgba(242, 249, 255, 0.95), rgba(218, 236, 251, 0.9));
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.2s linear infinite;
+  margin-bottom: 8px;
+}
+
+.skeleton-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(100deg, rgba(218, 236, 251, 0.9), rgba(242, 249, 255, 0.95), rgba(218, 236, 251, 0.9));
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.2s linear infinite;
+  margin-top: 10px;
+}
+
+.skeleton-square {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  background: linear-gradient(100deg, rgba(218, 236, 251, 0.9), rgba(242, 249, 255, 0.95), rgba(218, 236, 251, 0.9));
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.2s linear infinite;
+  margin-bottom: 8px;
+}
+
+.w-30 {
+  width: 30%;
+}
+
+.w-40 {
+  width: 40%;
+}
+
+.w-50 {
+  width: 50%;
+}
+
+.w-60 {
+  width: 60%;
+}
+
+.w-70 {
+  width: 70%;
+}
+
+.w-80 {
+  width: 80%;
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    background-position: -220% 0;
+  }
+}
+
 /* ===== Customer Control Center Redesign ===== */
 .control-route-shell {
   padding: 24px;
@@ -1620,5 +1715,20 @@ a {
   }
   .wizard-extra-row {
     grid-template-columns: 1fr;
+  }
+  .planner-line-item button,
+  .planner-line-item .btn {
+    width: 100%;
+  }
+  .preset-segments .tab {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+  .control-hero-top {
+    align-items: flex-start;
+  }
+  .ring-wrap {
+    width: 100%;
+    justify-content: flex-start;
   }
 }

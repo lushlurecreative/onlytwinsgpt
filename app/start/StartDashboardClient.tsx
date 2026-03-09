@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import PremiumCard from "@/components/PremiumCard";
 import PremiumButton from "@/components/PremiumButton";
+import ControlIcon from "@/components/ControlIcon";
 
 type StatusCard = {
   label: string;
@@ -26,6 +27,7 @@ type UtilityCard = {
   description: string;
   buttonText: string;
   href: string;
+  icon: string;
 };
 
 type ActionCard = SetupStep | UtilityCard;
@@ -216,6 +218,7 @@ export default function StartDashboardClient() {
       description: "Track your training and generation progress.",
       buttonText: "View Status",
       href: "/status",
+      icon: "Q",
     },
     {
       key: "library",
@@ -223,6 +226,7 @@ export default function StartDashboardClient() {
       description: "View and download your completed images.",
       buttonText: "Open Library",
       href: "/library",
+      icon: "L",
     },
     {
       key: "billing",
@@ -230,6 +234,7 @@ export default function StartDashboardClient() {
       description: "Manage your plan, email, and billing details.",
       buttonText: "Open Account",
       href: "/billing",
+      icon: "B",
     },
   ];
 
@@ -322,19 +327,41 @@ export default function StartDashboardClient() {
         </div>
       </section>
 
-      <section className="control-grid section">
-        <PremiumCard title="Twin Status" subtitle={completed.preferences ? "Identity profile configured" : "Identity profile pending"} />
-        <PremiumCard
-          title="Training Status"
-          subtitle={completed.photos ? `${photoCount} photos uploaded and ready` : `${photoCount}/10 minimum uploaded`}
-        />
-        <PremiumCard title="Current Plan" subtitle={planLabel} />
-        <PremiumCard title="Generation Queue" subtitle={requestCount > 0 ? `${requestCount} request(s) in pipeline` : "No active requests yet"} />
-        <PremiumCard
-          title="Latest Activity"
-          subtitle={latestSyncAt ? `Synced ${new Date(latestSyncAt).toLocaleString()}` : "Syncing dashboard state..."}
-        />
-      </section>
+      {loading ? (
+        <section className="control-grid section">
+          {Array.from({ length: 5 }).map((_, idx) => (
+            <PremiumCard key={`control-skeleton-${idx}`}>
+              <div className="skeleton-line w-40" />
+              <div className="skeleton-line w-80" />
+              <div className="skeleton-line w-30" />
+            </PremiumCard>
+          ))}
+        </section>
+      ) : (
+        <section className="control-grid section">
+          <PremiumCard
+            title="Twin Status"
+            subtitle={completed.preferences ? "Identity profile configured" : "Identity profile pending"}
+            action={<ControlIcon glyph="T" label="Twin Status" />}
+          />
+          <PremiumCard
+            title="Training Status"
+            subtitle={completed.photos ? `${photoCount} photos uploaded and ready` : `${photoCount}/10 minimum uploaded`}
+            action={<ControlIcon glyph="P" label="Training Status" />}
+          />
+          <PremiumCard title="Current Plan" subtitle={planLabel} action={<ControlIcon glyph="$" label="Current Plan" />} />
+          <PremiumCard
+            title="Generation Queue"
+            subtitle={requestCount > 0 ? `${requestCount} request(s) in pipeline` : "No active requests yet"}
+            action={<ControlIcon glyph="Q" label="Generation Queue" />}
+          />
+          <PremiumCard
+            title="Latest Activity"
+            subtitle={latestSyncAt ? `Synced ${new Date(latestSyncAt).toLocaleString()}` : "Syncing dashboard state..."}
+            action={<ControlIcon glyph="A" label="Latest Activity" />}
+          />
+        </section>
+      )}
 
       {allStepsDone && requestCount === 0 ? (
         <section className="section">
@@ -350,20 +377,28 @@ export default function StartDashboardClient() {
       ) : null}
 
       <section className="premium-status-grid section">
-        {statusCards.map((card, idx) => (
-          <PremiumCard key={card.label} className="premium-status-card">
-            <div className="status-label">{card.label}</div>
-            <div className="status-value">{card.value}</div>
-            <div className="status-progress">
-              <motion.div
-                className="status-progress-fill"
-                initial={{ width: 0 }}
-                animate={{ width: `${card.progress}%` }}
-                transition={{ duration: 0.8 + idx * 0.08, ease: "easeOut" }}
-              />
-            </div>
-          </PremiumCard>
-        ))}
+        {loading
+          ? Array.from({ length: 4 }).map((_, idx) => (
+              <PremiumCard key={`status-skeleton-${idx}`} className="premium-status-card">
+                <div className="skeleton-line w-30" />
+                <div className="skeleton-line w-60" />
+                <div className="skeleton-bar" />
+              </PremiumCard>
+            ))
+          : statusCards.map((card, idx) => (
+              <PremiumCard key={card.label} className="premium-status-card">
+                <div className="status-label">{card.label}</div>
+                <div className="status-value">{card.value}</div>
+                <div className="status-progress">
+                  <motion.div
+                    className="status-progress-fill"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${card.progress}%` }}
+                    transition={{ duration: 0.8 + idx * 0.08, ease: "easeOut" }}
+                  />
+                </div>
+              </PremiumCard>
+            ))}
       </section>
 
       <section className="feature-grid section">
@@ -374,7 +409,11 @@ export default function StartDashboardClient() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28, delay: idx * 0.04 }}
           >
-            <PremiumCard title={card.title} subtitle={card.description}>
+            <PremiumCard
+              title={card.title}
+              subtitle={card.description}
+              action={<ControlIcon glyph={"icon" in card ? card.icon : card.key === "preferences" ? "1" : card.key === "photos" ? "2" : "3"} label={card.title} />}
+            >
               {"viewHref" in card ? (
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <span className="badge">
@@ -400,6 +439,18 @@ export default function StartDashboardClient() {
           </motion.div>
         ))}
       </section>
+
+      {!loading && requestCount === 0 ? (
+        <section className="section">
+          <PremiumCard className="premium-empty">
+            <div className="empty-visual">Q</div>
+            <h3 style={{ marginTop: 0 }}>No generation activity yet</h3>
+            <p className="wizard-copy">
+              Your queue is ready. Complete setup steps and launch your first generation to populate live activity.
+            </p>
+          </PremiumCard>
+        </section>
+      ) : null}
     </div>
   );
 }

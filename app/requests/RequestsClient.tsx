@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import ControlIcon from "@/components/ControlIcon";
 
 type RequestRow = {
   id: string;
@@ -63,6 +64,8 @@ export default function RequestsClient() {
   const [saved, setSaved] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [hasSavedPreferences, setHasSavedPreferences] = useState(false);
+  const [hydrating, setHydrating] = useState(true);
+  const [loadingRequests, setLoadingRequests] = useState(true);
 
   const [allowedPhotos, allowedVideos] = monthlyPlan.split("-").map((x) => Number(x));
   const selectedPhotos = allocationRows
@@ -134,13 +137,16 @@ export default function RequestsClient() {
       };
       if (!response.ok) {
         setError(result.error ?? "Could not load requests.");
+        setLoadingRequests(false);
         return;
       }
       setRows(result.requests ?? []);
+      setLoadingRequests(false);
     };
-    void loadEntitlements();
-    void loadSavedPreferences();
-    void load();
+    void (async () => {
+      await Promise.allSettled([loadEntitlements(), loadSavedPreferences(), load()]);
+      setHydrating(false);
+    })();
   }, []);
 
   const setPresetRows = (key: string) => {
@@ -212,23 +218,38 @@ export default function RequestsClient() {
       </article>
 
       <section className="planner-summary-grid">
-        <article className="premium-card">
-          <div className="status-label">Current plan</div>
-          <div className="status-value">{entitlementLabel}</div>
-          <div className="muted">Auto-locked from active subscription</div>
-        </article>
-        <article className="premium-card">
-          <div className="status-label">Allocation health</div>
-          <div className="status-value">{allocationHealth === "balanced" ? "Balanced" : "Needs attention"}</div>
-          <div className="muted">
-            {selectedPhotos}/{allowedPhotos} photos · {selectedVideos}/{allowedVideos} videos
-          </div>
-        </article>
-        <article className="premium-card">
-          <div className="status-label">Saved profile</div>
-          <div className="status-value">{hasSavedPreferences ? "Saved and reusable" : "Draft not saved"}</div>
-          <div className="muted">Use edit mode anytime to refine next cycle</div>
-        </article>
+        {hydrating ? (
+          Array.from({ length: 3 }).map((_, idx) => (
+            <article className="premium-card" key={`planner-summary-skeleton-${idx}`}>
+              <div className="skeleton-line w-30" />
+              <div className="skeleton-line w-70" />
+              <div className="skeleton-line w-50" />
+            </article>
+          ))
+        ) : (
+          <>
+            <article className="premium-card">
+              <ControlIcon glyph="$" label="Current plan" />
+              <div className="status-label">Current plan</div>
+              <div className="status-value">{entitlementLabel}</div>
+              <div className="muted">Auto-locked from active subscription</div>
+            </article>
+            <article className="premium-card">
+              <ControlIcon glyph="H" label="Allocation health" />
+              <div className="status-label">Allocation health</div>
+              <div className="status-value">{allocationHealth === "balanced" ? "Balanced" : "Needs attention"}</div>
+              <div className="muted">
+                {selectedPhotos}/{allowedPhotos} photos · {selectedVideos}/{allowedVideos} videos
+              </div>
+            </article>
+            <article className="premium-card">
+              <ControlIcon glyph="S" label="Saved profile" />
+              <div className="status-label">Saved profile</div>
+              <div className="status-value">{hasSavedPreferences ? "Saved and reusable" : "Draft not saved"}</div>
+              <div className="muted">Use edit mode anytime to refine next cycle</div>
+            </article>
+          </>
+        )}
       </section>
 
       <article className="premium-card planner-config">
@@ -348,11 +369,18 @@ export default function RequestsClient() {
 
       {error ? <p style={{ color: "var(--danger)" }}>{error}</p> : null}
 
-      {rows.length === 0 ? (
+      {loadingRequests || hydrating ? (
         <article className="premium-card">
+          <div className="skeleton-line w-40" />
+          <div className="skeleton-line w-80" />
+          <div className="skeleton-line w-60" />
+        </article>
+      ) : rows.length === 0 ? (
+        <article className="premium-card">
+          <div className="empty-visual">P</div>
+          <h3 style={{ marginTop: 0 }}>No generation requests yet</h3>
           <p className="planner-copy" style={{ margin: 0 }}>
-            No requests yet. Upload training photos first, then complete onboarding preferences to queue your
-            first run.
+            Upload training photos first, then save your allocation profile to queue your first premium run.
           </p>
         </article>
       ) : (

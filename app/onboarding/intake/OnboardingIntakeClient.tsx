@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import PremiumCard from "@/components/PremiumCard";
 import PremiumButton from "@/components/PremiumButton";
+import ControlIcon from "@/components/ControlIcon";
 
 type ExtraField = {
   id: string;
@@ -203,6 +204,7 @@ export default function OnboardingIntakeClient() {
   return (
     <section className="wizard-stack">
       <PremiumCard className="wizard-progress">
+        <ControlIcon glyph="W" label="Onboarding wizard" />
         <h2 style={{ marginTop: 0 }}>Guided Onboarding Setup</h2>
         {loadingSaved ? (
           <p style={{ marginBottom: 0, opacity: 0.8 }}>Loading your saved setup...</p>
@@ -223,8 +225,21 @@ export default function OnboardingIntakeClient() {
         )}
       </PremiumCard>
 
+      {loadingSaved ? (
+        <div className="wizard-grid">
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <PremiumCard key={`wizard-skeleton-${idx}`} className="wizard-panel">
+              <div className="skeleton-line w-40" />
+              <div className="skeleton-line w-80" />
+              <div className="skeleton-line w-70" />
+              <div className="skeleton-line w-60" />
+            </PremiumCard>
+          ))}
+        </div>
+      ) : (
       <div className="wizard-grid">
         <PremiumCard className="wizard-panel">
+          <ControlIcon glyph="P" label="Basic profile" />
           <h3 style={{ marginTop: 0 }}>Basic profile</h3>
           <p className="wizard-copy">Required identity details for your digital twin profile.</p>
           <div className="wizard-fields two-col">
@@ -252,6 +267,7 @@ export default function OnboardingIntakeClient() {
         </PremiumCard>
 
         <PremiumCard className="wizard-panel">
+          <ControlIcon glyph="C" label="Contact info" />
           <h3 style={{ marginTop: 0 }}>Contact and delivery info</h3>
           <p className="wizard-copy">Where we send updates and delivery-ready content links.</p>
           <div className="wizard-fields two-col">
@@ -279,6 +295,7 @@ export default function OnboardingIntakeClient() {
         </PremiumCard>
 
         <PremiumCard className="wizard-panel">
+          <ControlIcon glyph="D" label="Style direction" />
           <h3 style={{ marginTop: 0 }}>Style and content direction</h3>
           <p className="wizard-copy">Define real identity + desired transformation direction for consistent outputs.</p>
           <div className="wizard-fields">
@@ -308,6 +325,7 @@ export default function OnboardingIntakeClient() {
         </PremiumCard>
 
         <PremiumCard className="wizard-panel">
+          <ControlIcon glyph="R" label="Preferences and boundaries" />
           <h3 style={{ marginTop: 0 }}>Preferences and boundaries</h3>
           <p className="wizard-copy">
             Enter rules, constraints, and style boundaries. You can type fully custom instructions.
@@ -325,6 +343,7 @@ export default function OnboardingIntakeClient() {
         </PremiumCard>
 
         <PremiumCard className="wizard-panel">
+          <ControlIcon glyph="A" label="Additional fields" />
           <h3 style={{ marginTop: 0 }}>Additional fields</h3>
           <p className="wizard-copy">
             Add campaign-specific fields like banned words, posting timezone, styling defaults, or delivery notes.
@@ -363,6 +382,7 @@ export default function OnboardingIntakeClient() {
           </div>
         </PremiumCard>
       </div>
+      )}
 
       <PremiumCard className="wizard-save-bar">
         <h3 style={{ marginTop: 0 }}>Save and continue</h3>

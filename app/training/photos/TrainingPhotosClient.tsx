@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import PremiumCard from "@/components/PremiumCard";
 import PremiumButton from "@/components/PremiumButton";
+import ControlIcon from "@/components/ControlIcon";
 
 type Status = "idle" | "uploading" | "done" | "error";
 type UploadedFile = {
@@ -33,6 +34,7 @@ export default function TrainingPhotosClient() {
   const [message, setMessage] = useState("");
   const [busyPath, setBusyPath] = useState<string | null>(null);
   const [replacingPath, setReplacingPath] = useState<string | null>(null);
+  const [loadingUploads, setLoadingUploads] = useState(true);
 
   useEffect(() => {
     const load = async () => {
@@ -44,9 +46,11 @@ export default function TrainingPhotosClient() {
       if (!response.ok) {
         setStatus("error");
         setMessage(result.error ?? "Could not load uploaded photos.");
+        setLoadingUploads(false);
         return;
       }
       setUploadedFiles(result.files ?? []);
+      setLoadingUploads(false);
     };
     void load();
   }, []);
@@ -207,6 +211,7 @@ export default function TrainingPhotosClient() {
   return (
     <div className="training-stack">
       <PremiumCard className="training-dropzone-card">
+        <ControlIcon glyph="T" label="Training uploader" />
         <h2 style={{ marginTop: 0 }}>Training Photo Uploader</h2>
         <p className="wizard-copy">
           Upload a curated set of photos. The system uses these images for twin training and generation quality.
@@ -252,7 +257,20 @@ export default function TrainingPhotosClient() {
         </motion.p>
       ) : null}
 
-      {uploadedFiles.length > 0 ? (
+      {loadingUploads ? (
+        <PremiumCard>
+          <div className="skeleton-line w-40" />
+          <div className="training-gallery-grid">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div key={`photo-skeleton-${idx}`} className="premium-card training-photo-card">
+                <div className="skeleton-square" />
+                <div className="skeleton-line w-80" />
+                <div className="skeleton-line w-40" />
+              </div>
+            ))}
+          </div>
+        </PremiumCard>
+      ) : uploadedFiles.length > 0 ? (
         <PremiumCard>
           <h3 style={{ margin: 0 }}>Uploaded photos ({uploadedFiles.length})</h3>
           <div className="training-gallery-grid">
@@ -306,7 +324,15 @@ export default function TrainingPhotosClient() {
             ))}
           </div>
         </PremiumCard>
-      ) : null}
+      ) : (
+        <PremiumCard className="premium-empty">
+          <div className="empty-visual">I</div>
+          <h3 style={{ marginTop: 0 }}>No photos uploaded yet</h3>
+          <p className="wizard-copy">
+            Start with a high-quality batch to unlock model training. Your gallery will populate here instantly.
+          </p>
+        </PremiumCard>
+      )}
     </div>
   );
 }
