@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import PremiumCard from "@/components/PremiumCard";
 import PremiumButton from "@/components/PremiumButton";
+import { WHATSAPP_LINK, WHATSAPP_NUMBER_DISPLAY } from "@/lib/support";
 
 type ThankYouState = "processing" | "ready" | "error";
 
@@ -49,7 +50,7 @@ export default function ThankYouPage() {
 
         if (!res.ok || data.state === "error") {
           setState("error");
-          setError(data.error ?? "We couldn't confirm payment. Contact support.");
+          setError(data.error ?? "We couldn't confirm payment yet. Message us on WhatsApp.");
           return;
         }
 
@@ -58,7 +59,7 @@ export default function ThankYouPage() {
       } catch {
         if (!cancelled) {
           setState("error");
-          setError("We couldn't confirm payment. Contact support.");
+          setError("We couldn't confirm payment yet. Message us on WhatsApp.");
         }
       }
     })();
@@ -104,7 +105,7 @@ export default function ThankYouPage() {
   }
 
   const supportText = useMemo(
-    () => "We couldn't confirm payment. Contact support.",
+    () => "We couldn't confirm payment yet. Message us on WhatsApp.",
     []
   );
 
@@ -126,6 +127,9 @@ export default function ThankYouPage() {
           <>
             <p style={{ color: "#c00", marginBottom: 8 }}>{error || supportText}</p>
             <p className="muted" style={{ marginBottom: 20 }}>{supportText}</p>
+            <a className="btn btn-secondary" href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+              WhatsApp: {WHATSAPP_NUMBER_DISPLAY}
+            </a>
           </>
         ) : null}
 

@@ -24,7 +24,7 @@ export default async function AdminCustomersPage() {
   if (!user) {
     redirect("/login?redirectTo=/admin/customers");
   }
-  if (!isAdminUser(user.id)) {
+  if (!isAdminUser(user.id, user.email)) {
     return <p>❌ Access denied. Add your user ID to ADMIN_USER_IDS.</p>;
   }
 

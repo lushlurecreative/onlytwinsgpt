@@ -9,7 +9,7 @@ export async function POST() {
   const supabase = await createClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isAdminUser(user.id)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!isAdminUser(user.id, user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const admin = getSupabaseAdmin();
   const { enqueued, reason } = await runEnqueueLeadSamples(admin);

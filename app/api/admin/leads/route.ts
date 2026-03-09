@@ -34,7 +34,7 @@ export async function GET() {
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isAdminUser(user.id)) {
+  if (!isAdminUser(user.id, user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isAdminUser(user.id)) {
+  if (!isAdminUser(user.id, user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -136,7 +136,7 @@ export async function DELETE(request: Request) {
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isAdminUser(user.id)) {
+  if (!isAdminUser(user.id, user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

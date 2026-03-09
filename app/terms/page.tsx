@@ -1,3 +1,5 @@
+import { WHATSAPP_LINK, WHATSAPP_NUMBER_DISPLAY } from "@/lib/support";
+
 export default function TermsPage() {
   return (
     <div className="section" style={{ maxWidth: 860, margin: "0 auto" }}>
@@ -39,7 +41,7 @@ export default function TermsPage() {
       <p>We may suspend or terminate accounts for violations of these Terms.</p>
 
       <h2>7. Disclaimer</h2>
-      <p>The service is provided "as is" without warranties of any kind.</p>
+      <p>The service is provided &quot;as is&quot; without warranties of any kind.</p>
 
       <h2>8. Limitation of Liability</h2>
       <p>
@@ -56,7 +58,9 @@ export default function TermsPage() {
       <p>
         For questions, contact:
         <br />
-        lush.lure.creative@gmail.com
+        <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+          WhatsApp: {WHATSAPP_NUMBER_DISPLAY}
+        </a>
       </p>
     </div>
   );

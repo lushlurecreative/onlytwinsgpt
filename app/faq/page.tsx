@@ -1,5 +1,6 @@
 import BrandName from "@/app/components/BrandName";
 import AuthAwarePrimaryCta from "@/components/AuthAwarePrimaryCta";
+import { WHATSAPP_LINK, WHATSAPP_NUMBER_DISPLAY } from "@/lib/support";
 
 const faqs = [
   {
@@ -59,8 +60,8 @@ export default function FaqPage() {
       <section className="section card">
         <h3>Still have questions?</h3>
         <div className="cta-row">
-          <a href="/contact" className="btn btn-secondary">
-            Contact Us
+          <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
+            WhatsApp: {WHATSAPP_NUMBER_DISPLAY}
           </a>
           <AuthAwarePrimaryCta className="btn btn-primary" />
         </div>

@@ -3,7 +3,11 @@
 import { useState } from "react";
 import PremiumButton from "@/components/PremiumButton";
 
-export default function BillingPortalButton() {
+type BillingPortalButtonProps = {
+  compact?: boolean;
+};
+
+export default function BillingPortalButton({ compact = false }: BillingPortalButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,9 +31,9 @@ export default function BillingPortalButton() {
   }
 
   return (
-    <div style={{ marginTop: 10 }}>
-      <PremiumButton onClick={openPortal} loading={loading}>
-        Open Stripe Billing Portal
+    <div style={{ marginTop: compact ? 0 : 10 }}>
+      <PremiumButton onClick={openPortal} loading={loading} variant={compact ? "ghost" : "primary"}>
+        Manage billing details
       </PremiumButton>
       {error ? <p style={{ color: "var(--danger)", marginTop: 6 }}>{error}</p> : null}
     </div>

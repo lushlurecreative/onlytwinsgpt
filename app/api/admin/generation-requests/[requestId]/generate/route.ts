@@ -44,7 +44,7 @@ export async function POST(_request: Request, { params }: Params) {
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isAdminUser(user.id)) {
+  if (!isAdminUser(user.id, user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -73,7 +73,7 @@ export async function POST(_request: Request, { params }: Params) {
   const total = Math.max(1, requestRow.image_count) + Math.max(0, requestRow.video_count);
   let done = 0;
   let retries = requestRow.retry_count ?? 0;
-  let outputPaths = [...(requestRow.output_paths ?? [])];
+  const outputPaths = [...(requestRow.output_paths ?? [])];
 
   const subjectId = await getApprovedSubjectIdForUser(requestRow.user_id);
   if (!subjectId) {

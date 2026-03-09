@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase-server";
+import { WHATSAPP_LINK, WHATSAPP_NUMBER_DISPLAY } from "@/lib/support";
 
 type LinkItem = { label: string; href: string };
 
@@ -183,19 +183,12 @@ function buildReply(questionRaw: string): AssistantReply {
       { label: "Requests", href: "/requests" },
       { label: "Billing", href: "/billing" },
       { label: "Upgrade", href: "/upgrade" },
+      { label: `WhatsApp: ${WHATSAPP_NUMBER_DISPLAY}`, href: WHATSAPP_LINK },
     ]
   );
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const body = (await request.json().catch(() => ({}))) as { message?: string };
   const message = (body.message ?? "").trim();
   if (!message) {

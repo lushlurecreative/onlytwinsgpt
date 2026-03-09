@@ -1,3 +1,5 @@
+import { WHATSAPP_LINK, WHATSAPP_NUMBER_DISPLAY } from "@/lib/support";
+
 export default function PrivacyPage() {
   return (
     <div className="section" style={{ maxWidth: 860, margin: "0 auto" }}>
@@ -8,7 +10,7 @@ export default function PrivacyPage() {
         Effective Date: March 2, 2026
       </p>
       <p>
-        OnlyTwins ("we", "our", "us") respects your privacy. This Privacy Policy explains what
+        OnlyTwins (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) respects your privacy. This Privacy Policy explains what
         information we collect and how we use it.
       </p>
 
@@ -49,7 +51,7 @@ export default function PrivacyPage() {
       <h2>6. Data Retention</h2>
       <p>
         We retain account data while your subscription is active. You may request deletion by
-        contacting support.
+        contacting us on WhatsApp.
       </p>
 
       <h2>7. Security</h2>
@@ -59,14 +61,18 @@ export default function PrivacyPage() {
       <p>
         You may request access, correction, or deletion of your data by contacting:
         <br />
-        lush.lure.creative@gmail.com
+        <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+          WhatsApp: {WHATSAPP_NUMBER_DISPLAY}
+        </a>
       </p>
 
       <h2>9. Contact</h2>
       <p>
         For privacy questions, contact:
         <br />
-        lush.lure.creative@gmail.com
+        <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+          WhatsApp: {WHATSAPP_NUMBER_DISPLAY}
+        </a>
       </p>
     </div>
   );

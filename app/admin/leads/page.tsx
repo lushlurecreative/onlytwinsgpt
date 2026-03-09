@@ -11,8 +11,8 @@ export default async function AdminLeadsPage() {
   if (!user) {
     redirect("/login?redirectTo=/admin/leads");
   }
-  if (!isAdminUser(user.id)) {
-    return <p>❌ Access denied. Add your user ID to ADMIN_USER_IDS.</p>;
+  if (!isAdminUser(user.id, user.email)) {
+    return <p>❌ Access denied.</p>;
   }
   return <AdminLeadsClient />;
 }

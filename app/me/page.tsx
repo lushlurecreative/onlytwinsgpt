@@ -1,90 +1,99 @@
-"use client";
-
-/* eslint-disable @next/next/no-img-element */
-
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import PremiumCard from "@/components/PremiumCard";
+import PremiumButton from "@/components/PremiumButton";
+import { getCurrentSubscriptionSummary } from "@/lib/request-planner";
+import { WHATSAPP_LINK, WHATSAPP_NUMBER_DISPLAY } from "@/lib/support";
 
-type PostRow = {
-  id: string;
-  storage_path: string;
-  caption: string | null;
-  is_published: boolean;
-  created_at: string;
-  signed_url: string | null;
-};
+function statusLabel(status: string) {
+  const s = status.toLowerCase();
+  if (s === "active") return "Active";
+  if (s === "trialing") return "Trialing";
+  if (s === "past_due") return "Past due";
+  if (s === "canceled") return "Canceled";
+  return "Unknown";
+}
 
-export default function MePage() {
-  const [status, setStatus] = useState("Loading...");
-  const [posts, setPosts] = useState<PostRow[]>([]);
-  const [postsError, setPostsError] = useState<string>("");
+export default async function MePage() {
+  const supabase = await createClient();
+  const admin = getSupabaseAdmin();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login?redirectTo=/me");
 
-  useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) return setStatus(`❌ ${error.message}`);
-      if (!data.user) {
-        setStatus("❌ Not signed in.");
-        return;
-      }
-
-      setStatus(`✅ Signed in as: ${data.user.email}`);
-
-      const response = await fetch("/api/posts");
-      const result = (await response.json().catch(() => ({}))) as {
-        posts?: PostRow[];
-        error?: string;
-      };
-
-      if (!response.ok) {
-        setPostsError(result.error ?? "Failed to load posts");
-        return;
-      }
-
-      setPosts(result.posts ?? []);
-    })();
-  }, []);
+  const summary = await getCurrentSubscriptionSummary(admin, user.id);
+  const renewalLabel = summary.nextRenewalAt
+    ? new Date(summary.nextRenewalAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "Unavailable";
+  const memberSince = user.created_at
+    ? new Date(user.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "Unavailable";
+  const loginMethod = (user.app_metadata?.provider as string | undefined) ?? "email";
+  const planName =
+    summary.planKey === "starter"
+      ? "Starter"
+      : summary.planKey === "professional"
+        ? "Growth"
+        : summary.planKey === "elite"
+          ? "Scale"
+          : summary.planName || "No active plan";
+  const allowanceSummary = `Includes ${summary.includedImages} photos and ${summary.includedVideos} videos per month`;
 
   return (
     <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
       <PremiumCard>
-        <h1 style={{ marginTop: 0 }}>Account Overview</h1>
-        <p>{status}</p>
+        <h1 style={{ marginTop: 0 }}>Account</h1>
+        <p style={{ marginBottom: 6 }}>
+          <strong>Email:</strong> {user.email ?? "Unavailable"}
+        </p>
+        <p style={{ marginBottom: 6 }}>
+          <strong>Current plan:</strong> {planName}
+        </p>
+        <p style={{ marginBottom: 6 }}>
+          <strong>Renewal date:</strong> {renewalLabel}
+        </p>
+        <p style={{ marginBottom: 6 }}>
+          <strong>Account status:</strong> {statusLabel(summary.status)}
+        </p>
+        <p style={{ marginBottom: 0 }}>{allowanceSummary}</p>
       </PremiumCard>
+
       <PremiumCard style={{ marginTop: 14 }}>
-      <h2 style={{ marginTop: 0 }}>My Posts</h2>
-      {postsError ? <p style={{ color: "var(--danger)" }}>{postsError}</p> : null}
-      {!postsError && posts.length === 0 ? <p>No posts yet.</p> : null}
-      {!postsError && posts.length > 0 ? (
-        <ul>
-          {posts.map((post) => (
-            <li key={post.id}>
-              <div>
-                <code>{post.storage_path}</code>
-              </div>
-              {post.signed_url ? (
-                <div style={{ marginTop: 6 }}>
-                  <a href={post.signed_url} target="_blank" rel="noopener noreferrer">
-                    Open signed URL
-                  </a>
-                </div>
-              ) : null}
-              {post.signed_url ? (
-                // Minimal preview for image uploads.
-                <img
-                  src={post.signed_url}
-                  alt={post.caption ?? "Uploaded content"}
-                  style={{ marginTop: 8, maxWidth: 280, display: "block" }}
-                />
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <p style={{ marginTop: 12, marginBottom: 0 }}>
-        Go to <code>/login</code>
-      </p>
+        <h2 style={{ marginTop: 0 }}>Quick links</h2>
+        <div className="cta-row">
+          <PremiumButton href="/dashboard">Dashboard</PremiumButton>
+          <PremiumButton href="/requests" variant="secondary">Requests</PremiumButton>
+          <PremiumButton href="/billing" variant="secondary">Billing</PremiumButton>
+          <PremiumButton href="/library" variant="secondary">Library</PremiumButton>
+        </div>
+      </PremiumCard>
+
+      <PremiumCard style={{ marginTop: 14 }}>
+        <h2 style={{ marginTop: 0 }}>Support</h2>
+        <p>Need help? Message us on WhatsApp.</p>
+        <a className="btn btn-primary" href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+          WhatsApp: {WHATSAPP_NUMBER_DISPLAY}
+        </a>
+      </PremiumCard>
+
+      <PremiumCard style={{ marginTop: 14 }}>
+        <h2 style={{ marginTop: 0 }}>Account details</h2>
+        <p style={{ marginBottom: 6 }}>
+          <strong>Login method:</strong> {loginMethod}
+        </p>
+        <p style={{ marginBottom: 0 }}>
+          <strong>Member since:</strong> {memberSince}
+        </p>
       </PremiumCard>
     </main>
   );

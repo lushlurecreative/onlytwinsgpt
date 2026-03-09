@@ -7,6 +7,7 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import PageTransition from "@/components/PageTransition";
 import OnlyTwinsAssistant from "@/components/OnlyTwinsAssistant";
 import { Analytics } from "@vercel/analytics/next";
+import { WHATSAPP_LINK, WHATSAPP_NUMBER_DISPLAY } from "@/lib/support";
 
 export const metadata = {
   title: "OnlyTwins",
@@ -59,7 +60,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <h4>Support</h4>
                 <div className="footer-links">
                   <Link href="/faq">FAQ</Link>
-                  <Link href="/contact">Contact</Link>
+                  <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+                    WhatsApp: {WHATSAPP_NUMBER_DISPLAY}
+                  </a>
                 </div>
               </div>
               <div>

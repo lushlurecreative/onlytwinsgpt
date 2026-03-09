@@ -30,7 +30,7 @@ export async function PATCH(request: Request, { params }: Params) {
   if (userError || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (!isAdminUser(user.id)) {
+  if (!isAdminUser(user.id, user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

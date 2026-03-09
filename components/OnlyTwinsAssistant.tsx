@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { WHATSAPP_LINK, WHATSAPP_NUMBER_DISPLAY } from "@/lib/support";
 
 type ChatMessage = {
   id: string;
@@ -20,21 +19,7 @@ const QUICK_ACTIONS: Array<{ label: string; prompt: string }> = [
   { label: "What should I upload?", prompt: "What should I upload?" },
 ];
 
-function shouldShowOnRoute(pathname: string) {
-  if (pathname.startsWith("/dashboard")) return true;
-  if (pathname.startsWith("/requests")) return true;
-  if (pathname.startsWith("/billing")) return true;
-  if (pathname.startsWith("/upgrade")) return true;
-  if (pathname.startsWith("/onboarding")) return true;
-  if (pathname.startsWith("/training/photos")) return true;
-  return false;
-}
-
 export default function OnlyTwinsAssistant() {
-  const pathname = usePathname();
-  const supabase = useMemo(() => createClient(), []);
-  const [checkedAuth, setCheckedAuth] = useState(false);
-  const [isAuthed, setIsAuthed] = useState(false);
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -48,22 +33,6 @@ export default function OnlyTwinsAssistant() {
       ],
     },
   ]);
-
-  useEffect(() => {
-    let active = true;
-    void supabase.auth.getUser().then(({ data }) => {
-      if (!active) return;
-      setIsAuthed(!!data.user);
-      setCheckedAuth(true);
-    });
-    return () => {
-      active = false;
-    };
-  }, [supabase]);
-
-  if (!checkedAuth || !isAuthed || !shouldShowOnRoute(pathname)) {
-    return null;
-  }
 
   const pushAssistant = (text: string, links?: Array<{ label: string; href: string }>) => {
     setMessages((prev) => [
@@ -86,9 +55,7 @@ export default function OnlyTwinsAssistant() {
       error?: string;
     };
     if (!response.ok) {
-      pushAssistant("I couldn’t process that right now. Please try again.", [
-        { label: "Dashboard", href: "/dashboard" },
-      ]);
+      pushAssistant("Need help from the team? Message us on WhatsApp.", []);
       return;
     }
     pushAssistant(result.answer ?? "I can help with plans, setup, and requests.", result.links ?? []);
@@ -167,6 +134,11 @@ export default function OnlyTwinsAssistant() {
               <button type="button" onClick={onSend}>
                 Send
               </button>
+            </div>
+            <div style={{ marginTop: 8 }}>
+              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer" className="assistant-link-chip">
+                Need help from the team? WhatsApp: {WHATSAPP_NUMBER_DISPLAY}
+              </a>
             </div>
           </div>
         </div>

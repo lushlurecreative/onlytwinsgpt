@@ -73,7 +73,7 @@ export async function PATCH(request: Request, { params }: Params) {
   const updates: Record<string, unknown> = {};
   if (body.label !== undefined) updates.label = body.label?.trim() ?? null;
 
-  const isAdmin = isAdminUser(user.id);
+  const isAdmin = isAdminUser(user.id, user.email);
   if (isAdmin) {
     if (body.consent_status !== undefined) updates.consent_status = body.consent_status;
     if (body.consent_signed_at !== undefined) updates.consent_signed_at = body.consent_signed_at;

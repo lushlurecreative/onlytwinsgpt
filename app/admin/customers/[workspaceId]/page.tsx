@@ -19,7 +19,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
   if (!user) {
     redirect(`/login?redirectTo=/admin/customers/${workspaceId}`);
   }
-  if (!isAdminUser(user.id)) {
+  if (!isAdminUser(user.id, user.email)) {
     return <p>❌ Access denied. Add your user ID to ADMIN_USER_IDS.</p>;
   }
 
