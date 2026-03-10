@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createGenerationJob, getApprovedSubjectIdForUser, getLoraReferenceForSubject, getPresetIdBySceneKey } from "@/lib/generation-jobs";
 import { createCanonicalCustomerGenerationBatch } from "@/lib/customer-generation";
 import { normalizeMixLines } from "@/lib/request-planner";
+import { isGenerationEngineEnabled, logGenerationEngineDisabled } from "@/lib/generation-engine";
 
 type GenerationRequestRow = {
   id: string;
@@ -79,6 +80,11 @@ async function ensureLines(admin: SupabaseClient, request: GenerationRequestRow)
 }
 
 export async function processPendingCustomerGeneration(admin: SupabaseClient, maxBatches = 10) {
+  if (!isGenerationEngineEnabled()) {
+    logGenerationEngineDisabled("request_processor");
+    return [];
+  }
+
   const nowIso = new Date().toISOString();
   const { data: candidates } = await admin
     .from("generation_requests")
@@ -165,6 +171,11 @@ export async function processPendingCustomerGeneration(admin: SupabaseClient, ma
 }
 
 export async function scheduleMonthlyCustomerBatches(admin: SupabaseClient, maxSubscribers = 200) {
+  if (!isGenerationEngineEnabled()) {
+    logGenerationEngineDisabled("monthly_scheduler");
+    return [];
+  }
+
   const now = new Date();
   const { data: subs } = await admin
     .from("subscriptions")

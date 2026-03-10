@@ -3,6 +3,7 @@ import { createGenerationRequestWithUsage } from "@/lib/generation-request-intak
 import { normalizeMixLines, type MixLine } from "@/lib/request-planner";
 import { getCurrentSubscriptionSummary } from "@/lib/request-planner";
 import { computeCutoff } from "@/lib/request-planner";
+import { isGenerationEngineEnabled, logGenerationEngineDisabled } from "@/lib/generation-engine";
 
 type BatchSource = "manual_save" | "monthly_scheduler" | "api_generation_request" | "vault_generate" | "generate_images";
 
@@ -105,6 +106,16 @@ export async function createCanonicalCustomerGenerationBatch(
   admin: SupabaseClient,
   input: CanonicalIntakeInput
 ): Promise<CanonicalIntakeResult> {
+  if (!isGenerationEngineEnabled()) {
+    logGenerationEngineDisabled("canonical_intake");
+    return {
+      ok: false,
+      status: 503,
+      error: "Generation engine is currently disabled.",
+      code: "GENERATION_ENGINE_DISABLED",
+    };
+  }
+
   const summary = await getCurrentSubscriptionSummary(admin, input.userId);
   const subscriptionStatus = String(summary.status ?? "").toLowerCase();
   if (!["active", "trialing", "past_due"].includes(subscriptionStatus)) {

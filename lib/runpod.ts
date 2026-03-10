@@ -4,6 +4,7 @@
  */
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { isGenerationEngineEnabled, logGenerationEngineDisabled } from "@/lib/generation-engine";
 
 const RUNPOD_API_BASE = "https://api.runpod.ai/v2";
 
@@ -123,6 +124,11 @@ export async function dispatchGenerationJobToRunPod(
     lead_id?: string | null;
   }
 ): Promise<string | null> {
+  if (!isGenerationEngineEnabled()) {
+    logGenerationEngineDisabled("job_dispatcher_dispatch_runpod");
+    return null;
+  }
+
   const config = await getRunPodConfig();
   if (!config) return null;
   const appUrl = getAppUrl();

@@ -7,6 +7,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getScenePresetByKey } from "@/lib/scene-presets";
 import { dispatchGenerationJobToRunPod } from "@/lib/runpod";
 import type { GenerationJobStatus } from "@/lib/db-enums";
+import { isGenerationEngineEnabled, logGenerationEngineDisabled } from "@/lib/generation-engine";
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 300_000; // 5 min per job
@@ -63,6 +64,11 @@ export async function getPresetIdBySceneKey(sceneKey: string): Promise<string | 
 }
 
 export async function createGenerationJob(input: CreateGenerationJobInput): Promise<string | null> {
+  if (!isGenerationEngineEnabled()) {
+    logGenerationEngineDisabled("job_dispatcher_create_generation_job");
+    return null;
+  }
+
   const admin = getSupabaseAdmin();
   const jobType = input.job_type ?? "user";
   const { data, error } = await admin
