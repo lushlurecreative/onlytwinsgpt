@@ -87,6 +87,17 @@ export default function AdminCustomersClient() {
     []
   );
   const debugRows = rows.slice(0, 5);
+  const hardBtnStyle = {
+    border: "2px solid #111",
+    background: "#fff",
+    color: "#111",
+    padding: "8px 10px",
+    borderRadius: 6,
+    fontWeight: 700,
+    cursor: "pointer",
+    textDecoration: "none",
+    display: "inline-block",
+  };
 
   function startCreate() {
     setSelected(null);
@@ -293,9 +304,9 @@ export default function AdminCustomersClient() {
               <div key={`debug-customer-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
                 <strong>{row.email ?? "Unknown email"}</strong>
                 <code>{row.workspaceId}</code>
-                <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>View</Link>
-                <button className="btn btn-primary" type="button" onClick={() => startEdit(row)}>Edit</button>
-                <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => setArchiveTarget(row)}>
+                <a href={`/admin/customers/${row.workspaceId}`} style={hardBtnStyle}>View</a>
+                <button style={hardBtnStyle} type="button" onClick={() => startEdit(row)}>Edit</button>
+                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setArchiveTarget(row)}>
                   Archive
                 </button>
               </div>
@@ -359,9 +370,9 @@ export default function AdminCustomersClient() {
               {rows.map((row) => (
                 <div key={`test-customer-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
                   <strong>{row.email ?? row.workspaceId}</strong>
-                  <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>View</Link>
-                  <button className="btn btn-primary" type="button" onClick={() => startEdit(row)}>Edit</button>
-                  <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => setArchiveTarget(row)}>
+                  <a href={`/admin/customers/${row.workspaceId}`} style={hardBtnStyle}>View</a>
+                  <button style={hardBtnStyle} type="button" onClick={() => startEdit(row)}>Edit</button>
+                  <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setArchiveTarget(row)}>
                     Archive
                   </button>
                 </div>
