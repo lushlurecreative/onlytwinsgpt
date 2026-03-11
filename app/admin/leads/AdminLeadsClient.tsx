@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @next/next/no-img-element */
 
 import { Fragment, useEffect, useState } from "react";
@@ -69,7 +68,7 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
   const [enqueueingSamples, setEnqueueingSamples] = useState(false);
   const [editingLead, setEditingLead] = useState<LeadRow | null>(null);
   const [leadFormMode, setLeadFormMode] = useState<"create" | "edit" | null>(null);
-  const [showDeleteLeadModal, setShowDeleteLeadModal] = useState<LeadRow | null>(null);
+  const [showArchiveLeadModal, setShowArchiveLeadModal] = useState<LeadRow | null>(null);
   const [sessionEmail, setSessionEmail] = useState<string | null>(initialSessionEmail);
   const [sessionIsAdmin, setSessionIsAdmin] = useState<boolean>(initialIsAdmin);
   const [leadForm, setLeadForm] = useState({
@@ -201,22 +200,22 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
     }
   }
 
-  async function deleteSelected() {
+  async function archiveSelected() {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
-    if (!window.confirm(`Delete ${ids.length} selected lead(s)?`)) return;
+    if (!window.confirm(`Archive ${ids.length} selected lead(s)?`)) return;
     setDeleting(true);
-    setMessage("Deleting...");
+    setMessage("Archiving...");
     const res = await fetch("/api/admin/leads", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids }),
+      body: JSON.stringify({ ids, archiveReason: "bulk_admin_archive" }),
     });
-    const json = (await res.json().catch(() => ({}))) as { error?: string; deleted?: number };
+    const json = (await res.json().catch(() => ({}))) as { error?: string; archived?: number };
     if (!res.ok) {
-      setMessage(json.error ?? "Delete failed");
+      setMessage(json.error ?? "Archive failed");
     } else {
-      setMessage(`Deleted ${json.deleted ?? ids.length} lead(s).`);
+      setMessage(`Archived ${json.archived ?? ids.length} lead(s).`);
       setSelectedIds(new Set());
       await load();
     }
@@ -314,15 +313,19 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
     await load();
   }
 
-  async function deleteLeadManual(row: LeadRow) {
-    setMessage("Deleting lead...");
-    const res = await fetch(`/api/admin/leads/${row.id}`, { method: "DELETE" });
+  async function archiveLeadManual(row: LeadRow) {
+    setMessage("Archiving lead...");
+    const res = await fetch(`/api/admin/leads/${row.id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archiveReason: "admin_archive" }),
+    });
     const json = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
-      setMessage(json.error ?? "Delete failed");
+      setMessage(json.error ?? "Archive failed");
       return;
     }
-    setMessage("Lead deleted.");
+    setMessage("Lead archived.");
     await load();
   }
 
@@ -667,11 +670,11 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
           </div>
         </div>
       ) : null}
-      {showDeleteLeadModal ? (
+      {showArchiveLeadModal ? (
         <div
           role="dialog"
           aria-modal="true"
-          aria-labelledby="delete-lead-title"
+          aria-labelledby="archive-lead-title"
           style={{
             position: "fixed",
             inset: 0,
@@ -681,28 +684,28 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
             justifyContent: "center",
             zIndex: 1000,
           }}
-          onClick={(e) => e.target === e.currentTarget && setShowDeleteLeadModal(null)}
+          onClick={(e) => e.target === e.currentTarget && setShowArchiveLeadModal(null)}
         >
           <div className="card" style={{ maxWidth: 520, width: "100%", margin: 16, padding: 16 }}>
-            <h3 id="delete-lead-title" style={{ marginTop: 0 }}>
-              Delete lead
+            <h3 id="archive-lead-title" style={{ marginTop: 0 }}>
+              Archive lead
             </h3>
             <p style={{ marginTop: 0 }}>
-              Delete <strong>{showDeleteLeadModal.handle}</strong>? This permanently removes the lead.
+              Archive <strong>{showArchiveLeadModal.handle}</strong>? This removes the lead from active admin lists but keeps audit history.
             </p>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
-              <button className="btn btn-ghost" type="button" onClick={() => setShowDeleteLeadModal(null)}>
+              <button className="btn btn-ghost" type="button" onClick={() => setShowArchiveLeadModal(null)}>
                 Cancel
               </button>
               <button
                 className="btn btn-primary"
                 type="button"
                 onClick={() => {
-                  void deleteLeadManual(showDeleteLeadModal);
-                  setShowDeleteLeadModal(null);
+                  void archiveLeadManual(showArchiveLeadModal);
+                  setShowArchiveLeadModal(null);
                 }}
               >
-                Delete lead
+                Archive lead
               </button>
             </div>
           </div>
@@ -887,12 +890,12 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
           {selectedIds.size > 0 ? (
             <button
               className="btn btn-ghost"
-              onClick={() => void deleteSelected()}
+              onClick={() => void archiveSelected()}
               disabled={deleting}
               type="button"
               style={{ color: "var(--error, #e5534b)" }}
             >
-              {deleting ? "Deleting…" : `Delete ${selectedIds.size} selected`}
+              {deleting ? "Archiving…" : `Archive ${selectedIds.size} selected`}
             </button>
           ) : null}
           <span className="muted" style={{ fontSize: 12 }}>
@@ -919,8 +922,8 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
                 <code>{row.id}</code>
                 <span className="muted">{row.email ?? row.platform}</span>
                 <button style={hardBtnStyle} type="button" onClick={() => openEditLeadModal(row)}>Edit</button>
-                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setShowDeleteLeadModal(row)}>
-                  Delete
+                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setShowArchiveLeadModal(row)}>
+                  Archive
                 </button>
               </div>
             ))}
@@ -938,8 +941,8 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
                 <strong>{row.handle}</strong>
                 <span className="muted">{row.email ?? row.platform}</span>
                 <button style={hardBtnStyle} type="button" onClick={() => openEditLeadModal(row)}>Edit</button>
-                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setShowDeleteLeadModal(row)}>
-                  Delete
+                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setShowArchiveLeadModal(row)}>
+                  Archive
                 </button>
               </div>
             ))}
@@ -1018,10 +1021,10 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
                             <button
                               className="btn btn-ghost"
                               style={{ color: "var(--error, #e5534b)" }}
-                              onClick={() => setShowDeleteLeadModal(row)}
+                              onClick={() => setShowArchiveLeadModal(row)}
                               type="button"
                             >
-                              Delete
+                              Archive
                             </button>
                             <button className="btn btn-ghost" onClick={() => void expand(row)} type="button">
                               {isExpanded ? "Hide" : (row.sample_paths?.length ? `Review (${row.sample_paths.length})` : "Review")}
@@ -1181,8 +1184,8 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
                   <strong style={{ minWidth: 240 }}>{row.handle}</strong>
                   <span className="muted">{row.email ?? row.platform}</span>
                   <button className="btn btn-primary" type="button" onClick={() => openEditLeadModal(row)}>Edit</button>
-                  <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => setShowDeleteLeadModal(row)}>
-                    Delete
+                  <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => setShowArchiveLeadModal(row)}>
+                    Archive
                   </button>
                 </div>
               ))}

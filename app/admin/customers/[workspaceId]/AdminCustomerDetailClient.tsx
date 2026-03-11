@@ -174,7 +174,7 @@ export default function AdminCustomerDetailClient({
     const res = await fetch(`/api/admin/customers/${workspaceId}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ confirmText: "DELETE" }),
+      body: JSON.stringify({ confirmText: "ARCHIVE" }),
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
@@ -227,12 +227,12 @@ export default function AdminCustomerDetailClient({
               This cancels and archives the customer subscription.
             </p>
             <label style={{ display: "grid", gap: 6 }}>
-              <span className="muted">Type DELETE to confirm</span>
+              <span className="muted">Type ARCHIVE to confirm</span>
               <input
                 className="input"
                 value={archiveConfirmText}
                 onChange={(e) => setArchiveConfirmText(e.target.value)}
-                placeholder="DELETE"
+                placeholder="ARCHIVE"
               />
             </label>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
@@ -249,7 +249,7 @@ export default function AdminCustomerDetailClient({
               <button
                 className="btn btn-primary"
                 type="button"
-                disabled={archiveConfirmText.trim().toUpperCase() !== "DELETE"}
+                disabled={archiveConfirmText.trim().toUpperCase() !== "ARCHIVE"}
                 onClick={() => {
                   void archiveCustomer();
                   setShowArchiveModal(false);

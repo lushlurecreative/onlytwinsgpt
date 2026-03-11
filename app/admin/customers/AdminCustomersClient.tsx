@@ -208,7 +208,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
       body: JSON.stringify({
         subscriptionId: row.id,
         subscriberId: row.workspaceId,
-        confirmText: "DELETE",
+        confirmText: "ARCHIVE",
       }),
     });
     const json = (await res.json().catch(() => ({}))) as { error?: string };
@@ -274,12 +274,12 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
               Customer: <strong>{archiveTarget.email ?? archiveTarget.workspaceId}</strong>
             </p>
             <label style={{ display: "grid", gap: 6 }}>
-              <span className="muted">Type DELETE to confirm</span>
+              <span className="muted">Type ARCHIVE to confirm</span>
               <input
                 className="input"
                 value={archiveConfirmText}
                 onChange={(e) => setArchiveConfirmText(e.target.value)}
-                placeholder="DELETE"
+                placeholder="ARCHIVE"
               />
             </label>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
@@ -296,7 +296,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
               <button
                 className="btn btn-primary"
                 type="button"
-                disabled={archiveConfirmText.trim().toUpperCase() !== "DELETE"}
+                disabled={archiveConfirmText.trim().toUpperCase() !== "ARCHIVE"}
                 onClick={() => {
                   if (!archiveTarget) return;
                   void archiveCustomer(archiveTarget);

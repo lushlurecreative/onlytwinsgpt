@@ -51,10 +51,43 @@ export async function PATCH(request: Request, { params }: Params) {
 export async function DELETE(_request: Request, { params }: Params) {
   const auth = await requireAdmin();
   if ("error" in auth) return auth.error;
+  let body: {
+    confirmText?: string;
+    hardDelete?: boolean;
+    archiveReason?: string | null;
+  } = {};
+  try {
+    body = await _request.json().catch(() => ({}));
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const { leadId } = await params;
   const admin = getSupabaseAdmin();
-  const { error } = await admin.from("leads").delete().eq("id", leadId);
+  const wantsHardDelete = body.hardDelete === true;
+
+  if (wantsHardDelete) {
+    if ((body.confirmText ?? "").trim().toUpperCase() !== "HARD DELETE") {
+      return NextResponse.json(
+        { error: "Confirmation text HARD DELETE is required for permanent deletion." },
+        { status: 400 }
+      );
+    }
+    const { error } = await admin.from("leads").delete().eq("id", leadId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true, mode: "hard_delete" }, { status: 200 });
+  }
+
+  const { error } = await admin
+    .from("leads")
+    .update({
+      archived_at: new Date().toISOString(),
+      archived_by: auth.user.id,
+      archive_reason: body.archiveReason ?? "admin_archive",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", leadId)
+    .is("archived_at", null);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ ok: true }, { status: 200 });
+  return NextResponse.json({ ok: true, mode: "archived" }, { status: 200 });
 }
 

@@ -82,8 +82,8 @@ export async function DELETE(request: Request, { params }: Params) {
   const admin = getSupabaseAdmin();
   const serviceCreatorId = getServiceCreatorId();
   const body = (await request.json().catch(() => ({}))) as { confirmText?: string };
-  if ((body.confirmText ?? "").trim().toUpperCase() !== "DELETE") {
-    return NextResponse.json({ error: "Confirmation text DELETE is required." }, { status: 400 });
+  if ((body.confirmText ?? "").trim().toUpperCase() !== "ARCHIVE") {
+    return NextResponse.json({ error: "Confirmation text ARCHIVE is required." }, { status: 400 });
   }
   const { error } = await admin
     .from("subscriptions")

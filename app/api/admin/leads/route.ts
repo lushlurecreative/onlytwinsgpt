@@ -41,16 +41,22 @@ export async function GET() {
 
   const admin = getSupabaseAdmin();
   const fullSelect =
-    "id, email, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, profile_urls, platforms_found, content_verticals, notes, sample_preview_path, sample_paths, generated_sample_paths, approved_at, messaged_at, created_at";
+    "id, email, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, profile_urls, platforms_found, content_verticals, notes, sample_preview_path, sample_paths, generated_sample_paths, approved_at, messaged_at, created_at, archived_at, archived_by, archive_reason";
   const baseSelect =
-    "id, email, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, notes, sample_preview_path, approved_at, messaged_at, created_at";
-  const minSelect = "id, email, source, handle, platform, follower_count, score, status, profile_url, created_at";
+    "id, email, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, notes, sample_preview_path, approved_at, messaged_at, created_at, archived_at, archived_by, archive_reason";
+  const minSelect = "id, email, source, handle, platform, follower_count, score, status, profile_url, created_at, archived_at, archived_by, archive_reason";
 
   let data: unknown[] | null = null;
   let err: { message: string } | null = null;
 
-  const q = (select: string) =>
-    admin.from("leads").select(select).order("platform", { ascending: true }).order("score", { ascending: false }).limit(2000);
+  const includeArchived = false;
+  const q = (select: string) => {
+    let query = admin.from("leads").select(select);
+    if (!includeArchived) {
+      query = query.is("archived_at", null);
+    }
+    return query.order("platform", { ascending: true }).order("score", { ascending: false }).limit(2000);
+  };
 
   let r = await q(fullSelect);
   if (r.error) {
@@ -142,7 +148,12 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  let body: { ids?: string[] } = {};
+  let body: {
+    ids?: string[];
+    confirmText?: string;
+    hardDelete?: boolean;
+    archiveReason?: string | null;
+  } = {};
   try {
     body = await request.json().catch(() => ({}));
   } catch {
@@ -155,10 +166,33 @@ export async function DELETE(request: Request) {
   }
 
   const admin = getSupabaseAdmin();
-  const { error } = await admin.from("leads").delete().in("id", ids);
+  const wantsHardDelete = body.hardDelete === true;
+  if (wantsHardDelete) {
+    if ((body.confirmText ?? "").trim().toUpperCase() !== "HARD DELETE") {
+      return NextResponse.json(
+        { error: "Confirmation text HARD DELETE is required for permanent deletion." },
+        { status: 400 }
+      );
+    }
+    const { error } = await admin.from("leads").delete().in("id", ids);
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ deleted: ids.length, mode: "hard_delete" }, { status: 200 });
+  }
+  const { error } = await admin
+    .from("leads")
+    .update({
+      archived_at: new Date().toISOString(),
+      archived_by: user.id,
+      archive_reason: body.archiveReason ?? "admin_archive",
+      updated_at: new Date().toISOString(),
+    })
+    .in("id", ids)
+    .is("archived_at", null);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
-  return NextResponse.json({ deleted: ids.length }, { status: 200 });
+  return NextResponse.json({ archived: ids.length, mode: "archived" }, { status: 200 });
 }
 

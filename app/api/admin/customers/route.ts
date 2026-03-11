@@ -364,8 +364,8 @@ export async function DELETE(request: Request) {
     subscriberId?: string;
     confirmText?: string;
   };
-  if ((body.confirmText ?? "").trim().toUpperCase() !== "DELETE") {
-    return NextResponse.json({ error: "Confirmation text DELETE is required." }, { status: 400 });
+  if ((body.confirmText ?? "").trim().toUpperCase() !== "ARCHIVE") {
+    return NextResponse.json({ error: "Confirmation text ARCHIVE is required." }, { status: 400 });
   }
   const subscriptionId = body.subscriptionId?.trim() || "";
   const subscriberId = body.subscriberId?.trim() || "";
