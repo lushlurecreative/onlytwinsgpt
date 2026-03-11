@@ -327,59 +327,85 @@ export default function AdminCustomersClient() {
       {!loading && rows.length === 0 ? <p>No subscribed customers found.</p> : null}
 
       {!loading && rows.length > 0 ? (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ borderCollapse: "collapse", minWidth: 980, width: "100%" }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8, background: "var(--surface, #fff)" }}>Actions</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Customer</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Plan</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Status</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Stripe Customer</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Stripe Subscription</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Renewal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.email ?? "Unknown"}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222", whiteSpace: "nowrap", background: "var(--surface, #fff)" }}>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>
-                        View
-                      </Link>
-                      <button
-                        className="btn btn-primary"
-                        type="button"
-                        onClick={() => {
-                          startEdit(row);
-                          window.scrollTo({ top: 0, behavior: "smooth" });
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-ghost"
-                        type="button"
-                        style={{ color: "var(--error, #e5534b)" }}
-                        onClick={() => setArchiveTarget(row)}
-                      >
-                        Archive
-                      </button>
-                    </div>
-                  </td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.creator}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.plan}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.status}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeCustomerId ?? "—"}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeSubscriptionId ?? "—"}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.renewalDate ? new Date(row.renewalDate).toLocaleDateString() : "—"}</td>
+        <div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ borderCollapse: "collapse", minWidth: 980, width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8, background: "var(--surface, #fff)" }}>Actions</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Customer</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Plan</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Status</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Stripe Customer</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Stripe Subscription</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Renewal</th>
                 </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.email ?? "Unknown"}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222", whiteSpace: "nowrap", background: "var(--surface, #fff)" }}>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>
+                          View
+                        </Link>
+                        <button
+                          className="btn btn-primary"
+                          type="button"
+                          onClick={() => {
+                            startEdit(row);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-ghost"
+                          type="button"
+                          style={{ color: "var(--error, #e5534b)" }}
+                          onClick={() => setArchiveTarget(row)}
+                        >
+                          Archive
+                        </button>
+                      </div>
+                    </td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.creator}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.plan}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.status}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeCustomerId ?? "—"}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeSubscriptionId ?? "—"}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.renewalDate ? new Date(row.renewalDate).toLocaleDateString() : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="card" style={{ marginTop: 12 }}>
+            <h3 style={{ marginTop: 0, marginBottom: 10 }}>Visible customer actions</h3>
+            <div style={{ display: "grid", gap: 10 }}>
+              {rows.map((row) => (
+                <div key={`actions-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+                  <strong style={{ minWidth: 240 }}>{row.email ?? row.workspaceId}</strong>
+                  <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>View</Link>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={() => {
+                      startEdit(row);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => setArchiveTarget(row)}>
+                    Archive
+                  </button>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
         </div>
       ) : null}
 

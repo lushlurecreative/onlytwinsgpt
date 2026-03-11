@@ -866,97 +866,98 @@ export default function AdminLeadsClient() {
       </div>
 
       {!loading && sorted.length > 0 ? (
-        <div className="card" style={{ marginTop: 12, overflowX: "auto" }}>
-          <table className="table" style={{ width: "100%", minWidth: 820 }}>
-            <thead>
-              <tr>
-                <th style={{ width: 40 }}>
-                  <input
-                    type="checkbox"
-                    checked={sorted.length > 0 && selectedIds.size === sorted.length}
-                    onChange={() => toggleSelectAll()}
-                    aria-label="Select all"
-                  />
-                </th>
-                <th>Platform</th>
-                <th>Handle</th>
-                <th>Actions</th>
-                <th>Score</th>
-                <th>Status</th>
-                <th>Sample Status</th>
-                <th>Outreach Status</th>
-                <th>Last Activity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((row) => {
-                const isExpanded = expandedId === row.id;
-                const assets = assetsById[row.id];
-                return (
-                  <Fragment key={row.id}>
-                    <tr>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(row.id)}
-                          onChange={() => toggleSelect(row.id)}
-                          aria-label={`Select ${row.handle}`}
-                        />
-                      </td>
-                      <td>{row.platform}</td>
-                      <td>
-                        {row.email ? <div className="muted" style={{ fontSize: 12 }}>{row.email}</div> : null}
-                        <strong>{row.handle}</strong>
-                        {row.profile_url ? (
-                          <a href={row.profile_url} target="_blank" rel="noreferrer" style={{ display: "block", fontSize: 12, color: "var(--accent)" }}>
-                            profile
-                          </a>
-                        ) : null}
-                        {(row.platforms_found?.length ?? 0) > 0 ? (
-                          <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
-                            Found on: {row.platforms_found!.join(", ")}
-                          </div>
-                        ) : null}
-                        {(row.content_verticals?.length ?? 0) > 0 ? (
-                          <div style={{ marginTop: 4 }}>
-                            {row.content_verticals!.map((v) => (
-                              <span key={v} className="badge badge-muted" style={{ marginRight: 4, fontSize: 10 }}>
-                                {v}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <button className="btn btn-primary" onClick={() => openEditLeadModal(row)} type="button">
-                            Edit
-                          </button>
-                          <button
-                            className="btn btn-ghost"
-                            style={{ color: "var(--error, #e5534b)" }}
-                            onClick={() => setShowDeleteLeadModal(row)}
-                            type="button"
-                          >
-                            Delete
-                          </button>
-                          <button className="btn btn-ghost" onClick={() => void expand(row)} type="button">
-                            {isExpanded ? "Hide" : (row.sample_paths?.length ? `Review (${row.sample_paths.length})` : "Review")}
-                          </button>
-                        </div>
-                      </td>
-                      <td><strong>{row.score}</strong></td>
-                      <td><span className="badge">{row.status}</span></td>
-                      <td>{sampleStatus(row)}</td>
-                      <td>{outreachStatus(row)}</td>
-                      <td className="muted" style={{ fontSize: 13 }}>
-                        {new Date(row.created_at).toLocaleDateString()}
-                      </td>
-                    </tr>
-                    {isExpanded ? (
+        <div>
+          <div className="card" style={{ marginTop: 12, overflowX: "auto" }}>
+            <table className="table" style={{ width: "100%", minWidth: 820 }}>
+              <thead>
+                <tr>
+                  <th style={{ width: 40 }}>
+                    <input
+                      type="checkbox"
+                      checked={sorted.length > 0 && selectedIds.size === sorted.length}
+                      onChange={() => toggleSelectAll()}
+                      aria-label="Select all"
+                    />
+                  </th>
+                  <th>Platform</th>
+                  <th>Handle</th>
+                  <th>Actions</th>
+                  <th>Score</th>
+                  <th>Status</th>
+                  <th>Sample Status</th>
+                  <th>Outreach Status</th>
+                  <th>Last Activity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((row) => {
+                  const isExpanded = expandedId === row.id;
+                  const assets = assetsById[row.id];
+                  return (
+                    <Fragment key={row.id}>
                       <tr>
-                        <td colSpan={10}>
-                          <div className="card" style={{ margin: "10px 0", padding: 14 }}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(row.id)}
+                            onChange={() => toggleSelect(row.id)}
+                            aria-label={`Select ${row.handle}`}
+                          />
+                        </td>
+                        <td>{row.platform}</td>
+                        <td>
+                          {row.email ? <div className="muted" style={{ fontSize: 12 }}>{row.email}</div> : null}
+                          <strong>{row.handle}</strong>
+                          {row.profile_url ? (
+                            <a href={row.profile_url} target="_blank" rel="noreferrer" style={{ display: "block", fontSize: 12, color: "var(--accent)" }}>
+                              profile
+                            </a>
+                          ) : null}
+                          {(row.platforms_found?.length ?? 0) > 0 ? (
+                            <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
+                              Found on: {row.platforms_found!.join(", ")}
+                            </div>
+                          ) : null}
+                          {(row.content_verticals?.length ?? 0) > 0 ? (
+                            <div style={{ marginTop: 4 }}>
+                              {row.content_verticals!.map((v) => (
+                                <span key={v} className="badge badge-muted" style={{ marginRight: 4, fontSize: 10 }}>
+                                  {v}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </td>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                            <button className="btn btn-primary" onClick={() => openEditLeadModal(row)} type="button">
+                              Edit
+                            </button>
+                            <button
+                              className="btn btn-ghost"
+                              style={{ color: "var(--error, #e5534b)" }}
+                              onClick={() => setShowDeleteLeadModal(row)}
+                              type="button"
+                            >
+                              Delete
+                            </button>
+                            <button className="btn btn-ghost" onClick={() => void expand(row)} type="button">
+                              {isExpanded ? "Hide" : (row.sample_paths?.length ? `Review (${row.sample_paths.length})` : "Review")}
+                            </button>
+                          </div>
+                        </td>
+                        <td><strong>{row.score}</strong></td>
+                        <td><span className="badge">{row.status}</span></td>
+                        <td>{sampleStatus(row)}</td>
+                        <td>{outreachStatus(row)}</td>
+                        <td className="muted" style={{ fontSize: 13 }}>
+                          {new Date(row.created_at).toLocaleDateString()}
+                        </td>
+                      </tr>
+                      {isExpanded ? (
+                        <tr>
+                          <td colSpan={10}>
+                            <div className="card" style={{ margin: "10px 0", padding: 14 }}>
                             <div className="split" style={{ gap: 20, alignItems: "start" }}>
                               <div>
                                 <h3 style={{ marginTop: 0, marginBottom: 4 }}>Reference photos (downloaded)</h3>
@@ -1080,15 +1081,31 @@ export default function AdminLeadsClient() {
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : null}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="card" style={{ marginTop: 12 }}>
+            <h3 style={{ marginTop: 0, marginBottom: 10 }}>Visible lead actions</h3>
+            <div style={{ display: "grid", gap: 10 }}>
+              {sorted.map((row) => (
+                <div key={`lead-actions-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+                  <strong style={{ minWidth: 240 }}>{row.handle}</strong>
+                  <span className="muted">{row.email ?? row.platform}</span>
+                  <button className="btn btn-primary" type="button" onClick={() => openEditLeadModal(row)}>Edit</button>
+                  <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => setShowDeleteLeadModal(row)}>
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : null}
     </div>
