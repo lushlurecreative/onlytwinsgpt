@@ -62,6 +62,19 @@ export default function AdminLeadsClient() {
     activityMode: "active",
   });
   const [enqueueingSamples, setEnqueueingSamples] = useState(false);
+  const [editingLead, setEditingLead] = useState<LeadRow | null>(null);
+  const [leadFormMode, setLeadFormMode] = useState<"create" | "edit" | null>(null);
+  const [showDeleteLeadModal, setShowDeleteLeadModal] = useState<LeadRow | null>(null);
+  const [leadForm, setLeadForm] = useState({
+    email: "",
+    handle: "",
+    platform: "instagram",
+    source: "manual",
+    status: "new" as LeadStatus,
+    profile_url: "",
+    notes: "",
+    follower_count: "0",
+  });
 
   async function load() {
     const res = await fetch("/api/admin/leads");
@@ -176,62 +189,84 @@ export default function AdminLeadsClient() {
     setDeleting(false);
   }
 
-  async function createLeadManual() {
-    const email = (window.prompt("Lead email (optional)") ?? "").trim().toLowerCase();
-    const handle = window.prompt("Lead handle/name");
-    if (!handle) return;
-    const platform = window.prompt("Platform/source (example: instagram)") ?? "instagram";
-    const source = window.prompt("Source label (example: manual)") ?? "manual";
-    const profileUrl = window.prompt("Profile URL (optional)") ?? "";
-    const notes = window.prompt("Notes (optional)") ?? "";
-    setMessage("Creating lead...");
-    const res = await fetch("/api/admin/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        leads: [
-          {
-            source,
-            email: email || undefined,
-            handle,
-            platform,
-            profileUrl: profileUrl || undefined,
-            notes: notes || undefined,
-          },
-        ],
-      }),
+  function openCreateLeadModal() {
+    setLeadFormMode("create");
+    setEditingLead(null);
+    setLeadForm({
+      email: "",
+      handle: "",
+      platform: "instagram",
+      source: "manual",
+      status: "new",
+      profile_url: "",
+      notes: "",
+      follower_count: "0",
     });
-    const json = (await res.json().catch(() => ({}))) as { error?: string };
-    if (!res.ok) {
-      setMessage(json.error ?? "Create lead failed");
-      return;
-    }
-    setMessage("Lead created.");
-    await load();
   }
 
-  async function editLeadManual(row: LeadRow) {
-    const email = window.prompt("Email", row.email ?? "") ?? row.email ?? "";
-    const handle = window.prompt("Handle/name", row.handle) ?? row.handle;
-    const source = window.prompt("Source", row.source) ?? row.source;
-    const platform = window.prompt("Platform", row.platform) ?? row.platform;
-    const status = window.prompt("Status", row.status) ?? row.status;
-    const profile_url = window.prompt("Profile URL", row.profile_url ?? "") ?? row.profile_url ?? "";
-    const notes = window.prompt("Notes", row.notes ?? "") ?? row.notes ?? "";
-    const followerRaw = window.prompt("Follower count", String(row.follower_count ?? 0)) ?? String(row.follower_count ?? 0);
+  function openEditLeadModal(row: LeadRow) {
+    setLeadFormMode("edit");
+    setEditingLead(row);
+    setLeadForm({
+      email: row.email ?? "",
+      handle: row.handle ?? "",
+      platform: row.platform ?? "instagram",
+      source: row.source ?? "manual",
+      status: row.status ?? "new",
+      profile_url: row.profile_url ?? "",
+      notes: row.notes ?? "",
+      follower_count: String(row.follower_count ?? 0),
+    });
+  }
+
+  async function saveLeadForm() {
+    if (!leadForm.handle.trim()) {
+      setMessage("Handle/name is required.");
+      return;
+    }
+    setMessage("Creating lead...");
+    if (leadFormMode === "create") {
+      const res = await fetch("/api/admin/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leads: [
+            {
+              source: leadForm.source.trim() || "manual",
+              email: leadForm.email.trim() || undefined,
+              handle: leadForm.handle.trim(),
+              platform: leadForm.platform.trim() || "instagram",
+              profileUrl: leadForm.profile_url.trim() || undefined,
+              notes: leadForm.notes.trim() || undefined,
+            },
+          ],
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setMessage(json.error ?? "Create lead failed");
+        return;
+      }
+      setMessage("Lead created.");
+      setLeadFormMode(null);
+      await load();
+      return;
+    }
+
+    if (!editingLead) return;
     setMessage("Saving lead...");
-    const res = await fetch(`/api/admin/leads/${row.id}`, {
+    const res = await fetch(`/api/admin/leads/${editingLead.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        handle,
-        email,
-        source,
-        platform,
-        status,
-        profile_url,
-        notes,
-        follower_count: Number(followerRaw) || 0,
+        handle: leadForm.handle.trim(),
+        email: leadForm.email.trim() || null,
+        source: leadForm.source.trim(),
+        platform: leadForm.platform.trim(),
+        status: leadForm.status,
+        profile_url: leadForm.profile_url.trim() || null,
+        notes: leadForm.notes.trim() || null,
+        follower_count: Number(leadForm.follower_count) || 0,
       }),
     });
     const json = (await res.json().catch(() => ({}))) as { error?: string };
@@ -240,14 +275,12 @@ export default function AdminLeadsClient() {
       return;
     }
     setMessage("Lead updated.");
+    setLeadFormMode(null);
+    setEditingLead(null);
     await load();
   }
 
   async function deleteLeadManual(row: LeadRow) {
-    const confirmed = window.confirm(
-      `Delete lead ${row.handle}?\n\nThis permanently removes the lead record and can remove linked automation context.`
-    );
-    if (!confirmed) return;
     setMessage("Deleting lead...");
     const res = await fetch(`/api/admin/leads/${row.id}`, { method: "DELETE" });
     const json = (await res.json().catch(() => ({}))) as { error?: string };
@@ -506,6 +539,121 @@ export default function AdminLeadsClient() {
           </div>
         </div>
       ) : null}
+      {leadFormMode ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="lead-form-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setLeadFormMode(null);
+              setEditingLead(null);
+            }
+          }}
+        >
+          <div className="card" style={{ maxWidth: 640, width: "100%", margin: 16, padding: 16 }}>
+            <h3 id="lead-form-title" style={{ marginTop: 0 }}>
+              {leadFormMode === "create" ? "Add lead" : "Edit lead"}
+            </h3>
+            <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span className="muted">Email</span>
+                <input className="input" value={leadForm.email} onChange={(e) => setLeadForm((f) => ({ ...f, email: e.target.value }))} />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span className="muted">Handle / name</span>
+                <input className="input" value={leadForm.handle} onChange={(e) => setLeadForm((f) => ({ ...f, handle: e.target.value }))} />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span className="muted">Platform</span>
+                <input className="input" value={leadForm.platform} onChange={(e) => setLeadForm((f) => ({ ...f, platform: e.target.value }))} />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span className="muted">Source</span>
+                <input className="input" value={leadForm.source} onChange={(e) => setLeadForm((f) => ({ ...f, source: e.target.value }))} />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span className="muted">Status</span>
+                <select className="input" value={leadForm.status} onChange={(e) => setLeadForm((f) => ({ ...f, status: e.target.value as LeadStatus }))}>
+                  {["new", "qualified", "sample_queued", "sample_generated", "outreach_queued", "contacted", "replied", "converted", "rejected"].map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span className="muted">Profile URL</span>
+                <input className="input" value={leadForm.profile_url} onChange={(e) => setLeadForm((f) => ({ ...f, profile_url: e.target.value }))} />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span className="muted">Follower count</span>
+                <input className="input" type="number" value={leadForm.follower_count} onChange={(e) => setLeadForm((f) => ({ ...f, follower_count: e.target.value }))} />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span className="muted">Notes</span>
+                <textarea className="input" rows={3} value={leadForm.notes} onChange={(e) => setLeadForm((f) => ({ ...f, notes: e.target.value }))} />
+              </label>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+              <button className="btn btn-ghost" type="button" onClick={() => setLeadFormMode(null)}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" type="button" onClick={() => void saveLeadForm()}>
+                {leadFormMode === "create" ? "Create lead" : "Save changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {showDeleteLeadModal ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-lead-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => e.target === e.currentTarget && setShowDeleteLeadModal(null)}
+        >
+          <div className="card" style={{ maxWidth: 520, width: "100%", margin: 16, padding: 16 }}>
+            <h3 id="delete-lead-title" style={{ marginTop: 0 }}>
+              Delete lead
+            </h3>
+            <p style={{ marginTop: 0 }}>
+              Delete <strong>{showDeleteLeadModal.handle}</strong>? This permanently removes the lead.
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+              <button className="btn btn-ghost" type="button" onClick={() => setShowDeleteLeadModal(null)}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={() => {
+                  void deleteLeadManual(showDeleteLeadModal);
+                  setShowDeleteLeadModal(null);
+                }}
+              >
+                Delete lead
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Lead Pipeline</h2>
         <p className="muted">Click Run scrape to fetch leads from YouTube, Reddit, and aggregators. Review, approve, generate AI samples, and send outreach.</p>
@@ -516,7 +664,7 @@ export default function AdminLeadsClient() {
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
           <button
             className="btn btn-primary"
-            onClick={() => void createLeadManual()}
+            onClick={openCreateLeadModal}
             type="button"
             title="Create lead manually"
           >
@@ -723,7 +871,7 @@ export default function AdminLeadsClient() {
                 <th>Sample Status</th>
                 <th>Outreach Status</th>
                 <th>Last Activity</th>
-                <th />
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -773,9 +921,22 @@ export default function AdminLeadsClient() {
                         {new Date(row.created_at).toLocaleDateString()}
                       </td>
                       <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        <button className="btn btn-ghost" onClick={() => void expand(row)} type="button">
-                          {isExpanded ? "Hide" : (row.sample_paths?.length ? `Review (${row.sample_paths.length} photos)` : "Review")}
-                        </button>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
+                          <button className="btn btn-ghost" onClick={() => void expand(row)} type="button">
+                            {isExpanded ? "Hide" : (row.sample_paths?.length ? `Review (${row.sample_paths.length} photos)` : "Review")}
+                          </button>
+                          <button className="btn btn-primary" onClick={() => openEditLeadModal(row)} type="button">
+                            Edit
+                          </button>
+                          <button
+                            className="btn btn-ghost"
+                            style={{ color: "var(--error, #e5534b)" }}
+                            onClick={() => setShowDeleteLeadModal(row)}
+                            type="button"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     {isExpanded ? (
@@ -860,20 +1021,6 @@ export default function AdminLeadsClient() {
                                   </div>
                                 ) : null}
                                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                  <button
-                                    className="btn btn-ghost"
-                                    onClick={() => void editLeadManual(row)}
-                                    type="button"
-                                  >
-                                    Edit lead
-                                  </button>
-                                  <button
-                                    className="btn btn-ghost"
-                                    onClick={() => void deleteLeadManual(row)}
-                                    type="button"
-                                  >
-                                    Delete lead
-                                  </button>
                                   <button
                                     className="btn btn-primary"
                                     onClick={() => void approve(row.id, true)}

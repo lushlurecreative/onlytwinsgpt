@@ -41,6 +41,8 @@ export default function AdminCustomersClient() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState<CustomerRow | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<CustomerRow | null>(null);
+  const [archiveConfirmText, setArchiveConfirmText] = useState("");
   const [form, setForm] = useState({
     email: "",
     fullName: "",
@@ -165,12 +167,6 @@ export default function AdminCustomersClient() {
   }
 
   async function archiveCustomer(row: CustomerRow) {
-    const ok = window.confirm(
-      "Archive this customer subscription?\n\nThis is a safe admin delete (soft archive). It will set canceled status and hide from main customer list."
-    );
-    if (!ok) return;
-    const confirmText = window.prompt('Type DELETE to confirm archive.');
-    if ((confirmText ?? "").trim().toUpperCase() !== "DELETE") return;
     setMessage("Archiving customer...");
     const res = await fetch("/api/admin/customers", {
       method: "DELETE",
@@ -192,6 +188,74 @@ export default function AdminCustomersClient() {
 
   return (
     <section>
+      {archiveTarget ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="archive-customer-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setArchiveTarget(null);
+              setArchiveConfirmText("");
+            }
+          }}
+        >
+          <div className="card" style={{ maxWidth: 520, width: "100%", margin: 16, padding: 16 }}>
+            <h3 id="archive-customer-title" style={{ marginTop: 0 }}>
+              Archive customer
+            </h3>
+            <p className="muted" style={{ marginTop: 0 }}>
+              This safely archives the customer subscription and removes it from the main customer list.
+            </p>
+            <p style={{ marginTop: 0 }}>
+              Customer: <strong>{archiveTarget.email ?? archiveTarget.workspaceId}</strong>
+            </p>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Type DELETE to confirm</span>
+              <input
+                className="input"
+                value={archiveConfirmText}
+                onChange={(e) => setArchiveConfirmText(e.target.value)}
+                placeholder="DELETE"
+              />
+            </label>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+              <button
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => {
+                  setArchiveTarget(null);
+                  setArchiveConfirmText("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={archiveConfirmText.trim().toUpperCase() !== "DELETE"}
+                onClick={() => {
+                  if (!archiveTarget) return;
+                  void archiveCustomer(archiveTarget);
+                  setArchiveTarget(null);
+                  setArchiveConfirmText("");
+                }}
+              >
+                Archive customer
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <h2 style={{ marginTop: 0 }}>Customers</h2>
       <p className="muted" style={{ marginTop: 0 }}>
         Main list shows paid/subscribed customers from subscription records only.
@@ -273,10 +337,30 @@ export default function AdminCustomersClient() {
                   <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeCustomerId ?? "—"}</td>
                   <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeSubscriptionId ?? "—"}</td>
                   <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.renewalDate ? new Date(row.renewalDate).toLocaleDateString() : "—"}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222", display: "flex", gap: 8 }}>
-                    <button className="btn btn-ghost" type="button" onClick={() => startEdit(row)}>Edit</button>
-                    <button className="btn btn-ghost" type="button" onClick={() => void archiveCustomer(row)}>Delete</button>
-                    <Link href={`/admin/customers/${row.workspaceId}`}>Open</Link>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>
+                        View
+                      </Link>
+                      <button
+                        className="btn btn-primary"
+                        type="button"
+                        onClick={() => {
+                          startEdit(row);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-ghost"
+                        type="button"
+                        style={{ color: "var(--error, #e5534b)" }}
+                        onClick={() => setArchiveTarget(row)}
+                      >
+                        Archive
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

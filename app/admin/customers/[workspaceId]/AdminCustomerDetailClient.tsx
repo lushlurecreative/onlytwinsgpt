@@ -77,6 +77,8 @@ export default function AdminCustomerDetailClient({
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
   const [suspended, setSuspended] = useState(!!suspendedAt);
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [archiveConfirmText, setArchiveConfirmText] = useState("");
   const [postList, setPostList] = useState(posts);
   const [customerForm, setCustomerForm] = useState({
     fullName: fullName ?? "",
@@ -168,12 +170,6 @@ export default function AdminCustomerDetailClient({
   }
 
   async function archiveCustomer() {
-    const confirmed = window.confirm(
-      "Archive this customer subscription?\n\nThis safely cancels + archives the subscription record."
-    );
-    if (!confirmed) return;
-    const confirmText = window.prompt('Type DELETE to confirm.');
-    if ((confirmText ?? "").trim().toUpperCase() !== "DELETE") return;
     setMessage("Archiving customer...");
     const res = await fetch(`/api/admin/customers/${workspaceId}`, {
       method: "DELETE",
@@ -202,6 +198,70 @@ export default function AdminCustomerDetailClient({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      {showArchiveModal ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="archive-customer-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowArchiveModal(false);
+              setArchiveConfirmText("");
+            }
+          }}
+        >
+          <div className="card" style={{ maxWidth: 520, width: "100%", margin: 16, padding: 16 }}>
+            <h3 id="archive-customer-title" style={{ marginTop: 0 }}>
+              Archive customer
+            </h3>
+            <p className="muted" style={{ marginTop: 0 }}>
+              This cancels and archives the customer subscription.
+            </p>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Type DELETE to confirm</span>
+              <input
+                className="input"
+                value={archiveConfirmText}
+                onChange={(e) => setArchiveConfirmText(e.target.value)}
+                placeholder="DELETE"
+              />
+            </label>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+              <button
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => {
+                  setShowArchiveModal(false);
+                  setArchiveConfirmText("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={archiveConfirmText.trim().toUpperCase() !== "DELETE"}
+                onClick={() => {
+                  void archiveCustomer();
+                  setShowArchiveModal(false);
+                  setArchiveConfirmText("");
+                }}
+              >
+                Archive customer
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {message ? <p style={{ margin: 0, color: "var(--color-muted)" }}>{message}</p> : null}
 
       {/* Moderation */}
@@ -244,22 +304,46 @@ export default function AdminCustomerDetailClient({
         <h3 style={{ marginTop: 0, marginBottom: 8 }}>Customer overview</h3>
         <div className="card" style={{ padding: 12 }}>
           <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
-            <input className="input" value={email ?? ""} readOnly placeholder="Email" />
-            <input className="input" value={customerForm.fullName} onChange={(e) => setCustomerForm((f) => ({ ...f, fullName: e.target.value }))} placeholder="Full name" />
-            <select className="input" value={customerForm.status} onChange={(e) => setCustomerForm((f) => ({ ...f, status: e.target.value }))}>
-              {["active", "trialing", "past_due", "canceled", "incomplete", "needs_review", "expired"].map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-            <input className="input" value={customerForm.stripePriceId} onChange={(e) => setCustomerForm((f) => ({ ...f, stripePriceId: e.target.value }))} placeholder="Plan / stripe_price_id" />
-            <input className="input" value={customerForm.stripeCustomerId} onChange={(e) => setCustomerForm((f) => ({ ...f, stripeCustomerId: e.target.value }))} placeholder="Stripe customer id" />
-            <input className="input" value={customerForm.stripeSubscriptionId} onChange={(e) => setCustomerForm((f) => ({ ...f, stripeSubscriptionId: e.target.value }))} placeholder="Stripe subscription id" />
-            <input className="input" type="date" value={customerForm.currentPeriodEnd} onChange={(e) => setCustomerForm((f) => ({ ...f, currentPeriodEnd: e.target.value }))} />
-            <input className="input" value={customerForm.adminNotes} onChange={(e) => setCustomerForm((f) => ({ ...f, adminNotes: e.target.value }))} placeholder="Internal admin notes" />
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Email</span>
+              <input className="input" value={email ?? ""} readOnly />
+            </label>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Full name</span>
+              <input className="input" value={customerForm.fullName} onChange={(e) => setCustomerForm((f) => ({ ...f, fullName: e.target.value }))} />
+            </label>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Status</span>
+              <select className="input" value={customerForm.status} onChange={(e) => setCustomerForm((f) => ({ ...f, status: e.target.value }))}>
+                {["active", "trialing", "past_due", "canceled", "incomplete", "needs_review", "expired"].map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </label>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Plan (Stripe price ID)</span>
+              <input className="input" value={customerForm.stripePriceId} onChange={(e) => setCustomerForm((f) => ({ ...f, stripePriceId: e.target.value }))} />
+            </label>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Stripe customer ID</span>
+              <input className="input" value={customerForm.stripeCustomerId} onChange={(e) => setCustomerForm((f) => ({ ...f, stripeCustomerId: e.target.value }))} />
+            </label>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Stripe subscription ID</span>
+              <input className="input" value={customerForm.stripeSubscriptionId} onChange={(e) => setCustomerForm((f) => ({ ...f, stripeSubscriptionId: e.target.value }))} />
+            </label>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Renewal / current period end</span>
+              <input className="input" type="date" value={customerForm.currentPeriodEnd} onChange={(e) => setCustomerForm((f) => ({ ...f, currentPeriodEnd: e.target.value }))} />
+            </label>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Admin notes</span>
+              <textarea className="input" value={customerForm.adminNotes} onChange={(e) => setCustomerForm((f) => ({ ...f, adminNotes: e.target.value }))} rows={3} />
+            </label>
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
             <button type="button" className="btn btn-primary" onClick={() => void saveCustomerOverview()}>
-              Save
+              Save changes
             </button>
             <button type="button" className="btn btn-ghost" onClick={() => setCustomerForm((f) => ({ ...f, status: "active" }))}>
               Set active
@@ -270,8 +354,8 @@ export default function AdminCustomerDetailClient({
             <button type="button" className="btn btn-ghost" onClick={() => setCustomerForm((f) => ({ ...f, status: "canceled" }))}>
               Set canceled
             </button>
-            <button type="button" className="btn btn-ghost" onClick={() => void archiveCustomer()}>
-              Delete (archive)
+            <button type="button" className="btn btn-ghost" onClick={() => setShowArchiveModal(true)}>
+              Archive customer
             </button>
           </div>
         </div>
