@@ -14,7 +14,7 @@ export default async function AdminLeadsPage() {
     redirect("/login?redirectTo=/admin/leads");
   }
   if (!isAdminUser(user.id, user.email)) {
-    return <p>❌ Access denied.</p>;
+    redirect("/dashboard?unauthorized=admin");
   }
   return <AdminLeadsClient />;
 }

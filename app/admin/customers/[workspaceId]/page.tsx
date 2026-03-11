@@ -21,7 +21,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
     redirect(`/login?redirectTo=/admin/customers/${workspaceId}`);
   }
   if (!isAdminUser(user.id, user.email)) {
-    return <p>❌ Access denied. Add your user ID to ADMIN_USER_IDS.</p>;
+    redirect("/dashboard?unauthorized=admin");
   }
 
   const serviceCreatorId = getServiceCreatorId();

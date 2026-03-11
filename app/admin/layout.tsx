@@ -5,6 +5,8 @@ import AdminNav from "./AdminNav";
 import AdminGlobalHealth from "./AdminGlobalHealth";
 import BrandName from "@/app/components/BrandName";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const {
@@ -15,21 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/login?redirectTo=/admin");
   }
   if (!isAdminUser(user.id, user.email)) {
-    return (
-      <section className="admin-shell">
-        <aside className="admin-sidebar">
-          <div className="admin-brand">
-            <BrandName /> Admin
-          </div>
-        </aside>
-        <div className="admin-content">
-          <div className="card">
-            <h2 style={{ marginTop: 0 }}>Access denied</h2>
-            <p className="muted">This account is not authorized for admin access.</p>
-          </div>
-        </div>
-      </section>
-    );
+    redirect("/dashboard?unauthorized=admin");
   }
 
   return (

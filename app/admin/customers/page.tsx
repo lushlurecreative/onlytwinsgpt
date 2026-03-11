@@ -15,7 +15,7 @@ export default async function AdminCustomersPage() {
     redirect("/login?redirectTo=/admin/customers");
   }
   if (!isAdminUser(user.id, user.email)) {
-    return <p>❌ Access denied.</p>;
+    redirect("/dashboard?unauthorized=admin");
   }
 
   return <AdminCustomersClient />;
