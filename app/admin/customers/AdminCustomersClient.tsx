@@ -32,7 +32,12 @@ type Summary = {
 
 type RecentAccount = { id: string; email: string | null; created_at: string; isCustomer: boolean };
 
-export default function AdminCustomersClient() {
+type Props = {
+  initialSessionEmail: string | null;
+  initialIsAdmin: boolean;
+};
+
+export default function AdminCustomersClient({ initialSessionEmail, initialIsAdmin }: Props) {
   const [rows, setRows] = useState<CustomerRow[]>([]);
   const [summary, setSummary] = useState<Summary>({ activeCustomers: 0, newThisWeek: 0, canceledThisWeek: 0 });
   const [recentAccounts, setRecentAccounts] = useState<RecentAccount[]>([]);
@@ -43,6 +48,8 @@ export default function AdminCustomersClient() {
   const [selected, setSelected] = useState<CustomerRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<CustomerRow | null>(null);
   const [archiveConfirmText, setArchiveConfirmText] = useState("");
+  const [sessionEmail, setSessionEmail] = useState<string | null>(initialSessionEmail);
+  const [sessionIsAdmin, setSessionIsAdmin] = useState<boolean>(initialIsAdmin);
   const [form, setForm] = useState({
     email: "",
     fullName: "",
@@ -80,6 +87,21 @@ export default function AdminCustomersClient() {
 
   useEffect(() => {
     void load();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSession() {
+      const res = await fetch("/api/admin/session", { cache: "no-store" });
+      const json = (await res.json().catch(() => ({}))) as { email?: string | null; isAdmin?: boolean };
+      if (cancelled) return;
+      setSessionEmail(json.email ?? null);
+      setSessionIsAdmin(Boolean(json.isAdmin));
+    }
+    void loadSession();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const statusOptions = useMemo(
@@ -213,6 +235,12 @@ export default function AdminCustomersClient() {
         }}
       >
         ADMIN CUSTOMER CONTROLS ACTIVE
+      </div>
+      <div className="card" style={{ marginBottom: 12, border: "2px solid #08a0ff" }}>
+        <strong>ADMIN SESSION DEBUG</strong>
+        <p style={{ margin: "8px 0 0" }}>
+          Current session email: <strong>{sessionEmail ?? "none"}</strong> · isAdmin: <strong>{String(sessionIsAdmin)}</strong>
+        </p>
       </div>
       {archiveTarget ? (
         <div
@@ -360,27 +388,25 @@ export default function AdminCustomersClient() {
       {message ? <p>{message}</p> : null}
       {loading ? <p>Loading...</p> : null}
       {!loading && rows.length === 0 ? <p>No subscribed customers found.</p> : null}
-      {!loading ? (
-        <div className="card" style={{ marginBottom: 12, border: "2px dashed #d4b400" }}>
-          <h3 style={{ marginTop: 0, marginBottom: 8 }}>Temporary customer action test bar</h3>
-          {rows.length === 0 ? (
-            <p className="muted" style={{ marginBottom: 0 }}>No customer rows available.</p>
-          ) : (
-            <div style={{ display: "grid", gap: 8 }}>
-              {rows.map((row) => (
-                <div key={`test-customer-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
-                  <strong>{row.email ?? row.workspaceId}</strong>
-                  <a href={`/admin/customers/${row.workspaceId}`} style={hardBtnStyle}>View</a>
-                  <button style={hardBtnStyle} type="button" onClick={() => startEdit(row)}>Edit</button>
-                  <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setArchiveTarget(row)}>
-                    Archive
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : null}
+      <div className="card" style={{ marginBottom: 12, border: "2px dashed #d4b400" }}>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Temporary customer action test bar</h3>
+        {rows.length === 0 ? (
+          <p className="muted" style={{ marginBottom: 0 }}>{loading ? "Loading customers..." : "No customer rows available."}</p>
+        ) : (
+          <div style={{ display: "grid", gap: 8 }}>
+            {rows.map((row) => (
+              <div key={`test-customer-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+                <strong>{row.email ?? row.workspaceId}</strong>
+                <a href={`/admin/customers/${row.workspaceId}`} style={hardBtnStyle}>View</a>
+                <button style={hardBtnStyle} type="button" onClick={() => startEdit(row)}>Edit</button>
+                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setArchiveTarget(row)}>
+                  Archive
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {!loading && rows.length > 0 ? (
         <div>

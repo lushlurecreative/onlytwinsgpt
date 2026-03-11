@@ -40,7 +40,12 @@ type ScrapeCriteria = {
 type SignedAsset = { path: string; signedUrl: string | null; error?: string };
 type LeadAssets = { samples: SignedAsset[]; generated: SignedAsset[]; preview: SignedAsset | null };
 
-export default function AdminLeadsClient() {
+type Props = {
+  initialSessionEmail: string | null;
+  initialIsAdmin: boolean;
+};
+
+export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }: Props) {
   const [rows, setRows] = useState<LeadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -65,6 +70,8 @@ export default function AdminLeadsClient() {
   const [editingLead, setEditingLead] = useState<LeadRow | null>(null);
   const [leadFormMode, setLeadFormMode] = useState<"create" | "edit" | null>(null);
   const [showDeleteLeadModal, setShowDeleteLeadModal] = useState<LeadRow | null>(null);
+  const [sessionEmail, setSessionEmail] = useState<string | null>(initialSessionEmail);
+  const [sessionIsAdmin, setSessionIsAdmin] = useState<boolean>(initialIsAdmin);
   const [leadForm, setLeadForm] = useState({
     email: "",
     handle: "",
@@ -90,6 +97,21 @@ export default function AdminLeadsClient() {
 
   useEffect(() => {
     void load();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSession() {
+      const res = await fetch("/api/admin/session", { cache: "no-store" });
+      const json = (await res.json().catch(() => ({}))) as { email?: string | null; isAdmin?: boolean };
+      if (cancelled) return;
+      setSessionEmail(json.email ?? null);
+      setSessionIsAdmin(Boolean(json.isAdmin));
+    }
+    void loadSession();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -499,6 +521,12 @@ export default function AdminLeadsClient() {
       >
         ADMIN LEAD CONTROLS ACTIVE
       </div>
+      <div className="card" style={{ marginBottom: 12, border: "2px solid #08a0ff" }}>
+        <strong>ADMIN SESSION DEBUG</strong>
+        <p style={{ margin: "8px 0 0" }}>
+          Current session email: <strong>{sessionEmail ?? "none"}</strong> · isAdmin: <strong>{String(sessionIsAdmin)}</strong>
+        </p>
+      </div>
       {outreachPreview ? (
         <div
           role="dialog"
@@ -899,27 +927,25 @@ export default function AdminLeadsClient() {
           </div>
         )}
       </div>
-      {!loading ? (
-        <div className="card" style={{ marginTop: 12, border: "2px dashed #d4b400" }}>
-          <h3 style={{ marginTop: 0, marginBottom: 8 }}>Temporary lead action test bar</h3>
-          {rows.length === 0 ? (
-            <p className="muted" style={{ marginBottom: 0 }}>No lead rows available.</p>
-          ) : (
-            <div style={{ display: "grid", gap: 8 }}>
-              {rows.map((row) => (
-                <div key={`test-lead-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
-                  <strong>{row.handle}</strong>
-                  <span className="muted">{row.email ?? row.platform}</span>
-                  <button style={hardBtnStyle} type="button" onClick={() => openEditLeadModal(row)}>Edit</button>
-                  <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setShowDeleteLeadModal(row)}>
-                    Delete
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : null}
+      <div className="card" style={{ marginTop: 12, border: "2px dashed #d4b400" }}>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Temporary lead action test bar</h3>
+        {rows.length === 0 ? (
+          <p className="muted" style={{ marginBottom: 0 }}>{loading ? "Loading leads..." : "No lead rows available."}</p>
+        ) : (
+          <div style={{ display: "grid", gap: 8 }}>
+            {rows.map((row) => (
+              <div key={`test-lead-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+                <strong>{row.handle}</strong>
+                <span className="muted">{row.email ?? row.platform}</span>
+                <button style={hardBtnStyle} type="button" onClick={() => openEditLeadModal(row)}>Edit</button>
+                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setShowDeleteLeadModal(row)}>
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {!loading && sorted.length > 0 ? (
         <div>

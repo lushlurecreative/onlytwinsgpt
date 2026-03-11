@@ -16,6 +16,6 @@ export default async function AdminLeadsPage() {
   if (!isAdminUser(user.id, user.email)) {
     redirect("/dashboard?unauthorized=admin");
   }
-  return <AdminLeadsClient />;
+  return <AdminLeadsClient initialSessionEmail={user.email ?? null} initialIsAdmin={true} />;
 }
 

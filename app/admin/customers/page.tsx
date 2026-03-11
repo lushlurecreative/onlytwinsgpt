@@ -18,5 +18,5 @@ export default async function AdminCustomersPage() {
     redirect("/dashboard?unauthorized=admin");
   }
 
-  return <AdminCustomersClient />;
+  return <AdminCustomersClient initialSessionEmail={user.email ?? null} initialIsAdmin={true} />;
 }
