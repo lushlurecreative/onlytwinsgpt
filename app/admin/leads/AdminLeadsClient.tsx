@@ -473,6 +473,20 @@ export default function AdminLeadsClient() {
 
   return (
     <div>
+      <div
+        style={{
+          background: "#ffef5a",
+          color: "#1b1b1b",
+          border: "2px solid #d4b400",
+          borderRadius: 10,
+          padding: "10px 12px",
+          fontWeight: 800,
+          letterSpacing: "0.02em",
+          marginBottom: 12,
+        }}
+      >
+        ADMIN LEAD CONTROLS ACTIVE
+      </div>
       {outreachPreview ? (
         <div
           role="dialog"
@@ -853,7 +867,7 @@ export default function AdminLeadsClient() {
 
       {!loading && sorted.length > 0 ? (
         <div className="card" style={{ marginTop: 12, overflowX: "auto" }}>
-          <table className="table" style={{ width: "100%", minWidth: 900 }}>
+          <table className="table" style={{ width: "100%", minWidth: 820 }}>
             <thead>
               <tr>
                 <th style={{ width: 40 }}>
@@ -866,12 +880,12 @@ export default function AdminLeadsClient() {
                 </th>
                 <th>Platform</th>
                 <th>Handle</th>
+                <th>Actions</th>
                 <th>Score</th>
                 <th>Status</th>
                 <th>Sample Status</th>
                 <th>Outreach Status</th>
                 <th>Last Activity</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -913,18 +927,8 @@ export default function AdminLeadsClient() {
                           </div>
                         ) : null}
                       </td>
-                      <td><strong>{row.score}</strong></td>
-                      <td><span className="badge">{row.status}</span></td>
-                      <td>{sampleStatus(row)}</td>
-                      <td>{outreachStatus(row)}</td>
-                      <td className="muted" style={{ fontSize: 13 }}>
-                        {new Date(row.created_at).toLocaleDateString()}
-                      </td>
-                      <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
-                          <button className="btn btn-ghost" onClick={() => void expand(row)} type="button">
-                            {isExpanded ? "Hide" : (row.sample_paths?.length ? `Review (${row.sample_paths.length} photos)` : "Review")}
-                          </button>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                           <button className="btn btn-primary" onClick={() => openEditLeadModal(row)} type="button">
                             Edit
                           </button>
@@ -936,7 +940,17 @@ export default function AdminLeadsClient() {
                           >
                             Delete
                           </button>
+                          <button className="btn btn-ghost" onClick={() => void expand(row)} type="button">
+                            {isExpanded ? "Hide" : (row.sample_paths?.length ? `Review (${row.sample_paths.length})` : "Review")}
+                          </button>
                         </div>
+                      </td>
+                      <td><strong>{row.score}</strong></td>
+                      <td><span className="badge">{row.status}</span></td>
+                      <td>{sampleStatus(row)}</td>
+                      <td>{outreachStatus(row)}</td>
+                      <td className="muted" style={{ fontSize: 13 }}>
+                        {new Date(row.created_at).toLocaleDateString()}
                       </td>
                     </tr>
                     {isExpanded ? (

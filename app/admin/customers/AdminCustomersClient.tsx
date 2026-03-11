@@ -188,6 +188,20 @@ export default function AdminCustomersClient() {
 
   return (
     <section>
+      <div
+        style={{
+          background: "#ffef5a",
+          color: "#1b1b1b",
+          border: "2px solid #d4b400",
+          borderRadius: 10,
+          padding: "10px 12px",
+          fontWeight: 800,
+          letterSpacing: "0.02em",
+          marginBottom: 12,
+        }}
+      >
+        ADMIN CUSTOMER CONTROLS ACTIVE
+      </div>
       {archiveTarget ? (
         <div
           role="dialog"
@@ -314,30 +328,24 @@ export default function AdminCustomersClient() {
 
       {!loading && rows.length > 0 ? (
         <div style={{ overflowX: "auto" }}>
-          <table style={{ borderCollapse: "collapse", minWidth: 1300, width: "100%" }}>
+          <table style={{ borderCollapse: "collapse", minWidth: 980, width: "100%" }}>
             <thead>
               <tr>
                 <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8, background: "var(--surface, #fff)" }}>Actions</th>
                 <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Customer</th>
                 <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Plan</th>
                 <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Status</th>
                 <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Stripe Customer</th>
                 <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Stripe Subscription</th>
                 <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Renewal</th>
-                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
                   <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.email ?? "Unknown"}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.creator}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.plan}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.status}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeCustomerId ?? "—"}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeSubscriptionId ?? "—"}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.renewalDate ? new Date(row.renewalDate).toLocaleDateString() : "—"}</td>
-                  <td style={{ padding: 8, borderBottom: "1px solid #222", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222", whiteSpace: "nowrap", background: "var(--surface, #fff)" }}>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>
                         View
@@ -362,6 +370,12 @@ export default function AdminCustomersClient() {
                       </button>
                     </div>
                   </td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.creator}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.plan}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.status}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeCustomerId ?? "—"}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeSubscriptionId ?? "—"}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.renewalDate ? new Date(row.renewalDate).toLocaleDateString() : "—"}</td>
                 </tr>
               ))}
             </tbody>
