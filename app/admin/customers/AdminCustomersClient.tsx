@@ -1,0 +1,316 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+
+type CustomerRow = {
+  id: string;
+  workspaceId: string;
+  email: string | null;
+  creator: string;
+  creatorId: string;
+  plan: string;
+  stripePriceId: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  status: string;
+  rawStatus: string;
+  renewalDate: string | null;
+  createdAt: string;
+  canceledAt: string | null;
+  usage: number;
+  modelStatus: string;
+  lastActivity: string;
+  adminNotes: string | null;
+};
+
+type Summary = {
+  activeCustomers: number;
+  newThisWeek: number;
+  canceledThisWeek: number;
+};
+
+type RecentAccount = { id: string; email: string | null; created_at: string; isCustomer: boolean };
+
+export default function AdminCustomersClient() {
+  const [rows, setRows] = useState<CustomerRow[]>([]);
+  const [summary, setSummary] = useState<Summary>({ activeCustomers: 0, newThisWeek: 0, canceledThisWeek: 0 });
+  const [recentAccounts, setRecentAccounts] = useState<RecentAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+  const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selected, setSelected] = useState<CustomerRow | null>(null);
+  const [form, setForm] = useState({
+    email: "",
+    fullName: "",
+    plan: "",
+    status: "active",
+    stripeCustomerId: "",
+    stripeSubscriptionId: "",
+    renewalDate: "",
+    adminNotes: "",
+  });
+
+  async function load() {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (q.trim()) params.set("q", q.trim());
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    const res = await fetch(`/api/admin/customers?${params.toString()}`);
+    const json = (await res.json().catch(() => ({}))) as {
+      customers?: CustomerRow[];
+      summary?: Summary;
+      recentAccounts?: RecentAccount[];
+      error?: string;
+    };
+    if (!res.ok) {
+      setMessage(json.error ?? "Failed to load customers");
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+    setRows(json.customers ?? []);
+    setSummary(json.summary ?? { activeCustomers: 0, newThisWeek: 0, canceledThisWeek: 0 });
+    setRecentAccounts(json.recentAccounts ?? []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const statusOptions = useMemo(
+    () => ["all", "active", "trialing", "past_due", "canceled", "incomplete", "needs_review", "expired"],
+    []
+  );
+
+  function startCreate() {
+    setSelected(null);
+    setForm({
+      email: "",
+      fullName: "",
+      plan: "",
+      status: "active",
+      stripeCustomerId: "",
+      stripeSubscriptionId: "",
+      renewalDate: "",
+      adminNotes: "",
+    });
+  }
+
+  function startEdit(row: CustomerRow) {
+    setSelected(row);
+    setForm({
+      email: row.email ?? "",
+      fullName: "",
+      plan: row.stripePriceId ?? "",
+      status: row.rawStatus,
+      stripeCustomerId: row.stripeCustomerId ?? "",
+      stripeSubscriptionId: row.stripeSubscriptionId ?? "",
+      renewalDate: row.renewalDate ? row.renewalDate.slice(0, 10) : "",
+      adminNotes: row.adminNotes ?? "",
+    });
+  }
+
+  async function createCustomer() {
+    setMessage("Creating customer...");
+    const res = await fetch("/api/admin/customers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: form.email,
+        plan: form.plan || null,
+        status: form.status,
+        stripeCustomerId: form.stripeCustomerId || null,
+        stripeSubscriptionId: form.stripeSubscriptionId || null,
+        renewalDate: form.renewalDate ? new Date(form.renewalDate).toISOString() : null,
+        adminNotes: form.adminNotes || null,
+      }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      setMessage(json.error ?? "Failed to create customer");
+      return;
+    }
+    setMessage("Customer created.");
+    await load();
+  }
+
+  async function saveCustomer() {
+    if (!selected) return;
+    setMessage("Saving changes...");
+    const res = await fetch("/api/admin/customers", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subscriptionId: selected.id,
+        subscriberId: selected.workspaceId,
+        fullName: form.fullName || null,
+        plan: form.plan || null,
+        status: form.status,
+        stripeCustomerId: form.stripeCustomerId || null,
+        stripeSubscriptionId: form.stripeSubscriptionId || null,
+        renewalDate: form.renewalDate ? new Date(form.renewalDate).toISOString() : null,
+        adminNotes: form.adminNotes || null,
+      }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      setMessage(json.error ?? "Failed to update customer");
+      return;
+    }
+    setMessage("Customer updated.");
+    await load();
+  }
+
+  async function archiveCustomer(row: CustomerRow) {
+    const ok = window.confirm(
+      "Archive this customer subscription?\n\nThis is a safe admin delete (soft archive). It will set canceled status and hide from main customer list."
+    );
+    if (!ok) return;
+    const confirmText = window.prompt('Type DELETE to confirm archive.');
+    if ((confirmText ?? "").trim().toUpperCase() !== "DELETE") return;
+    setMessage("Archiving customer...");
+    const res = await fetch("/api/admin/customers", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subscriptionId: row.id,
+        subscriberId: row.workspaceId,
+        confirmText: "DELETE",
+      }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      setMessage(json.error ?? "Failed to archive customer");
+      return;
+    }
+    setMessage("Customer archived.");
+    await load();
+  }
+
+  return (
+    <section>
+      <h2 style={{ marginTop: 0 }}>Customers</h2>
+      <p className="muted" style={{ marginTop: 0 }}>
+        Main list shows paid/subscribed customers from subscription records only.
+      </p>
+      <div style={{ display: "flex", gap: 24, marginBottom: 12, flexWrap: "wrap" }}>
+        <span>Active Customers: <strong>{summary.activeCustomers}</strong></span>
+        <span>New This Week: <strong>{summary.newThisWeek}</strong></span>
+        <span>Canceled This Week: <strong>{summary.canceledThisWeek}</strong></span>
+      </div>
+
+      <div className="card" style={{ marginBottom: 12 }}>
+        <h3 style={{ marginTop: 0 }}>Admin controls</h3>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+          <button className="btn btn-primary" onClick={startCreate} type="button">Add customer</button>
+          <button className="btn btn-ghost" onClick={() => void load()} type="button">Refresh</button>
+        </div>
+        <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+          <input className="input" placeholder="Customer email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+          <input className="input" placeholder="Plan / stripe price id" value={form.plan} onChange={(e) => setForm((f) => ({ ...f, plan: e.target.value }))} />
+          <select className="input" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
+            {statusOptions.filter((s) => s !== "all").map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+          <input className="input" placeholder="Stripe customer id" value={form.stripeCustomerId} onChange={(e) => setForm((f) => ({ ...f, stripeCustomerId: e.target.value }))} />
+          <input className="input" placeholder="Stripe subscription id" value={form.stripeSubscriptionId} onChange={(e) => setForm((f) => ({ ...f, stripeSubscriptionId: e.target.value }))} />
+          <input className="input" type="date" value={form.renewalDate} onChange={(e) => setForm((f) => ({ ...f, renewalDate: e.target.value }))} />
+          <input className="input" placeholder="Full name (optional)" value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
+          <input className="input" placeholder="Internal notes" value={form.adminNotes} onChange={(e) => setForm((f) => ({ ...f, adminNotes: e.target.value }))} />
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+          {selected ? (
+            <>
+              <button className="btn btn-primary" onClick={() => void saveCustomer()} type="button">Save customer</button>
+              <button className="btn btn-ghost" onClick={startCreate} type="button">Clear edit</button>
+            </>
+          ) : (
+            <button className="btn btn-primary" onClick={() => void createCustomer()} type="button">Create customer</button>
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <input className="input" placeholder="Search customers" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          {statusOptions.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <button className="btn btn-ghost" onClick={() => void load()} type="button">Apply filters</button>
+      </div>
+
+      {message ? <p>{message}</p> : null}
+      {loading ? <p>Loading...</p> : null}
+      {!loading && rows.length === 0 ? <p>No subscribed customers found.</p> : null}
+
+      {!loading && rows.length > 0 ? (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ borderCollapse: "collapse", minWidth: 1300, width: "100%" }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Customer</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Plan</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Status</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Stripe Customer</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Stripe Subscription</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Renewal</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.email ?? "Unknown"}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.creator}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.plan}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.status}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeCustomerId ?? "—"}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeSubscriptionId ?? "—"}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.renewalDate ? new Date(row.renewalDate).toLocaleDateString() : "—"}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222", display: "flex", gap: 8 }}>
+                    <button className="btn btn-ghost" type="button" onClick={() => startEdit(row)}>Edit</button>
+                    <button className="btn btn-ghost" type="button" onClick={() => void archiveCustomer(row)}>Delete</button>
+                    <Link href={`/admin/customers/${row.workspaceId}`}>Open</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {recentAccounts.length > 0 ? (
+        <div style={{ marginTop: 20 }}>
+          <h3 style={{ marginBottom: 8 }}>Recent accounts (not customer source-of-truth)</h3>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ borderCollapse: "collapse", minWidth: 620, width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Signed up</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Conversion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentAccounts.map((a) => (
+                  <tr key={a.id}>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{a.email ?? a.id.slice(0, 8)}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{new Date(a.created_at).toLocaleString()}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{a.isCustomer ? "Converted customer" : "Unconverted signup"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+

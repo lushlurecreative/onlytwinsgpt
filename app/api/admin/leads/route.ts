@@ -5,6 +5,7 @@ import { isAdminUser } from "@/lib/admin";
 import { runMigrations } from "@/lib/run-migrations";
 
 type LeadInput = {
+  email?: string;
   source: string;
   handle: string;
   platform: string;
@@ -40,10 +41,10 @@ export async function GET() {
 
   const admin = getSupabaseAdmin();
   const fullSelect =
-    "id, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, profile_urls, platforms_found, content_verticals, notes, sample_preview_path, sample_paths, generated_sample_paths, approved_at, messaged_at, created_at";
+    "id, email, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, profile_urls, platforms_found, content_verticals, notes, sample_preview_path, sample_paths, generated_sample_paths, approved_at, messaged_at, created_at";
   const baseSelect =
-    "id, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, notes, sample_preview_path, approved_at, messaged_at, created_at";
-  const minSelect = "id, source, handle, platform, follower_count, score, status, profile_url, created_at";
+    "id, email, source, handle, platform, follower_count, engagement_rate, luxury_tag_hits, score, status, profile_url, notes, sample_preview_path, approved_at, messaged_at, created_at";
+  const minSelect = "id, email, source, handle, platform, follower_count, score, status, profile_url, created_at";
 
   let data: unknown[] | null = null;
   let err: { message: string } | null = null;
@@ -107,6 +108,7 @@ export async function POST(request: Request) {
     const hasUserInfo = !!(lead.profileUrl?.trim() || lead.handle?.trim());
     const sampleCount = Array.isArray(lead.sampleUrls) ? lead.sampleUrls.length : 0;
     return {
+      email: lead.email?.trim()?.toLowerCase() || null,
       source: lead.source.trim(),
       handle: lead.handle.trim(),
       platform: lead.platform.trim(),

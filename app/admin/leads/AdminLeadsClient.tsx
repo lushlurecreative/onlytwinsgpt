@@ -8,6 +8,7 @@ import type { LeadStatus } from "@/lib/db-enums";
 
 type LeadRow = {
   id: string;
+  email?: string | null;
   source: string;
   handle: string;
   platform: string;
@@ -173,6 +174,89 @@ export default function AdminLeadsClient() {
       await load();
     }
     setDeleting(false);
+  }
+
+  async function createLeadManual() {
+    const email = (window.prompt("Lead email (optional)") ?? "").trim().toLowerCase();
+    const handle = window.prompt("Lead handle/name");
+    if (!handle) return;
+    const platform = window.prompt("Platform/source (example: instagram)") ?? "instagram";
+    const source = window.prompt("Source label (example: manual)") ?? "manual";
+    const profileUrl = window.prompt("Profile URL (optional)") ?? "";
+    const notes = window.prompt("Notes (optional)") ?? "";
+    setMessage("Creating lead...");
+    const res = await fetch("/api/admin/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        leads: [
+          {
+            source,
+            email: email || undefined,
+            handle,
+            platform,
+            profileUrl: profileUrl || undefined,
+            notes: notes || undefined,
+          },
+        ],
+      }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      setMessage(json.error ?? "Create lead failed");
+      return;
+    }
+    setMessage("Lead created.");
+    await load();
+  }
+
+  async function editLeadManual(row: LeadRow) {
+    const email = window.prompt("Email", row.email ?? "") ?? row.email ?? "";
+    const handle = window.prompt("Handle/name", row.handle) ?? row.handle;
+    const source = window.prompt("Source", row.source) ?? row.source;
+    const platform = window.prompt("Platform", row.platform) ?? row.platform;
+    const status = window.prompt("Status", row.status) ?? row.status;
+    const profile_url = window.prompt("Profile URL", row.profile_url ?? "") ?? row.profile_url ?? "";
+    const notes = window.prompt("Notes", row.notes ?? "") ?? row.notes ?? "";
+    const followerRaw = window.prompt("Follower count", String(row.follower_count ?? 0)) ?? String(row.follower_count ?? 0);
+    setMessage("Saving lead...");
+    const res = await fetch(`/api/admin/leads/${row.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        handle,
+        email,
+        source,
+        platform,
+        status,
+        profile_url,
+        notes,
+        follower_count: Number(followerRaw) || 0,
+      }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      setMessage(json.error ?? "Update failed");
+      return;
+    }
+    setMessage("Lead updated.");
+    await load();
+  }
+
+  async function deleteLeadManual(row: LeadRow) {
+    const confirmed = window.confirm(
+      `Delete lead ${row.handle}?\n\nThis permanently removes the lead record and can remove linked automation context.`
+    );
+    if (!confirmed) return;
+    setMessage("Deleting lead...");
+    const res = await fetch(`/api/admin/leads/${row.id}`, { method: "DELETE" });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      setMessage(json.error ?? "Delete failed");
+      return;
+    }
+    setMessage("Lead deleted.");
+    await load();
   }
 
   async function approve(id: string, approved: boolean) {
@@ -432,6 +516,14 @@ export default function AdminLeadsClient() {
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
           <button
             className="btn btn-primary"
+            onClick={() => void createLeadManual()}
+            type="button"
+            title="Create lead manually"
+          >
+            Add lead
+          </button>
+          <button
+            className="btn btn-primary"
             onClick={() => void triggerScrape()}
             disabled={triggeringScrape}
             type="button"
@@ -651,6 +743,7 @@ export default function AdminLeadsClient() {
                       </td>
                       <td>{row.platform}</td>
                       <td>
+                        {row.email ? <div className="muted" style={{ fontSize: 12 }}>{row.email}</div> : null}
                         <strong>{row.handle}</strong>
                         {row.profile_url ? (
                           <a href={row.profile_url} target="_blank" rel="noreferrer" style={{ display: "block", fontSize: 12, color: "var(--accent)" }}>
@@ -767,6 +860,20 @@ export default function AdminLeadsClient() {
                                   </div>
                                 ) : null}
                                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                  <button
+                                    className="btn btn-ghost"
+                                    onClick={() => void editLeadManual(row)}
+                                    type="button"
+                                  >
+                                    Edit lead
+                                  </button>
+                                  <button
+                                    className="btn btn-ghost"
+                                    onClick={() => void deleteLeadManual(row)}
+                                    type="button"
+                                  >
+                                    Delete lead
+                                  </button>
                                   <button
                                     className="btn btn-primary"
                                     onClick={() => void approve(row.id, true)}

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
 import { getServiceCreatorId } from "@/lib/service-creator";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import AdminCustomerDetailClient from "./AdminCustomerDetailClient";
 
 type PageProps = {
@@ -24,6 +25,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
   }
 
   const serviceCreatorId = getServiceCreatorId();
+  const admin = getSupabaseAdmin();
 
   const [
     subRes,
@@ -34,11 +36,12 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
   ] = await Promise.all([
     supabase
       .from("subscriptions")
-      .select("id, status, stripe_price_id, current_period_end, created_at, canceled_at")
+      .select("id, status, stripe_price_id, stripe_subscription_id, current_period_end, created_at, canceled_at, admin_notes")
       .eq("creator_id", serviceCreatorId)
       .eq("subscriber_id", workspaceId)
+      .is("archived_at", null)
       .maybeSingle(),
-    supabase.from("profiles").select("id, full_name, suspended_at").eq("id", workspaceId).maybeSingle(),
+    supabase.from("profiles").select("id, full_name, suspended_at, stripe_customer_id").eq("id", workspaceId).maybeSingle(),
     supabase.from("subjects").select("id, user_id, label, consent_status, consent_signed_at, identity_verified_at, created_at, updated_at").eq("user_id", workspaceId),
     supabase
       .from("generation_requests")
@@ -49,8 +52,26 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
     supabase.from("posts").select("id, caption, is_published, visibility, created_at").eq("creator_id", workspaceId).order("created_at", { ascending: false }).limit(50),
   ]);
 
-  const sub = subRes.data as { status: string; stripe_price_id: string | null; current_period_end: string | null } | null;
-  const profile = profileRes.data as { full_name?: string | null; suspended_at?: string | null } | null;
+  const sub = subRes.data as {
+    id: string;
+    status: string;
+    stripe_price_id: string | null;
+    stripe_subscription_id: string | null;
+    current_period_end: string | null;
+    admin_notes?: string | null;
+  } | null;
+  const profile = profileRes.data as {
+    full_name?: string | null;
+    suspended_at?: string | null;
+    stripe_customer_id?: string | null;
+  } | null;
+  let email: string | null = null;
+  try {
+    const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    email = (data?.users ?? []).find((u) => u.id === workspaceId)?.email ?? null;
+  } catch {
+    email = null;
+  }
   const subjectsList = (subjectRes.data ?? []) as { id: string; user_id: string; label: string | null; consent_status: string; consent_signed_at: string | null; identity_verified_at: string | null; created_at: string; updated_at: string }[];
   const subject = subjectsList[0] ?? null;
   const genReqs = (genReqsRes.data ?? []) as { id: string; scene_preset: string; status: string; created_at: string; output_paths: string[] }[];
@@ -112,8 +133,18 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
       </p>
       <AdminCustomerDetailClient
         workspaceId={workspaceId}
+        email={email}
+        fullName={profile?.full_name ?? null}
         subjectId={subject?.id ?? null}
-        subscription={sub ? { status: sub.status, stripe_price_id: sub.stripe_price_id, current_period_end: sub.current_period_end } : null}
+        subscription={sub ? {
+          id: sub.id,
+          status: sub.status,
+          stripe_price_id: sub.stripe_price_id,
+          stripe_subscription_id: sub.stripe_subscription_id,
+          current_period_end: sub.current_period_end,
+          admin_notes: sub.admin_notes ?? null,
+        } : null}
+        stripeCustomerId={profile?.stripe_customer_id ?? null}
         training={{
           datasetStatus,
           trainingStatus,

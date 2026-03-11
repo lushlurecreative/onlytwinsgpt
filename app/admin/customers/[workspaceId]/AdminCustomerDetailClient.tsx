@@ -5,9 +5,12 @@ import AdminGenerationRequestsSection from "./AdminGenerationRequestsSection";
 import AdminSubjectsSection, { type SubjectRow } from "./AdminSubjectsSection";
 
 type Subscription = {
+  id: string;
   status: string;
   stripe_price_id: string | null;
+  stripe_subscription_id: string | null;
   current_period_end: string | null;
+  admin_notes: string | null;
 } | null;
 
 type GenerationRow = {
@@ -42,8 +45,11 @@ type PostRow = {
 
 type Props = {
   workspaceId: string;
+  email: string | null;
+  fullName: string | null;
   subjectId: string | null;
   subscription: Subscription;
+  stripeCustomerId: string | null;
   training: TrainingInfo;
   generations: GenerationRow[];
   assets: { path: string; createdAt: string; requestId?: string }[];
@@ -55,8 +61,11 @@ type Props = {
 
 export default function AdminCustomerDetailClient({
   workspaceId,
+  email,
+  fullName,
   subjectId,
   subscription,
+  stripeCustomerId,
   training,
   generations,
   assets,
@@ -69,6 +78,15 @@ export default function AdminCustomerDetailClient({
   const [loading, setLoading] = useState<string | null>(null);
   const [suspended, setSuspended] = useState(!!suspendedAt);
   const [postList, setPostList] = useState(posts);
+  const [customerForm, setCustomerForm] = useState({
+    fullName: fullName ?? "",
+    status: subscription?.status ?? "active",
+    stripePriceId: subscription?.stripe_price_id ?? "",
+    stripeCustomerId: stripeCustomerId ?? "",
+    stripeSubscriptionId: subscription?.stripe_subscription_id ?? "",
+    currentPeriodEnd: subscription?.current_period_end ? subscription.current_period_end.slice(0, 10) : "",
+    adminNotes: subscription?.admin_notes ?? "",
+  });
 
   async function toggleSuspend() {
     setMessage("");
@@ -126,6 +144,50 @@ export default function AdminCustomerDetailClient({
     }
   }
 
+  async function saveCustomerOverview() {
+    setMessage("Saving customer...");
+    const res = await fetch(`/api/admin/customers/${workspaceId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fullName: customerForm.fullName || null,
+        status: customerForm.status,
+        stripePriceId: customerForm.stripePriceId || null,
+        stripeCustomerId: customerForm.stripeCustomerId || null,
+        stripeSubscriptionId: customerForm.stripeSubscriptionId || null,
+        currentPeriodEnd: customerForm.currentPeriodEnd ? new Date(customerForm.currentPeriodEnd).toISOString() : null,
+        adminNotes: customerForm.adminNotes || null,
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      setMessage(data.error ?? "Failed to save customer");
+      return;
+    }
+    setMessage("Customer updated.");
+  }
+
+  async function archiveCustomer() {
+    const confirmed = window.confirm(
+      "Archive this customer subscription?\n\nThis safely cancels + archives the subscription record."
+    );
+    if (!confirmed) return;
+    const confirmText = window.prompt('Type DELETE to confirm.');
+    if ((confirmText ?? "").trim().toUpperCase() !== "DELETE") return;
+    setMessage("Archiving customer...");
+    const res = await fetch(`/api/admin/customers/${workspaceId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmText: "DELETE" }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) {
+      setMessage(data.error ?? "Failed to archive customer");
+      return;
+    }
+    setMessage("Customer archived.");
+  }
+
   const planLabel = subscription?.stripe_price_id ? "Subscription" : "—";
   const statusLabel =
     subscription?.status === "trialing"
@@ -179,27 +241,43 @@ export default function AdminCustomerDetailClient({
 
       {/* Section A: Subscription */}
       <div>
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Subscription</h3>
-        <table style={{ borderCollapse: "collapse" }}>
-          <tbody>
-            <tr>
-              <td style={{ padding: "4px 12px 4px 0", fontWeight: 500 }}>Plan</td>
-              <td style={{ padding: 4 }}>{planLabel}</td>
-            </tr>
-            <tr>
-              <td style={{ padding: "4px 12px 4px 0", fontWeight: 500 }}>Status</td>
-              <td style={{ padding: 4 }}>{statusLabel}</td>
-            </tr>
-            <tr>
-              <td style={{ padding: "4px 12px 4px 0", fontWeight: 500 }}>Renewal Date</td>
-              <td style={{ padding: 4 }}>
-                {subscription?.current_period_end
-                  ? new Date(subscription.current_period_end).toLocaleDateString()
-                  : "—"}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Customer overview</h3>
+        <div className="card" style={{ padding: 12 }}>
+          <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+            <input className="input" value={email ?? ""} readOnly placeholder="Email" />
+            <input className="input" value={customerForm.fullName} onChange={(e) => setCustomerForm((f) => ({ ...f, fullName: e.target.value }))} placeholder="Full name" />
+            <select className="input" value={customerForm.status} onChange={(e) => setCustomerForm((f) => ({ ...f, status: e.target.value }))}>
+              {["active", "trialing", "past_due", "canceled", "incomplete", "needs_review", "expired"].map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <input className="input" value={customerForm.stripePriceId} onChange={(e) => setCustomerForm((f) => ({ ...f, stripePriceId: e.target.value }))} placeholder="Plan / stripe_price_id" />
+            <input className="input" value={customerForm.stripeCustomerId} onChange={(e) => setCustomerForm((f) => ({ ...f, stripeCustomerId: e.target.value }))} placeholder="Stripe customer id" />
+            <input className="input" value={customerForm.stripeSubscriptionId} onChange={(e) => setCustomerForm((f) => ({ ...f, stripeSubscriptionId: e.target.value }))} placeholder="Stripe subscription id" />
+            <input className="input" type="date" value={customerForm.currentPeriodEnd} onChange={(e) => setCustomerForm((f) => ({ ...f, currentPeriodEnd: e.target.value }))} />
+            <input className="input" value={customerForm.adminNotes} onChange={(e) => setCustomerForm((f) => ({ ...f, adminNotes: e.target.value }))} placeholder="Internal admin notes" />
+          </div>
+          <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            <button type="button" className="btn btn-primary" onClick={() => void saveCustomerOverview()}>
+              Save
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => setCustomerForm((f) => ({ ...f, status: "active" }))}>
+              Set active
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => setCustomerForm((f) => ({ ...f, status: "past_due" }))}>
+              Set past due
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => setCustomerForm((f) => ({ ...f, status: "canceled" }))}>
+              Set canceled
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={() => void archiveCustomer()}>
+              Delete (archive)
+            </button>
+          </div>
+        </div>
+        <p className="muted" style={{ marginTop: 10, marginBottom: 0 }}>
+          Current status: <strong>{statusLabel}</strong> · Current plan: <strong>{planLabel}</strong>
+        </p>
       </div>
 
       {/* Subject (Vault) / consent */}
