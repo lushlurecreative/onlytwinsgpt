@@ -178,6 +178,10 @@ export async function POST(request: Request) {
     if (lock.duplicate) {
       return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
     }
+    const failAfterLock = async (status: number, body: Record<string, unknown>) => {
+      await markStripeEventProcessed(event.id);
+      return NextResponse.json(body, { status });
+    };
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -217,7 +221,8 @@ export async function POST(request: Request) {
           stripeCustomerId = extractStripeCustomerId(resolvedSubscription.customer);
         }
         if (!customerEmail || !stripeCustomerId) {
-          return NextResponse.json(
+          return failAfterLock(
+            400,
             {
               error: "Missing customer email or customer id for onboarding flow",
               diagnostics: {
@@ -225,8 +230,7 @@ export async function POST(request: Request) {
                 session_customer_type: typeof fullSession.customer,
                 stripe_subscription_id: stripeSubscriptionId,
               },
-            },
-            { status: 400 }
+            }
           );
         }
 
@@ -268,12 +272,12 @@ export async function POST(request: Request) {
         }
 
         if (!subscriberId) {
-          return NextResponse.json(
+          return failAfterLock(
+            500,
             {
               error: "Unable to resolve or create subscriber for checkout.session.completed",
               session_id: fullSession.id,
-            },
-            { status: 500 }
+            }
           );
         }
 
@@ -292,7 +296,7 @@ export async function POST(request: Request) {
             sessionId: fullSession.id,
             subscriberId,
           });
-          return NextResponse.json({ error: profileUpsertError.message }, { status: 500 });
+          return failAfterLock(500, { error: profileUpsertError.message });
         }
 
         if (stripeSubscriptionId && creatorId && subscriberId) {
@@ -320,12 +324,12 @@ export async function POST(request: Request) {
             });
           }
         } else if (stripeSubscriptionId) {
-          return NextResponse.json(
+          return failAfterLock(
+            500,
             {
               error: "Unable to persist subscription during checkout.session.completed",
               stripe_subscription_id: stripeSubscriptionId,
-            },
-            { status: 500 }
+            }
           );
         }
       }
@@ -349,7 +353,7 @@ export async function POST(request: Request) {
             leadId,
             message: rpcError.message,
           });
-          return NextResponse.json({ error: rpcError.message }, { status: 500 });
+          return failAfterLock(500, { error: rpcError.message });
         }
       }
     }
@@ -363,9 +367,9 @@ export async function POST(request: Request) {
       const { creatorId, subscriberId } = await resolveSubscriptionParties(subscription);
 
       if (!creatorId || !subscriberId) {
-        return NextResponse.json(
+        return failAfterLock(
+          400,
           { error: "Unable to resolve creator/subscriber from subscription metadata" },
-          { status: 400 }
         );
       }
 
@@ -401,7 +405,7 @@ export async function POST(request: Request) {
           stripeEventId: event.id,
           message: error.message,
         });
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return failAfterLock(400, { error: error.message });
       }
 
       const planKey = getPlanKeyForStripePriceId(priceId);

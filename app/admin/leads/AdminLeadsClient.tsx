@@ -149,6 +149,7 @@ export default function AdminLeadsClient() {
     if (pa !== pb) return pa.localeCompare(pb);
     return (b.score ?? 0) - (a.score ?? 0) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
+  const debugRows = rows.slice(0, 5);
 
   function toggleSelect(id: string) {
     setSelectedIds((prev) => {
@@ -864,6 +865,50 @@ export default function AdminLeadsClient() {
         {loading ? <p>Loading...</p> : null}
         {!loading && rows.length === 0 ? <p className="muted">No leads yet. Click Run scrape to fetch leads from Reddit.</p> : null}
       </div>
+      <div className="card" style={{ marginTop: 12, border: "2px solid #d4b400" }}>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>ADMIN LEAD CONTROLS DEBUG</h3>
+        <p style={{ marginTop: 0 }}>
+          Total leads loaded: <strong>{rows.length}</strong>
+        </p>
+        {debugRows.length === 0 ? (
+          <p className="muted" style={{ marginBottom: 0 }}>No lead rows loaded yet.</p>
+        ) : (
+          <div style={{ display: "grid", gap: 8 }}>
+            {debugRows.map((row) => (
+              <div key={`debug-lead-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+                <strong>{row.handle}</strong>
+                <code>{row.id}</code>
+                <span className="muted">{row.email ?? row.platform}</span>
+                <button className="btn btn-primary" type="button" onClick={() => openEditLeadModal(row)}>Edit</button>
+                <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => setShowDeleteLeadModal(row)}>
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {!loading ? (
+        <div className="card" style={{ marginTop: 12, border: "2px dashed #d4b400" }}>
+          <h3 style={{ marginTop: 0, marginBottom: 8 }}>Temporary lead action test bar</h3>
+          {rows.length === 0 ? (
+            <p className="muted" style={{ marginBottom: 0 }}>No lead rows available.</p>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              {rows.map((row) => (
+                <div key={`test-lead-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+                  <strong>{row.handle}</strong>
+                  <span className="muted">{row.email ?? row.platform}</span>
+                  <button className="btn btn-primary" type="button" onClick={() => openEditLeadModal(row)}>Edit</button>
+                  <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => setShowDeleteLeadModal(row)}>
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {!loading && sorted.length > 0 ? (
         <div>

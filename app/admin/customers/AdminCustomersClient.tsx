@@ -86,6 +86,7 @@ export default function AdminCustomersClient() {
     () => ["all", "active", "trialing", "past_due", "canceled", "incomplete", "needs_review", "expired"],
     []
   );
+  const debugRows = rows.slice(0, 5);
 
   function startCreate() {
     setSelected(null);
@@ -279,6 +280,29 @@ export default function AdminCustomersClient() {
         <span>New This Week: <strong>{summary.newThisWeek}</strong></span>
         <span>Canceled This Week: <strong>{summary.canceledThisWeek}</strong></span>
       </div>
+      <div className="card" style={{ marginBottom: 12, border: "2px solid #d4b400" }}>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>ADMIN CUSTOMER CONTROLS DEBUG</h3>
+        <p style={{ marginTop: 0 }}>
+          Total customers loaded: <strong>{rows.length}</strong>
+        </p>
+        {debugRows.length === 0 ? (
+          <p className="muted" style={{ marginBottom: 0 }}>No customer rows loaded yet.</p>
+        ) : (
+          <div style={{ display: "grid", gap: 8 }}>
+            {debugRows.map((row) => (
+              <div key={`debug-customer-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+                <strong>{row.email ?? "Unknown email"}</strong>
+                <code>{row.workspaceId}</code>
+                <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>View</Link>
+                <button className="btn btn-primary" type="button" onClick={() => startEdit(row)}>Edit</button>
+                <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => setArchiveTarget(row)}>
+                  Archive
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="card" style={{ marginBottom: 12 }}>
         <h3 style={{ marginTop: 0 }}>Admin controls</h3>
@@ -325,6 +349,27 @@ export default function AdminCustomersClient() {
       {message ? <p>{message}</p> : null}
       {loading ? <p>Loading...</p> : null}
       {!loading && rows.length === 0 ? <p>No subscribed customers found.</p> : null}
+      {!loading ? (
+        <div className="card" style={{ marginBottom: 12, border: "2px dashed #d4b400" }}>
+          <h3 style={{ marginTop: 0, marginBottom: 8 }}>Temporary customer action test bar</h3>
+          {rows.length === 0 ? (
+            <p className="muted" style={{ marginBottom: 0 }}>No customer rows available.</p>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              {rows.map((row) => (
+                <div key={`test-customer-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
+                  <strong>{row.email ?? row.workspaceId}</strong>
+                  <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>View</Link>
+                  <button className="btn btn-primary" type="button" onClick={() => startEdit(row)}>Edit</button>
+                  <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => setArchiveTarget(row)}>
+                    Archive
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {!loading && rows.length > 0 ? (
         <div>

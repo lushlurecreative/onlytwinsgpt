@@ -35,6 +35,21 @@ export async function GET() {
   let heartbeatStale = false;
   let heartbeatMissing = false;
   let systemEventsMissing = false;
+  let pendingWorkerJobs = 0;
+
+  const [pendingTrainingRes, pendingGenerationRes] = await Promise.all([
+    admin
+      .from("training_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+    admin
+      .from("generation_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+  ]);
+  pendingWorkerJobs =
+    Number(pendingTrainingRes.count ?? 0) +
+    Number(pendingGenerationRes.count ?? 0);
 
   const { data: heartbeatRow, error: heartbeatError } = await admin
     .from("system_events")
@@ -56,12 +71,14 @@ export async function GET() {
       status = "red";
     }
   } else if (!heartbeatRow?.created_at) {
-    heartbeatMissing = true;
-    reasons.push("Worker heartbeat missing");
-    status = "yellow";
+    if (pendingWorkerJobs > 0) {
+      heartbeatMissing = true;
+      reasons.push("Worker heartbeat missing");
+      status = "yellow";
+    }
   } else {
     heartbeatAge = nowMs - new Date(heartbeatRow.created_at).getTime();
-    if (heartbeatAge > HEARTBEAT_STALE_MS) {
+    if (heartbeatAge > HEARTBEAT_STALE_MS && pendingWorkerJobs > 0) {
       heartbeatStale = true;
       reasons.push("Worker heartbeat stale (>5 min)");
       status = status === "green" ? "yellow" : status;

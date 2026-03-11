@@ -10,6 +10,7 @@ type HealthState = {
 
 export default function AdminGlobalHealth() {
   const [health, setHealth] = useState<HealthState | null>(null);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,22 +78,37 @@ export default function AdminGlobalHealth() {
 
   const dot = health.status === "green" ? "🟢" : health.status === "yellow" ? "🟡" : "🔴";
   const label = health.status === "green" ? "System OK" : health.status === "yellow" ? "Warnings" : "Issues";
+  if (dismissed && health.status !== "red") return null;
 
   return (
     <div
       className="admin-global-health"
       style={{
         marginBottom: 12,
-        padding: "8px 12px",
+        padding: "8px 10px",
         background: health.status === "red" ? "#2a1515" : health.status === "yellow" ? "#2a2515" : "#152a15",
         borderRadius: 8,
         border: `1px solid ${health.status === "red" ? "#633" : health.status === "yellow" ? "#663" : "#363"}`,
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        flexWrap: "wrap",
       }}
     >
       <strong>{dot} {label}</strong>
       {health.reason && health.reason !== "All systems OK" && (
-        <span style={{ marginLeft: 8, opacity: 0.9 }}>{health.reason}</span>
+        <span style={{ opacity: 0.9 }}>{health.reason}</span>
       )}
+      {health.status !== "red" ? (
+        <button
+          type="button"
+          className="btn btn-ghost"
+          style={{ marginLeft: "auto", padding: "4px 8px" }}
+          onClick={() => setDismissed(true)}
+        >
+          Dismiss
+        </button>
+      ) : null}
     </div>
   );
 }
