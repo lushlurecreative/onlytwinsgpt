@@ -15,12 +15,12 @@ export function getAdminUserIds() {
 }
 
 export function getAdminOwnerEmails() {
-  const raw = process.env.ADMIN_OWNER_EMAILS ?? "osborneinvestmentgroup@gmail.com";
+  const raw = process.env.ADMIN_OWNER_EMAILS ?? "lush.lure.creative@gmail.com";
   return parseCsv(raw).map((s) => s.toLowerCase());
 }
 
 export function isAdminUser(userId: string, email?: string | null) {
   const emailLower = email?.trim().toLowerCase() ?? null;
-  return getAdminUserIds().includes(userId) || (!!emailLower && getAdminOwnerEmails().includes(emailLower));
+  return !!emailLower && getAdminOwnerEmails().includes(emailLower);
 }
 

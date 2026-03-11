@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { isAdminUser } from "@/lib/admin";
 
 const ALLOWED_VISIBILITY = new Set(["public", "subscribers"]);
 
@@ -21,12 +22,7 @@ async function resolveActor(
   }
 
   const adminHeader = request.headers.get("x-admin-override");
-  const adminIds =
-    (process.env.ADMIN_USER_IDS ?? "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean) ?? [];
-  const isAdmin = adminHeader === "1" && adminIds.includes(user.id);
+  const isAdmin = adminHeader === "1" && isAdminUser(user.id, user.email);
 
   return { user, isAdmin, error: null as string | null };
 }
