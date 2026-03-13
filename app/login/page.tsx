@@ -18,6 +18,11 @@ function LoginPageInner() {
 
   useEffect(() => {
     const checkExistingSession = async () => {
+      const loggedOut = searchParams.get("loggedOut") === "1" || searchParams.get("logout") === "1";
+      if (loggedOut) {
+        await supabase.auth.signOut();
+        return;
+      }
       const { data } = await supabase.auth.getUser();
       if (data.user) {
         const sessionRes = await fetch("/api/admin/session", { cache: "no-store" });
