@@ -197,8 +197,8 @@ export async function POST(request: Request) {
       let stripeSubscriptionId: string | null = null;
       stripeSubscriptionId = extractStripeSubscriptionId(session.subscription);
 
-      // Canonical onboarding flow: pricing checkout -> webhook provisioning -> thank-you auth.
-      if (source === "pricing" && isKnownPlan) {
+      // Canonical onboarding flow: pricing or admin pay-now link -> webhook provisioning -> thank-you auth.
+      if ((source === "pricing" || source === "admin_pay_link") && isKnownPlan) {
         const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
           expand: ["customer", "subscription"],
         });

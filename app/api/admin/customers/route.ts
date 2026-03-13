@@ -216,24 +216,7 @@ export async function GET(request: Request) {
     return haystack.includes(q);
   });
 
-  let recentAccounts: Array<{ id: string; email: string | null; created_at: string; isCustomer: boolean }> = [];
-  try {
-    const { data } = await admin.auth.admin.listUsers({ perPage: 200 });
-    const customerIds = new Set(list.map((row) => row.workspaceId));
-    recentAccounts = (data?.users ?? [])
-      .map((u) => ({
-        id: u.id,
-        email: u.email ?? null,
-        created_at: u.created_at ?? new Date().toISOString(),
-        isCustomer: customerIds.has(u.id),
-      }))
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 100);
-  } catch {
-    // ignore
-  }
-
-  return NextResponse.json({ customers: filteredList, summary, recentAccounts }, { status: 200 });
+  return NextResponse.json({ customers: filteredList, summary }, { status: 200 });
 }
 
 export async function POST(request: Request) {

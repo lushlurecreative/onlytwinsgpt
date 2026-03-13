@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { PACKAGE_PLANS, type PlanKey } from "@/lib/package-plans";
 
 type CustomerRow = {
   id: string;
@@ -30,18 +31,37 @@ type Summary = {
   canceledThisWeek: number;
 };
 
-type RecentAccount = { id: string; email: string | null; created_at: string; isCustomer: boolean };
+type PaymentLinkRow = {
+  id: string;
+  email: string;
+  plan: string;
+  checkoutUrl: string | null;
+  fullName: string | null;
+  adminNotes: string | null;
+  createdAt: string;
+  stripeCheckoutSessionId: string | null;
+};
 
 type Props = {
   initialSessionEmail: string | null;
   initialIsAdmin: boolean;
 };
 
-export default function AdminCustomersClient({ initialSessionEmail, initialIsAdmin }: Props) {
+const PLAN_KEYS: PlanKey[] = [
+  "starter",
+  "professional",
+  "elite",
+  "single_batch",
+  "partner_70_30",
+  "partner_50_50",
+];
+
+export default function AdminCustomersClient({ initialSessionEmail: _initialSessionEmail, initialIsAdmin: _initialIsAdmin }: Props) {
   const [rows, setRows] = useState<CustomerRow[]>([]);
   const [summary, setSummary] = useState<Summary>({ activeCustomers: 0, newThisWeek: 0, canceledThisWeek: 0 });
-  const [recentAccounts, setRecentAccounts] = useState<RecentAccount[]>([]);
+  const [paymentLinks, setPaymentLinks] = useState<PaymentLinkRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [paymentLinksLoading, setPaymentLinksLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -51,12 +71,6 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
   const [showEditModal, setShowEditModal] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [archivingCustomer, setArchivingCustomer] = useState(false);
-  const [debugEvents, setDebugEvents] = useState<string[]>([]);
-  const [sessionEmail, setSessionEmail] = useState<string | null>(initialSessionEmail);
-  const [sessionIsAdmin, setSessionIsAdmin] = useState<boolean>(initialIsAdmin);
-  const [deleteAccountTarget, setDeleteAccountTarget] = useState<RecentAccount | null>(null);
-  const [deletingAccount, setDeletingAccount] = useState(false);
-  const addCustomerSectionRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState({
     email: "",
     fullName: "",
@@ -67,6 +81,16 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
     renewalDate: "",
     adminNotes: "",
   });
+  const [payLinkForm, setPayLinkForm] = useState({
+    email: "",
+    plan: "" as PlanKey | "",
+    fullName: "",
+    adminNotes: "",
+  });
+  const [createdPaymentLink, setCreatedPaymentLink] = useState<{ url: string; id: string } | null>(null);
+  const [creatingLink, setCreatingLink] = useState(false);
+  const [deletePaymentLinkTarget, setDeletePaymentLinkTarget] = useState<PaymentLinkRow | null>(null);
+  const [deletingPaymentLink, setDeletingPaymentLink] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -77,7 +101,6 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
     const json = (await res.json().catch(() => ({}))) as {
       customers?: CustomerRow[];
       summary?: Summary;
-      recentAccounts?: RecentAccount[];
       error?: string;
     };
     if (!res.ok) {
@@ -88,8 +111,20 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
     }
     setRows(json.customers ?? []);
     setSummary(json.summary ?? { activeCustomers: 0, newThisWeek: 0, canceledThisWeek: 0 });
-    setRecentAccounts(json.recentAccounts ?? []);
     setLoading(false);
+  }
+
+  async function loadPaymentLinks() {
+    setPaymentLinksLoading(true);
+    const res = await fetch("/api/admin/payment-links");
+    const json = (await res.json().catch(() => ({}))) as { paymentLinks?: PaymentLinkRow[]; error?: string };
+    if (!res.ok) {
+      setPaymentLinks([]);
+      setPaymentLinksLoading(false);
+      return;
+    }
+    setPaymentLinks(json.paymentLinks ?? []);
+    setPaymentLinksLoading(false);
   }
 
   useEffect(() => {
@@ -100,59 +135,24 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function loadSession() {
-      const res = await fetch("/api/admin/session", { cache: "no-store" });
-      const json = (await res.json().catch(() => ({}))) as { email?: string | null; isAdmin?: boolean };
-      if (cancelled) return;
-      setSessionEmail(json.email ?? null);
-      setSessionIsAdmin(Boolean(json.isAdmin));
-    }
-    void loadSession();
-    return () => {
-      cancelled = true;
-    };
+    const tid = setTimeout(() => {
+      loadPaymentLinks();
+    }, 0);
+    return () => clearTimeout(tid);
   }, []);
 
   const statusOptions = useMemo(
     () => ["all", "active", "trialing", "past_due", "canceled", "incomplete", "needs_review", "expired"],
     []
   );
-  const debugRows = rows.slice(0, 5);
-  const hardBtnStyle = {
-    border: "2px solid #111",
-    background: "#fff",
-    color: "#111",
-    padding: "8px 10px",
-    borderRadius: 6,
-    fontWeight: 700,
-    cursor: "pointer",
-    textDecoration: "none",
-    display: "inline-block",
-  };
 
-  function pushDebugEvent(event: string) {
-    const timestamp = new Date().toLocaleTimeString();
-    setDebugEvents((prev) => [`${timestamp} - ${event}`, ...prev].slice(0, 12));
-  }
-
-  function startCreate() {
-    setSelected(null);
-    setShowEditModal(false);
-    setForm({
-      email: "",
-      fullName: "",
-      plan: "",
-      status: "active",
-      stripeCustomerId: "",
-      stripeSubscriptionId: "",
-      renewalDate: "",
-      adminNotes: "",
-    });
-  }
+  const paidEmails = useMemo(() => new Set(rows.map((r) => (r.email ?? "").toLowerCase())), [rows]);
+  const awaitingPayment = useMemo(
+    () => paymentLinks.filter((pl) => !paidEmails.has(pl.email.toLowerCase())),
+    [paymentLinks, paidEmails]
+  );
 
   function startEdit(row: CustomerRow) {
-    pushDebugEvent(`Edit click handler fired for ${row.id}`);
     setSelected(row);
     setForm({
       email: row.email ?? "",
@@ -168,35 +168,57 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
     setMessage(`Editing customer: ${row.email ?? row.workspaceId}`);
   }
 
-  async function createCustomer() {
-    setMessage("Creating customer...");
-    const res = await fetch("/api/admin/customers", {
+  async function createPaymentLink() {
+    if (!payLinkForm.email.trim()) {
+      setMessage("Email is required.");
+      return;
+    }
+    if (!payLinkForm.plan) {
+      setMessage("Please select a plan.");
+      return;
+    }
+    setCreatingLink(true);
+    setMessage("Creating payment link...");
+    const res = await fetch("/api/admin/payment-links", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: form.email,
-        plan: form.plan || null,
-        status: form.status,
-        stripeCustomerId: form.stripeCustomerId || null,
-        stripeSubscriptionId: form.stripeSubscriptionId || null,
-        renewalDate: form.renewalDate ? new Date(form.renewalDate).toISOString() : null,
-        adminNotes: form.adminNotes || null,
+        email: payLinkForm.email.trim().toLowerCase(),
+        plan: payLinkForm.plan,
+        fullName: payLinkForm.fullName.trim() || null,
+        adminNotes: payLinkForm.adminNotes.trim() || null,
       }),
     });
-    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    const json = (await res.json().catch(() => ({}))) as { url?: string; id?: string; error?: string };
+    setCreatingLink(false);
     if (!res.ok) {
-      setMessage(json.error ?? "Failed to create customer");
+      setMessage(json.error ?? "Failed to create payment link");
       return;
     }
-    setMessage("Customer created.");
-    await load();
+    setCreatedPaymentLink({ url: json.url ?? "", id: json.id ?? "" });
+    setMessage("Payment link created. Copy or open the link below.");
+    setPayLinkForm((f) => ({ ...f, email: "", plan: "" as PlanKey | "", fullName: "", adminNotes: "" }));
+    await loadPaymentLinks();
+  }
+
+  async function deletePaymentLink(pl: PaymentLinkRow) {
+    setDeletingPaymentLink(true);
+    const res = await fetch(`/api/admin/payment-links/${pl.id}`, { method: "DELETE" });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    setDeletingPaymentLink(false);
+    setDeletePaymentLinkTarget(null);
+    if (!res.ok) {
+      setMessage(json.error ?? "Failed to delete");
+      return;
+    }
+    setMessage("Payment link removed.");
+    await loadPaymentLinks();
   }
 
   async function saveCustomer() {
     if (!selected) return;
     setSavingCustomer(true);
     setMessage("Saving changes...");
-    pushDebugEvent(`PATCH request sent for subscription ${selected.id}`);
     const res = await fetch("/api/admin/customers", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -215,12 +237,10 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
     const json = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
       setMessage(json.error ?? "Failed to update customer");
-      pushDebugEvent(`PATCH failed for ${selected.id}: ${json.error ?? `HTTP ${res.status}`}`);
       setSavingCustomer(false);
       return;
     }
     setMessage("Customer updated successfully");
-    pushDebugEvent(`PATCH succeeded for ${selected.id}`);
     await load();
     setSavingCustomer(false);
     setShowEditModal(false);
@@ -230,14 +250,11 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
   function openArchiveModal(row: CustomerRow) {
     setArchiveTarget(row);
     setArchiveConfirmText("");
-    pushDebugEvent(`Archive click handler fired for ${row.id}`);
-    setMessage(`Archive modal opened for: ${row.email ?? row.workspaceId}`);
   }
 
   async function archiveCustomer(row: CustomerRow) {
     setArchivingCustomer(true);
     setMessage("Archiving customer...");
-    pushDebugEvent(`DELETE archive request sent for subscription ${row.id}`);
     const res = await fetch("/api/admin/customers", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -250,53 +267,308 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
     const json = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
       setMessage(json.error ?? "Failed to archive customer");
-      pushDebugEvent(`Archive failed for ${row.id}: ${json.error ?? `HTTP ${res.status}`}`);
       setArchivingCustomer(false);
       return;
     }
     setMessage("Customer archived successfully");
-    pushDebugEvent(`Archive succeeded for ${row.id}`);
     await load();
     setArchivingCustomer(false);
+    setArchiveTarget(null);
+    setArchiveConfirmText("");
+  }
+
+  function copyToClipboard(text: string) {
+    void navigator.clipboard.writeText(text).then(() => setMessage("Link copied to clipboard."));
   }
 
   return (
     <section>
-      <div
-        style={{
-          background: "#ffef5a",
-          color: "#1b1b1b",
-          border: "2px solid #d4b400",
-          borderRadius: 10,
-          padding: "10px 12px",
-          fontWeight: 800,
-          letterSpacing: "0.02em",
-          marginBottom: 12,
-        }}
-      >
-        ADMIN CUSTOMER CONTROLS ACTIVE
-      </div>
-      <div className="card" style={{ marginBottom: 12, border: "2px solid #08a0ff" }}>
-        <strong>ADMIN SESSION DEBUG</strong>
-        <p style={{ margin: "8px 0 0" }}>
-          Current session email: <strong>{sessionEmail ?? "none"}</strong> · isAdmin: <strong>{String(sessionIsAdmin)}</strong>
-        </p>
-      </div>
-      <div className="card" style={{ marginBottom: 12, border: "2px solid #6b5cff" }}>
-        <strong>CUSTOMER ACTION DEBUG</strong>
-        <p style={{ margin: "8px 0 0" }}>
-          selectedCustomerId: <strong>{selected?.id ?? "none"}</strong> · editModalOpen:{" "}
-          <strong>{String(showEditModal)}</strong> · saveEnabled:{" "}
-          <strong>{String(Boolean(selected) && !savingCustomer)}</strong>
-        </p>
-        {debugEvents.length > 0 ? (
-          <div style={{ marginTop: 10, display: "grid", gap: 4 }}>
-            {debugEvents.map((event, i) => (
-              <code key={`${event}-${i}`}>{event}</code>
+      {/* ——— Section A: Add customer and send payment link ——— */}
+      <h2 style={{ marginTop: 0, marginBottom: 8, fontSize: "1.25rem" }}>Add customer and send payment link</h2>
+      <p className="muted" style={{ marginTop: 0, marginBottom: 12 }}>
+        Create a manual customer entry and generate a pay-now checkout link. When they pay, they become a paid customer.
+      </p>
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", marginBottom: 12 }}>
+          <input
+            className="input"
+            placeholder="Customer email"
+            value={payLinkForm.email}
+            onChange={(e) => setPayLinkForm((f) => ({ ...f, email: e.target.value }))}
+          />
+          <select
+            className="input"
+            value={payLinkForm.plan}
+            onChange={(e) => setPayLinkForm((f) => ({ ...f, plan: e.target.value as PlanKey }))}
+          >
+            <option value="">Select plan</option>
+            {PLAN_KEYS.map((key) => (
+              <option key={key} value={key}>
+                {PACKAGE_PLANS[key].name} — {PACKAGE_PLANS[key].displayPrice}
+              </option>
             ))}
+          </select>
+          <input
+            className="input"
+            placeholder="Full name (optional)"
+            value={payLinkForm.fullName}
+            onChange={(e) => setPayLinkForm((f) => ({ ...f, fullName: e.target.value }))}
+          />
+          <input
+            className="input"
+            placeholder="Internal notes (optional)"
+            value={payLinkForm.adminNotes}
+            onChange={(e) => setPayLinkForm((f) => ({ ...f, adminNotes: e.target.value }))}
+          />
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            className="btn btn-primary"
+            type="button"
+            disabled={creatingLink || !payLinkForm.email.trim() || !payLinkForm.plan}
+            onClick={() => void createPaymentLink()}
+          >
+            {creatingLink ? "Creating…" : "Create and generate payment link"}
+          </button>
+          <button className="btn btn-ghost" type="button" onClick={() => void load()}>
+            Refresh
+          </button>
+        </div>
+
+        {createdPaymentLink?.url ? (
+          <div style={{ marginTop: 16, padding: 12, background: "var(--surface, #f5f5f5)", borderRadius: 8 }}>
+            <p style={{ margin: "0 0 8px", fontWeight: 600 }}>Payment link created</p>
+            <input
+              className="input"
+              readOnly
+              value={createdPaymentLink.url}
+              style={{ width: "100%", marginBottom: 8 }}
+            />
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                className="btn btn-primary"
+                type="button"
+                onClick={() => copyToClipboard(createdPaymentLink.url)}
+              >
+                Copy link
+              </button>
+              <a
+                href={createdPaymentLink.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost"
+              >
+                Open link
+              </a>
+              <button
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => setCreatedPaymentLink(null)}
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
         ) : null}
       </div>
+
+      {/* ——— Section B: Awaiting payment ——— */}
+      <h2 style={{ marginTop: 8, marginBottom: 8, fontSize: "1.25rem" }}>Awaiting payment</h2>
+      <p className="muted" style={{ marginTop: 0, marginBottom: 10 }}>
+        Manual pay-now links that have not yet been paid. Once paid, the customer appears in Paid customers below.
+      </p>
+      {paymentLinksLoading ? (
+        <p className="muted">Loading…</p>
+      ) : awaitingPayment.length === 0 ? (
+        <p className="muted">No pending payment links.</p>
+      ) : (
+        <div className="card" style={{ marginBottom: 24, overflowX: "auto" }}>
+          <table style={{ borderCollapse: "collapse", minWidth: 640, width: "100%" }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Plan</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Created</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {awaitingPayment.map((pl) => (
+                <tr key={pl.id}>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{pl.email}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{pl.plan}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
+                    {new Date(pl.createdAt).toLocaleString()}
+                  </td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222", whiteSpace: "nowrap" }}>
+                    {pl.checkoutUrl ? (
+                      <>
+                        <button
+                          className="btn btn-ghost"
+                          type="button"
+                          onClick={() => copyToClipboard(pl.checkoutUrl!)}
+                        >
+                          Copy pay link
+                        </button>
+                        <a
+                          href={pl.checkoutUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-ghost"
+                        >
+                          Open pay link
+                        </a>
+                      </>
+                    ) : (
+                      <span className="muted">Link expired</span>
+                    )}
+                    <button
+                      className="btn btn-ghost"
+                      type="button"
+                      style={{ color: "var(--error, #e5534b)" }}
+                      onClick={() => setDeletePaymentLinkTarget(pl)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {deletePaymentLinkTarget ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deletingPaymentLink) setDeletePaymentLinkTarget(null);
+          }}
+        >
+          <div className="card" style={{ maxWidth: 400, margin: 16, padding: 16 }}>
+            <h3 style={{ marginTop: 0 }}>Remove payment link</h3>
+            <p className="muted" style={{ marginTop: 0 }}>
+              Remove this pending link from the list. This does not cancel the Stripe session.
+            </p>
+            <p style={{ marginTop: 0 }}>
+              <strong>{deletePaymentLinkTarget.email}</strong> — {deletePaymentLinkTarget.plan}
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+              <button
+                className="btn btn-ghost"
+                type="button"
+                disabled={deletingPaymentLink}
+                onClick={() => setDeletePaymentLinkTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                style={{ background: "var(--error, #e5534b)", borderColor: "var(--error, #e5534b)" }}
+                disabled={deletingPaymentLink}
+                onClick={() => void deletePaymentLink(deletePaymentLinkTarget)}
+              >
+                {deletingPaymentLink ? "Removing…" : "Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ——— Section C: Paid customers ——— */}
+      <h2 style={{ marginTop: 8, marginBottom: 8, fontSize: "1.25rem" }}>Paid customers</h2>
+      <p className="muted" style={{ marginTop: 0, marginBottom: 10 }}>
+        Customers with active or tracked subscription records.
+      </p>
+      <div style={{ display: "flex", gap: 24, marginBottom: 8, flexWrap: "wrap" }}>
+        <span>Active: <strong>{summary.activeCustomers}</strong></span>
+        <span>New this week: <strong>{summary.newThisWeek}</strong></span>
+        <span>Canceled this week: <strong>{summary.canceledThisWeek}</strong></span>
+      </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+        <input
+          className="input"
+          placeholder="Search customers"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <select
+          className="input"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          {statusOptions.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <button className="btn btn-ghost" type="button" onClick={() => void load()}>
+          Apply filters
+        </button>
+      </div>
+
+      {message ? <p>{message}</p> : null}
+      {loading ? <p>Loading…</p> : null}
+      {!loading && rows.length === 0 ? <p>No paid customers found.</p> : null}
+      {!loading && rows.length > 0 ? (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ borderCollapse: "collapse", minWidth: 800, width: "100%" }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Plan</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Status</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Renewal / period end</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.email ?? "—"}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.plan}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.status}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
+                    {row.renewalDate ? new Date(row.renewalDate).toLocaleDateString() : "—"}
+                  </td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222", whiteSpace: "nowrap" }}>
+                    <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>
+                      View
+                    </Link>
+                    <button
+                      className="btn btn-primary"
+                      type="button"
+                      onClick={() => startEdit(row)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn btn-ghost"
+                      type="button"
+                      style={{ color: "var(--error, #e5534b)" }}
+                      onClick={() => openArchiveModal(row)}
+                    >
+                      Archive
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {/* Edit customer modal */}
       {showEditModal && selected ? (
         <div
           role="dialog"
@@ -312,19 +584,15 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
             zIndex: 1000,
           }}
           onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowEditModal(false);
-            }
+            if (e.target === e.currentTarget) setShowEditModal(false);
           }}
         >
           <div className="card" style={{ maxWidth: 900, width: "100%", margin: 16, padding: 16 }}>
-            <h3 id="edit-customer-title" style={{ marginTop: 0 }}>
-              Edit customer
-            </h3>
+            <h3 id="edit-customer-title" style={{ marginTop: 0 }}>Edit customer</h3>
             <p className="muted" style={{ marginTop: 0 }}>
-              Editing customer: <strong>{selected.email ?? selected.workspaceId}</strong>
+              Editing: <strong>{selected.email ?? selected.workspaceId}</strong>
             </p>
-            <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+            <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
               <input className="input" placeholder="Customer email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
               <input className="input" placeholder="Plan / stripe price id" value={form.plan} onChange={(e) => setForm((f) => ({ ...f, plan: e.target.value }))} />
               <select className="input" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
@@ -343,12 +611,14 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
                 Cancel
               </button>
               <button className="btn btn-primary" onClick={() => void saveCustomer()} type="button" disabled={savingCustomer || !selected}>
-                {savingCustomer ? "Saving..." : "Save customer"}
+                {savingCustomer ? "Saving…" : "Save customer"}
               </button>
             </div>
           </div>
         </div>
       ) : null}
+
+      {/* Archive customer modal */}
       {archiveTarget ? (
         <div
           role="dialog"
@@ -371,9 +641,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
           }}
         >
           <div className="card" style={{ maxWidth: 520, width: "100%", margin: 16, padding: 16 }}>
-            <h3 id="archive-customer-title" style={{ marginTop: 0 }}>
-              Archive customer
-            </h3>
+            <h3 id="archive-customer-title" style={{ marginTop: 0 }}>Archive customer</h3>
             <p className="muted" style={{ marginTop: 0 }}>
               This safely archives the customer subscription and removes it from the main customer list.
             </p>
@@ -407,311 +675,9 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
                 onClick={() => {
                   if (!archiveTarget) return;
                   void archiveCustomer(archiveTarget);
-                  setArchiveTarget(null);
-                  setArchiveConfirmText("");
                 }}
               >
-                {archivingCustomer ? "Archiving..." : "Archive customer"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-      <h2 style={{ marginTop: 0 }}>Customers</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
-        Main list shows paid/subscribed customers from subscription records only.
-      </p>
-      <div style={{ display: "flex", gap: 24, marginBottom: 12, flexWrap: "wrap" }}>
-        <span>Active Customers: <strong>{summary.activeCustomers}</strong></span>
-        <span>New This Week: <strong>{summary.newThisWeek}</strong></span>
-        <span>Canceled This Week: <strong>{summary.canceledThisWeek}</strong></span>
-      </div>
-      <div className="card" style={{ marginBottom: 12, border: "2px solid #d4b400" }}>
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>ADMIN CUSTOMER CONTROLS DEBUG</h3>
-        <p style={{ marginTop: 0 }}>
-          Total customers loaded: <strong>{rows.length}</strong>
-        </p>
-        {debugRows.length === 0 ? (
-          <p className="muted" style={{ marginBottom: 0 }}>No customer rows loaded yet.</p>
-        ) : (
-          <div style={{ display: "grid", gap: 8 }}>
-            {debugRows.map((row) => (
-              <div key={`debug-customer-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
-                <strong>{row.email ?? "Unknown email"}</strong>
-                <code>{row.workspaceId}</code>
-                <a href={`/admin/customers/${row.workspaceId}`} style={hardBtnStyle}>View</a>
-                <button style={hardBtnStyle} type="button" onClick={() => startEdit(row)}>Edit</button>
-                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => openArchiveModal(row)}>
-                  Archive
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="card" style={{ marginBottom: 12 }} ref={addCustomerSectionRef}>
-        <h3 style={{ marginTop: 0 }}>Add customer</h3>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-          <button className="btn btn-ghost" onClick={() => void load()} type="button">Refresh</button>
-        </div>
-        <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
-          <input className="input" placeholder="Customer email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-          <input className="input" placeholder="Plan / stripe price id" value={form.plan} onChange={(e) => setForm((f) => ({ ...f, plan: e.target.value }))} />
-          <select className="input" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
-            {statusOptions.filter((s) => s !== "all").map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <input className="input" placeholder="Stripe customer id" value={form.stripeCustomerId} onChange={(e) => setForm((f) => ({ ...f, stripeCustomerId: e.target.value }))} />
-          <input className="input" placeholder="Stripe subscription id" value={form.stripeSubscriptionId} onChange={(e) => setForm((f) => ({ ...f, stripeSubscriptionId: e.target.value }))} />
-          <input className="input" type="date" value={form.renewalDate} onChange={(e) => setForm((f) => ({ ...f, renewalDate: e.target.value }))} />
-          <input className="input" placeholder="Full name (optional)" value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
-          <input className="input" placeholder="Internal notes" value={form.adminNotes} onChange={(e) => setForm((f) => ({ ...f, adminNotes: e.target.value }))} />
-        </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-          <button className="btn btn-primary" onClick={() => void createCustomer()} type="button">Create customer</button>
-        </div>
-      </div>
-
-      <h2 style={{ marginTop: 24, marginBottom: 8, fontSize: "1.25rem" }}>A. Real customers</h2>
-      <p className="muted" style={{ marginTop: 0, marginBottom: 10 }}>Subscription-backed customers. Edit and archive from the table below.</p>
-      <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-        <input className="input" placeholder="Search customers" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          {statusOptions.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <button className="btn btn-ghost" onClick={() => void load()} type="button">Apply filters</button>
-      </div>
-
-      {message ? <p>{message}</p> : null}
-      {loading ? <p>Loading...</p> : null}
-      {!loading && rows.length === 0 ? <p>No subscribed customers found.</p> : null}
-      <div className="card" style={{ marginBottom: 12, border: "2px dashed #d4b400" }}>
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Temporary customer action test bar</h3>
-        {rows.length === 0 ? (
-          <p className="muted" style={{ marginBottom: 0 }}>{loading ? "Loading customers..." : "No customer rows available."}</p>
-        ) : (
-          <div style={{ display: "grid", gap: 8 }}>
-            {rows.map((row) => (
-              <div key={`test-customer-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
-                <strong>{row.email ?? row.workspaceId}</strong>
-                <a href={`/admin/customers/${row.workspaceId}`} style={hardBtnStyle}>View</a>
-                <button style={hardBtnStyle} type="button" onClick={() => startEdit(row)}>Edit</button>
-                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => openArchiveModal(row)}>
-                  Archive
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {!loading && rows.length > 0 ? (
-        <div>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ borderCollapse: "collapse", minWidth: 980, width: "100%" }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8, background: "var(--surface, #fff)" }}>Actions</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Customer</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Plan</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Status</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Stripe Customer</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Stripe Subscription</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Renewal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.email ?? "Unknown"}</td>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222", whiteSpace: "nowrap", background: "var(--surface, #fff)" }}>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>
-                          View
-                        </Link>
-                        <button
-                          className="btn btn-primary"
-                          type="button"
-                          onClick={() => {
-                            startEdit(row);
-                            window.scrollTo({ top: 0, behavior: "smooth" });
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn btn-ghost"
-                          type="button"
-                          style={{ color: "var(--error, #e5534b)" }}
-                          onClick={() => openArchiveModal(row)}
-                        >
-                          Archive
-                        </button>
-                      </div>
-                    </td>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.creator}</td>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.plan}</td>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.status}</td>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeCustomerId ?? "—"}</td>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.stripeSubscriptionId ?? "—"}</td>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{row.renewalDate ? new Date(row.renewalDate).toLocaleDateString() : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="card" style={{ marginTop: 12 }}>
-            <h3 style={{ marginTop: 0, marginBottom: 10 }}>Visible customer actions</h3>
-            <div style={{ display: "grid", gap: 10 }}>
-              {rows.map((row) => (
-                <div key={`actions-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
-                  <strong style={{ minWidth: 240 }}>{row.email ?? row.workspaceId}</strong>
-                  <Link className="btn btn-ghost" href={`/admin/customers/${row.workspaceId}`}>View</Link>
-                  <button
-                    className="btn btn-primary"
-                    type="button"
-                    onClick={() => {
-                      startEdit(row);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => openArchiveModal(row)}>
-                    Archive
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <h2 style={{ marginTop: 32, marginBottom: 8, fontSize: "1.25rem" }}>B. Recent accounts</h2>
-      <p className="muted" style={{ marginTop: 0, marginBottom: 10 }}>Raw signups (not customer source-of-truth). Use View, Delete, or Convert to customer below.</p>
-      {recentAccounts.length > 0 ? (
-        <div style={{ marginTop: 4 }}>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ borderCollapse: "collapse", minWidth: 720, width: "100%" }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Signed up</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Conversion</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8, background: "var(--surface, #fff)" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentAccounts.map((a) => (
-                  <tr key={a.id}>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{a.email ?? a.id.slice(0, 8)}</td>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{new Date(a.created_at).toLocaleString()}</td>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{a.isCustomer ? "Converted customer" : "Unconverted signup"}</td>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222", whiteSpace: "nowrap", background: "var(--surface, #fff)" }}>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <Link className="btn btn-ghost" href={`/admin/customers/${a.id}`}>
-                          View
-                        </Link>
-                        {!a.isCustomer ? (
-                          <>
-                            <button
-                              className="btn btn-ghost"
-                              type="button"
-                              onClick={() => {
-                                setForm((f) => ({ ...f, email: a.email ?? "" }));
-                                addCustomerSectionRef.current?.scrollIntoView({ behavior: "smooth" });
-                              }}
-                            >
-                              Convert to customer
-                            </button>
-                            <button
-                              className="btn btn-ghost"
-                              type="button"
-                              style={{ color: "var(--error, #e5534b)" }}
-                              onClick={() => setDeleteAccountTarget(a)}
-                            >
-                              Delete
-                            </button>
-                          </>
-                        ) : (
-                          <span className="muted" style={{ fontSize: "0.9rem" }}>Use customer Archive above</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <p className="muted" style={{ marginTop: 4 }}>No recent accounts.</p>
-      )}
-
-      {deleteAccountTarget ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-account-title"
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget && !deletingAccount) {
-              setDeleteAccountTarget(null);
-            }
-          }}
-        >
-          <div className="card" style={{ maxWidth: 480, width: "100%", margin: 16, padding: 16 }}>
-            <h3 id="delete-account-title" style={{ marginTop: 0 }}>Delete recent account</h3>
-            <p className="muted" style={{ marginTop: 0 }}>
-              This is permanent. The auth account and profile for this signup will be removed. They will no longer appear in Recent accounts.
-            </p>
-            <p style={{ marginTop: 0 }}>
-              Account: <strong>{deleteAccountTarget.email ?? deleteAccountTarget.id.slice(0, 8)}</strong>
-            </p>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
-              <button
-                className="btn btn-ghost"
-                type="button"
-                disabled={deletingAccount}
-                onClick={() => setDeleteAccountTarget(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                type="button"
-                disabled={deletingAccount}
-                style={{ background: "var(--error, #e5534b)", borderColor: "var(--error, #e5534b)" }}
-                onClick={async () => {
-                  setDeletingAccount(true);
-                  try {
-                    const res = await fetch(`/api/admin/users/${deleteAccountTarget.id}`, { method: "DELETE" });
-                    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-                    if (!res.ok) {
-                      setMessage(json.error ?? "Delete failed");
-                      return;
-                    }
-                    setDeleteAccountTarget(null);
-                    await load();
-                  } finally {
-                    setDeletingAccount(false);
-                  }
-                }}
-              >
-                {deletingAccount ? "Deleting..." : "Delete account"}
+                {archivingCustomer ? "Archiving…" : "Archive customer"}
               </button>
             </div>
           </div>
@@ -720,4 +686,3 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
     </section>
   );
 }
-
