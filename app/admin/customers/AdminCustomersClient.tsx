@@ -42,6 +42,14 @@ type PaymentLinkRow = {
   stripeCheckoutSessionId: string | null;
 };
 
+type AllUserRow = {
+  id: string;
+  email: string | null;
+  createdAt: string | null;
+  isAdmin: boolean;
+  isPaidCustomer: boolean;
+};
+
 type Props = {
   initialSessionEmail: string | null;
   initialIsAdmin: boolean;
@@ -91,6 +99,10 @@ export default function AdminCustomersClient({ initialSessionEmail: _initialSess
   const [creatingLink, setCreatingLink] = useState(false);
   const [deletePaymentLinkTarget, setDeletePaymentLinkTarget] = useState<PaymentLinkRow | null>(null);
   const [deletingPaymentLink, setDeletingPaymentLink] = useState(false);
+  const [allUsers, setAllUsers] = useState<AllUserRow[]>([]);
+  const [allUsersLoading, setAllUsersLoading] = useState(true);
+  const [deleteUserTarget, setDeleteUserTarget] = useState<AllUserRow | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -127,6 +139,19 @@ export default function AdminCustomersClient({ initialSessionEmail: _initialSess
     setPaymentLinksLoading(false);
   }
 
+  async function loadAllUsers() {
+    setAllUsersLoading(true);
+    const res = await fetch("/api/admin/users");
+    const json = (await res.json().catch(() => ({}))) as { users?: AllUserRow[]; error?: string };
+    if (!res.ok) {
+      setAllUsers([]);
+      setAllUsersLoading(false);
+      return;
+    }
+    setAllUsers(json.users ?? []);
+    setAllUsersLoading(false);
+  }
+
   useEffect(() => {
     const tid = setTimeout(() => {
       load();
@@ -141,6 +166,13 @@ export default function AdminCustomersClient({ initialSessionEmail: _initialSess
     return () => clearTimeout(tid);
   }, []);
 
+  useEffect(() => {
+    const tid = setTimeout(() => {
+      loadAllUsers();
+    }, 0);
+    return () => clearTimeout(tid);
+  }, []);
+
   const statusOptions = useMemo(
     () => ["all", "active", "trialing", "past_due", "canceled", "incomplete", "needs_review", "expired"],
     []
@@ -151,6 +183,30 @@ export default function AdminCustomersClient({ initialSessionEmail: _initialSess
     () => paymentLinks.filter((pl) => !paidEmails.has(pl.email.toLowerCase())),
     [paymentLinks, paidEmails]
   );
+  const nonAdminUsers = useMemo(
+    () => allUsers.filter((u) => !u.isAdmin),
+    [allUsers]
+  );
+
+  async function deleteUserByEmail(userRow: AllUserRow) {
+    if (!userRow.email) return;
+    setDeletingUser(true);
+    const res = await fetch("/api/admin/user-reset/delete-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: userRow.email }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string };
+    setDeletingUser(false);
+    setDeleteUserTarget(null);
+    if (!res.ok) {
+      setMessage(json.error ?? "Delete failed");
+      return;
+    }
+    setMessage("User deleted.");
+    await loadAllUsers();
+    await load();
+  }
 
   function startEdit(row: CustomerRow) {
     setSelected(row);
@@ -437,6 +493,105 @@ export default function AdminCustomersClient({ initialSessionEmail: _initialSess
           </table>
         </div>
       )}
+
+      {/* ——— Users / test accounts (all non-admin auth users) ——— */}
+      <h2 style={{ marginTop: 24, marginBottom: 8, fontSize: "1.25rem" }}>Users / test accounts</h2>
+      <p className="muted" style={{ marginTop: 0, marginBottom: 10 }}>
+        All non-admin auth users (including non-paying, orphaned, and test accounts). Use{" "}
+        <Link href="/admin/user-reset">User reset tools</Link> to delete single user or all test users.
+      </p>
+      {allUsersLoading ? (
+        <p className="muted">Loading…</p>
+      ) : nonAdminUsers.length === 0 ? (
+        <p className="muted">No non-admin users.</p>
+      ) : (
+        <div className="card" style={{ marginBottom: 24, overflowX: "auto" }}>
+          <table style={{ borderCollapse: "collapse", minWidth: 560, width: "100%" }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Signed up</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Status</th>
+                <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {nonAdminUsers.map((u) => (
+                <tr key={u.id}>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{u.email ?? u.id.slice(0, 8)}</td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
+                    {u.createdAt ? new Date(u.createdAt).toLocaleString() : "—"}
+                  </td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
+                    {u.isPaidCustomer ? "Paid customer" : "Test / non-customer"}
+                  </td>
+                  <td style={{ padding: 8, borderBottom: "1px solid #222", whiteSpace: "nowrap" }}>
+                    <Link className="btn btn-ghost" href={`/admin/customers/${u.id}`}>
+                      View
+                    </Link>
+                    <button
+                      className="btn btn-ghost"
+                      type="button"
+                      style={{ color: "var(--error, #e5534b)" }}
+                      onClick={() => setDeleteUserTarget(u)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {deleteUserTarget ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deletingUser) setDeleteUserTarget(null);
+          }}
+        >
+          <div className="card" style={{ maxWidth: 420, margin: 16, padding: 16 }}>
+            <h3 style={{ marginTop: 0 }}>Delete user completely</h3>
+            <p className="muted" style={{ marginTop: 0 }}>
+              This permanently removes the user and all their data (auth, profile, subscriptions, subjects, generation requests, posts, etc.).
+            </p>
+            <p style={{ marginTop: 0 }}>
+              <strong>{deleteUserTarget.email ?? deleteUserTarget.id}</strong>
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+              <button
+                className="btn btn-ghost"
+                type="button"
+                disabled={deletingUser}
+                onClick={() => setDeleteUserTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                style={{ background: "var(--error, #e5534b)", borderColor: "var(--error, #e5534b)" }}
+                disabled={deletingUser}
+                onClick={() => void deleteUserByEmail(deleteUserTarget)}
+              >
+                {deletingUser ? "Deleting…" : "Delete user"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {deletePaymentLinkTarget ? (
         <div

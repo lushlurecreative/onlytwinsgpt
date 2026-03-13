@@ -4,9 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/admin/leads", label: "Leads" },
+  { href: "/admin", label: "Dashboard" },
   { href: "/admin/customers", label: "Customers" },
+  { href: "/admin/leads", label: "Leads" },
   { href: "/admin/revenue", label: "Revenue" },
+  { href: "/admin/worker", label: "Worker / Jobs" },
+  { href: "/admin/webhook-health", label: "Health" },
+  { href: "/admin/user-reset", label: "User reset tools" },
 ];
 
 export default function AdminNav() {
@@ -15,7 +19,10 @@ export default function AdminNav() {
   return (
     <nav className="admin-nav" aria-label="Admin">
       {NAV.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const active =
+          item.href === "/admin"
+            ? pathname === "/admin"
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
             key={item.href}
@@ -26,6 +33,11 @@ export default function AdminNav() {
           </Link>
         );
       })}
+      <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--line, #333)" }}>
+        <Link href="/login" className="admin-nav-link">
+          Log out
+        </Link>
+      </div>
     </nav>
   );
 }
