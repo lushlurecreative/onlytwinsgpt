@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { useState } from "react";
 
 const NAV = [
   { href: "/admin", label: "Dashboard" },
@@ -12,6 +14,18 @@ const NAV = [
 
 export default function AdminNav() {
   const pathname = usePathname();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      setLoggingOut(false);
+    }
+    window.location.href = "/";
+  }
 
   return (
     <nav className="admin-nav" aria-label="Admin">
@@ -31,9 +45,15 @@ export default function AdminNav() {
         );
       })}
       <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--line, #333)" }}>
-        <Link href="/login" className="admin-nav-link">
-          Log out
-        </Link>
+        <button
+          type="button"
+          className="admin-nav-link"
+          onClick={() => void handleLogout()}
+          disabled={loggingOut}
+          style={{ background: "none", border: "none", cursor: loggingOut ? "wait" : "pointer", width: "100%", textAlign: "left", font: "inherit", padding: 0 }}
+        >
+          {loggingOut ? "Logging out…" : "Log out"}
+        </button>
       </div>
     </nav>
   );
