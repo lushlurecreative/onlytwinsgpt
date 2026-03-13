@@ -78,6 +78,30 @@ export async function POST(request: Request) {
   const stripe = getStripe();
   const serviceCreatorId = getServiceCreatorId();
   const creatorId = auth.user.id;
+
+  const { data: existingProfile } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("id", creatorId)
+    .maybeSingle();
+  if (!existingProfile) {
+    const { error: profileError } = await admin
+      .from("profiles")
+      .upsert(
+        {
+          id: creatorId,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "id" }
+      );
+    if (profileError) {
+      return NextResponse.json(
+        { error: `Could not ensure admin profile exists: ${profileError.message}` },
+        { status: 500 }
+      );
+    }
+  }
+
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? (request.url ? new URL(request.url).origin : "https://onlytwins.dev");
 
