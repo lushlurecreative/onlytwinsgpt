@@ -48,6 +48,10 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
   const [selected, setSelected] = useState<CustomerRow | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<CustomerRow | null>(null);
   const [archiveConfirmText, setArchiveConfirmText] = useState("");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [archivingCustomer, setArchivingCustomer] = useState(false);
+  const [debugEvents, setDebugEvents] = useState<string[]>([]);
   const [sessionEmail, setSessionEmail] = useState<string | null>(initialSessionEmail);
   const [sessionIsAdmin, setSessionIsAdmin] = useState<boolean>(initialIsAdmin);
   const [form, setForm] = useState({
@@ -124,8 +128,14 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
     display: "inline-block",
   };
 
+  function pushDebugEvent(event: string) {
+    const timestamp = new Date().toLocaleTimeString();
+    setDebugEvents((prev) => [`${timestamp} - ${event}`, ...prev].slice(0, 12));
+  }
+
   function startCreate() {
     setSelected(null);
+    setShowEditModal(false);
     setForm({
       email: "",
       fullName: "",
@@ -139,6 +149,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
   }
 
   function startEdit(row: CustomerRow) {
+    pushDebugEvent(`Edit click handler fired for ${row.id}`);
     setSelected(row);
     setForm({
       email: row.email ?? "",
@@ -150,6 +161,8 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
       renewalDate: row.renewalDate ? row.renewalDate.slice(0, 10) : "",
       adminNotes: row.adminNotes ?? "",
     });
+    setShowEditModal(true);
+    setMessage(`Editing customer: ${row.email ?? row.workspaceId}`);
   }
 
   async function createCustomer() {
@@ -178,7 +191,9 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
 
   async function saveCustomer() {
     if (!selected) return;
+    setSavingCustomer(true);
     setMessage("Saving changes...");
+    pushDebugEvent(`PATCH request sent for subscription ${selected.id}`);
     const res = await fetch("/api/admin/customers", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -197,14 +212,29 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
     const json = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
       setMessage(json.error ?? "Failed to update customer");
+      pushDebugEvent(`PATCH failed for ${selected.id}: ${json.error ?? `HTTP ${res.status}`}`);
+      setSavingCustomer(false);
       return;
     }
-    setMessage("Customer updated.");
+    setMessage("Customer updated successfully");
+    pushDebugEvent(`PATCH succeeded for ${selected.id}`);
     await load();
+    setSavingCustomer(false);
+    setShowEditModal(false);
+    setSelected(null);
+  }
+
+  function openArchiveModal(row: CustomerRow) {
+    setArchiveTarget(row);
+    setArchiveConfirmText("");
+    pushDebugEvent(`Archive click handler fired for ${row.id}`);
+    setMessage(`Archive modal opened for: ${row.email ?? row.workspaceId}`);
   }
 
   async function archiveCustomer(row: CustomerRow) {
+    setArchivingCustomer(true);
     setMessage("Archiving customer...");
+    pushDebugEvent(`DELETE archive request sent for subscription ${row.id}`);
     const res = await fetch("/api/admin/customers", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -217,10 +247,14 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
     const json = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
       setMessage(json.error ?? "Failed to archive customer");
+      pushDebugEvent(`Archive failed for ${row.id}: ${json.error ?? `HTTP ${res.status}`}`);
+      setArchivingCustomer(false);
       return;
     }
-    setMessage("Customer archived.");
+    setMessage("Customer archived successfully");
+    pushDebugEvent(`Archive succeeded for ${row.id}`);
     await load();
+    setArchivingCustomer(false);
   }
 
   return (
@@ -245,6 +279,73 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
           Current session email: <strong>{sessionEmail ?? "none"}</strong> · isAdmin: <strong>{String(sessionIsAdmin)}</strong>
         </p>
       </div>
+      <div className="card" style={{ marginBottom: 12, border: "2px solid #6b5cff" }}>
+        <strong>CUSTOMER ACTION DEBUG</strong>
+        <p style={{ margin: "8px 0 0" }}>
+          selectedCustomerId: <strong>{selected?.id ?? "none"}</strong> · editModalOpen:{" "}
+          <strong>{String(showEditModal)}</strong> · saveEnabled:{" "}
+          <strong>{String(Boolean(selected) && !savingCustomer)}</strong>
+        </p>
+        {debugEvents.length > 0 ? (
+          <div style={{ marginTop: 10, display: "grid", gap: 4 }}>
+            {debugEvents.map((event, i) => (
+              <code key={`${event}-${i}`}>{event}</code>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      {showEditModal && selected ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-customer-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowEditModal(false);
+            }
+          }}
+        >
+          <div className="card" style={{ maxWidth: 900, width: "100%", margin: 16, padding: 16 }}>
+            <h3 id="edit-customer-title" style={{ marginTop: 0 }}>
+              Edit customer
+            </h3>
+            <p className="muted" style={{ marginTop: 0 }}>
+              Editing customer: <strong>{selected.email ?? selected.workspaceId}</strong>
+            </p>
+            <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+              <input className="input" placeholder="Customer email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              <input className="input" placeholder="Plan / stripe price id" value={form.plan} onChange={(e) => setForm((f) => ({ ...f, plan: e.target.value }))} />
+              <select className="input" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}>
+                {statusOptions.filter((s) => s !== "all").map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <input className="input" placeholder="Stripe customer id" value={form.stripeCustomerId} onChange={(e) => setForm((f) => ({ ...f, stripeCustomerId: e.target.value }))} />
+              <input className="input" placeholder="Stripe subscription id" value={form.stripeSubscriptionId} onChange={(e) => setForm((f) => ({ ...f, stripeSubscriptionId: e.target.value }))} />
+              <input className="input" type="date" value={form.renewalDate} onChange={(e) => setForm((f) => ({ ...f, renewalDate: e.target.value }))} />
+              <input className="input" placeholder="Full name (optional)" value={form.fullName} onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))} />
+              <input className="input" placeholder="Internal notes" value={form.adminNotes} onChange={(e) => setForm((f) => ({ ...f, adminNotes: e.target.value }))} />
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+              <button className="btn btn-ghost" type="button" onClick={() => setShowEditModal(false)}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={() => void saveCustomer()} type="button" disabled={savingCustomer || !selected}>
+                {savingCustomer ? "Saving..." : "Save customer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {archiveTarget ? (
         <div
           role="dialog"
@@ -299,7 +400,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
               <button
                 className="btn btn-primary"
                 type="button"
-                disabled={archiveConfirmText.trim().toUpperCase() !== "ARCHIVE"}
+                disabled={archiveConfirmText.trim().toUpperCase() !== "ARCHIVE" || archivingCustomer}
                 onClick={() => {
                   if (!archiveTarget) return;
                   void archiveCustomer(archiveTarget);
@@ -307,7 +408,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
                   setArchiveConfirmText("");
                 }}
               >
-                Archive customer
+                {archivingCustomer ? "Archiving..." : "Archive customer"}
               </button>
             </div>
           </div>
@@ -337,7 +438,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
                 <code>{row.workspaceId}</code>
                 <a href={`/admin/customers/${row.workspaceId}`} style={hardBtnStyle}>View</a>
                 <button style={hardBtnStyle} type="button" onClick={() => startEdit(row)}>Edit</button>
-                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setArchiveTarget(row)}>
+                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => openArchiveModal(row)}>
                   Archive
                 </button>
               </div>
@@ -347,7 +448,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
       </div>
 
       <div className="card" style={{ marginBottom: 12 }}>
-        <h3 style={{ marginTop: 0 }}>Admin controls</h3>
+        <h3 style={{ marginTop: 0 }}>Add customer</h3>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
           <button className="btn btn-primary" onClick={startCreate} type="button">Add customer</button>
           <button className="btn btn-ghost" onClick={() => void load()} type="button">Refresh</button>
@@ -367,14 +468,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
           <input className="input" placeholder="Internal notes" value={form.adminNotes} onChange={(e) => setForm((f) => ({ ...f, adminNotes: e.target.value }))} />
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-          {selected ? (
-            <>
-              <button className="btn btn-primary" onClick={() => void saveCustomer()} type="button">Save customer</button>
-              <button className="btn btn-ghost" onClick={startCreate} type="button">Clear edit</button>
-            </>
-          ) : (
-            <button className="btn btn-primary" onClick={() => void createCustomer()} type="button">Create customer</button>
-          )}
+          <button className="btn btn-primary" onClick={() => void createCustomer()} type="button">Create customer</button>
         </div>
       </div>
 
@@ -402,7 +496,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
                 <strong>{row.email ?? row.workspaceId}</strong>
                 <a href={`/admin/customers/${row.workspaceId}`} style={hardBtnStyle}>View</a>
                 <button style={hardBtnStyle} type="button" onClick={() => startEdit(row)}>Edit</button>
-                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setArchiveTarget(row)}>
+                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => openArchiveModal(row)}>
                   Archive
                 </button>
               </div>
@@ -450,7 +544,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
                           className="btn btn-ghost"
                           type="button"
                           style={{ color: "var(--error, #e5534b)" }}
-                          onClick={() => setArchiveTarget(row)}
+                          onClick={() => openArchiveModal(row)}
                         >
                           Archive
                         </button>
@@ -484,7 +578,7 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
                   >
                     Edit
                   </button>
-                  <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => setArchiveTarget(row)}>
+                  <button className="btn btn-ghost" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => openArchiveModal(row)}>
                     Archive
                   </button>
                 </div>

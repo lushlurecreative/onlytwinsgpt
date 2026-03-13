@@ -304,6 +304,7 @@ export async function PATCH(request: Request) {
   if ("error" in auth) return auth.error;
 
   const admin = getSupabaseAdmin();
+  const serviceCreatorId = getServiceCreatorId();
   const body = (await request.json().catch(() => ({}))) as {
     subscriptionId?: string;
     subscriberId?: string;
@@ -333,12 +334,15 @@ export async function PATCH(request: Request) {
   if (body.renewalDate !== undefined) subPatch.current_period_end = body.renewalDate || null;
   if (body.adminNotes !== undefined) subPatch.admin_notes = body.adminNotes ?? null;
 
-  let q = admin.from("subscriptions").update(subPatch);
+  let q = admin.from("subscriptions").update(subPatch).eq("creator_id", serviceCreatorId).is("archived_at", null);
   if (subscriptionId) q = q.eq("id", subscriptionId);
-  else q = q.eq("subscriber_id", subscriberId).is("archived_at", null);
+  else q = q.eq("subscriber_id", subscriberId);
   const { data: updated, error } = await q.select("id, subscriber_id").limit(1).maybeSingle();
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+  if (!updated) {
+    return NextResponse.json({ error: "No active customer subscription was found to update." }, { status: 404 });
   }
 
   const targetSubscriberId = subscriberId || (updated as { subscriber_id?: string } | null)?.subscriber_id || "";
@@ -351,7 +355,7 @@ export async function PATCH(request: Request) {
       await admin.from("profiles").upsert({ id: targetSubscriberId, ...profilePatch }, { onConflict: "id" });
     }
   }
-  return NextResponse.json({ ok: true }, { status: 200 });
+  return NextResponse.json({ ok: true, updatedSubscriptionId: updated.id }, { status: 200 });
 }
 
 export async function DELETE(request: Request) {
@@ -372,15 +376,23 @@ export async function DELETE(request: Request) {
   if (!subscriptionId && !subscriberId) {
     return NextResponse.json({ error: "subscriptionId or subscriberId is required." }, { status: 400 });
   }
-  let q = admin.from("subscriptions").update({
-    status: "canceled",
-    canceled_at: new Date().toISOString(),
-    archived_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  });
+  const serviceCreatorId = getServiceCreatorId();
+  let q = admin
+    .from("subscriptions")
+    .update({
+      status: "canceled",
+      canceled_at: new Date().toISOString(),
+      archived_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("creator_id", serviceCreatorId)
+    .is("archived_at", null);
   if (subscriptionId) q = q.eq("id", subscriptionId);
-  else q = q.eq("subscriber_id", subscriberId).is("archived_at", null);
-  const { error } = await q;
+  else q = q.eq("subscriber_id", subscriberId);
+  const { data: archived, error } = await q.select("id").limit(1).maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ ok: true }, { status: 200 });
+  if (!archived) {
+    return NextResponse.json({ error: "No active customer subscription was found to archive." }, { status: 404 });
+  }
+  return NextResponse.json({ ok: true, archivedSubscriptionId: archived.id }, { status: 200 });
 }

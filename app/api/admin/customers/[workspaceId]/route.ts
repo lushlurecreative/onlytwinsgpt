@@ -52,14 +52,20 @@ export async function PATCH(request: Request, { params }: Params) {
   if (body.adminNotes !== undefined) patch.admin_notes = body.adminNotes ?? null;
 
   if (Object.keys(patch).length > 0) {
-    const { error: subError } = await admin
+    const { data: updatedSub, error: subError } = await admin
       .from("subscriptions")
       .update(patch)
       .eq("creator_id", serviceCreatorId)
       .eq("subscriber_id", workspaceId)
-      .is("archived_at", null);
+      .is("archived_at", null)
+      .select("id")
+      .limit(1)
+      .maybeSingle();
     if (subError) {
       return NextResponse.json({ error: subError.message }, { status: 400 });
+    }
+    if (!updatedSub) {
+      return NextResponse.json({ error: "No active customer subscription found for this workspace." }, { status: 404 });
     }
   }
 
@@ -85,7 +91,7 @@ export async function DELETE(request: Request, { params }: Params) {
   if ((body.confirmText ?? "").trim().toUpperCase() !== "ARCHIVE") {
     return NextResponse.json({ error: "Confirmation text ARCHIVE is required." }, { status: 400 });
   }
-  const { error } = await admin
+  const { data: archivedSub, error } = await admin
     .from("subscriptions")
     .update({
       status: "canceled",
@@ -95,8 +101,14 @@ export async function DELETE(request: Request, { params }: Params) {
     })
     .eq("creator_id", serviceCreatorId)
     .eq("subscriber_id", workspaceId)
-    .is("archived_at", null);
+    .is("archived_at", null)
+    .select("id")
+    .limit(1)
+    .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ ok: true }, { status: 200 });
+  if (!archivedSub) {
+    return NextResponse.json({ error: "No active customer subscription found to archive." }, { status: 404 });
+  }
+  return NextResponse.json({ ok: true, archivedSubscriptionId: archivedSub.id }, { status: 200 });
 }
 
