@@ -55,7 +55,6 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
   const [sessionEmail, setSessionEmail] = useState<string | null>(initialSessionEmail);
   const [sessionIsAdmin, setSessionIsAdmin] = useState<boolean>(initialIsAdmin);
   const [deleteAccountTarget, setDeleteAccountTarget] = useState<RecentAccount | null>(null);
-  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
   const addCustomerSectionRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState({
@@ -671,43 +670,30 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
           onClick={(e) => {
             if (e.target === e.currentTarget && !deletingAccount) {
               setDeleteAccountTarget(null);
-              setDeleteAccountConfirm("");
             }
           }}
         >
           <div className="card" style={{ maxWidth: 480, width: "100%", margin: 16, padding: 16 }}>
             <h3 id="delete-account-title" style={{ marginTop: 0 }}>Delete recent account</h3>
             <p className="muted" style={{ marginTop: 0 }}>
-              This permanently removes the auth account and profile for this signup. They will no longer appear in Recent accounts.
+              This is permanent. The auth account and profile for this signup will be removed. They will no longer appear in Recent accounts.
             </p>
             <p style={{ marginTop: 0 }}>
               Account: <strong>{deleteAccountTarget.email ?? deleteAccountTarget.id.slice(0, 8)}</strong>
             </p>
-            <label style={{ display: "grid", gap: 6 }}>
-              <span className="muted">Type DELETE to confirm</span>
-              <input
-                className="input"
-                value={deleteAccountConfirm}
-                onChange={(e) => setDeleteAccountConfirm(e.target.value)}
-                placeholder="DELETE"
-              />
-            </label>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
               <button
                 className="btn btn-ghost"
                 type="button"
                 disabled={deletingAccount}
-                onClick={() => {
-                  setDeleteAccountTarget(null);
-                  setDeleteAccountConfirm("");
-                }}
+                onClick={() => setDeleteAccountTarget(null)}
               >
                 Cancel
               </button>
               <button
                 className="btn btn-primary"
                 type="button"
-                disabled={deletingAccount || deleteAccountConfirm !== "DELETE"}
+                disabled={deletingAccount}
                 style={{ background: "var(--error, #e5534b)", borderColor: "var(--error, #e5534b)" }}
                 onClick={async () => {
                   setDeletingAccount(true);
@@ -719,7 +705,6 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
                       return;
                     }
                     setDeleteAccountTarget(null);
-                    setDeleteAccountConfirm("");
                     await load();
                   } finally {
                     setDeletingAccount(false);
