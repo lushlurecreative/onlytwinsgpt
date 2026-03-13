@@ -87,13 +87,7 @@ export async function POST(request: Request) {
   if (!existingProfile) {
     const { error: profileError } = await admin
       .from("profiles")
-      .upsert(
-        {
-          id: creatorId,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "id" }
-      );
+      .upsert({ id: creatorId }, { onConflict: "id" });
     if (profileError) {
       return NextResponse.json(
         { error: `Could not ensure admin profile exists: ${profileError.message}` },
