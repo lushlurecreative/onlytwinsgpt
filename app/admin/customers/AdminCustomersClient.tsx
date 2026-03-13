@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type CustomerRow = {
   id: string;
@@ -54,6 +54,10 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
   const [debugEvents, setDebugEvents] = useState<string[]>([]);
   const [sessionEmail, setSessionEmail] = useState<string | null>(initialSessionEmail);
   const [sessionIsAdmin, setSessionIsAdmin] = useState<boolean>(initialIsAdmin);
+  const [deleteAccountTarget, setDeleteAccountTarget] = useState<RecentAccount | null>(null);
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const addCustomerSectionRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState({
     email: "",
     fullName: "",
@@ -447,10 +451,9 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
         )}
       </div>
 
-      <div className="card" style={{ marginBottom: 12 }}>
+      <div className="card" style={{ marginBottom: 12 }} ref={addCustomerSectionRef}>
         <h3 style={{ marginTop: 0 }}>Add customer</h3>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-          <button className="btn btn-primary" onClick={startCreate} type="button">Add customer</button>
           <button className="btn btn-ghost" onClick={() => void load()} type="button">Refresh</button>
         </div>
         <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
@@ -472,6 +475,8 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
         </div>
       </div>
 
+      <h2 style={{ marginTop: 24, marginBottom: 8, fontSize: "1.25rem" }}>A. Real customers</h2>
+      <p className="muted" style={{ marginTop: 0, marginBottom: 10 }}>Subscription-backed customers. Edit and archive from the table below.</p>
       <div style={{ display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
         <input className="input" placeholder="Search customers" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
@@ -588,16 +593,18 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
         </div>
       ) : null}
 
+      <h2 style={{ marginTop: 32, marginBottom: 8, fontSize: "1.25rem" }}>B. Recent accounts</h2>
+      <p className="muted" style={{ marginTop: 0, marginBottom: 10 }}>Raw signups (not customer source-of-truth). Use View, Delete, or Convert to customer below.</p>
       {recentAccounts.length > 0 ? (
-        <div style={{ marginTop: 20 }}>
-          <h3 style={{ marginBottom: 8 }}>Recent accounts (not customer source-of-truth)</h3>
+        <div style={{ marginTop: 4 }}>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ borderCollapse: "collapse", minWidth: 620, width: "100%" }}>
+            <table style={{ borderCollapse: "collapse", minWidth: 720, width: "100%" }}>
               <thead>
                 <tr>
                   <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Email</th>
                   <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Signed up</th>
                   <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8 }}>Conversion</th>
+                  <th style={{ textAlign: "left", borderBottom: "1px solid #333", padding: 8, background: "var(--surface, #fff)" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -606,10 +613,122 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
                     <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{a.email ?? a.id.slice(0, 8)}</td>
                     <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{new Date(a.created_at).toLocaleString()}</td>
                     <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{a.isCustomer ? "Converted customer" : "Unconverted signup"}</td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222", whiteSpace: "nowrap", background: "var(--surface, #fff)" }}>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <Link className="btn btn-ghost" href={`/admin/customers/${a.id}`}>
+                          View
+                        </Link>
+                        {!a.isCustomer ? (
+                          <>
+                            <button
+                              className="btn btn-ghost"
+                              type="button"
+                              onClick={() => {
+                                setForm((f) => ({ ...f, email: a.email ?? "" }));
+                                addCustomerSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+                              }}
+                            >
+                              Convert to customer
+                            </button>
+                            <button
+                              className="btn btn-ghost"
+                              type="button"
+                              style={{ color: "var(--error, #e5534b)" }}
+                              onClick={() => setDeleteAccountTarget(a)}
+                            >
+                              Delete
+                            </button>
+                          </>
+                        ) : (
+                          <span className="muted" style={{ fontSize: "0.9rem" }}>Use customer Archive above</span>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      ) : (
+        <p className="muted" style={{ marginTop: 4 }}>No recent accounts.</p>
+      )}
+
+      {deleteAccountTarget ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-account-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !deletingAccount) {
+              setDeleteAccountTarget(null);
+              setDeleteAccountConfirm("");
+            }
+          }}
+        >
+          <div className="card" style={{ maxWidth: 480, width: "100%", margin: 16, padding: 16 }}>
+            <h3 id="delete-account-title" style={{ marginTop: 0 }}>Delete recent account</h3>
+            <p className="muted" style={{ marginTop: 0 }}>
+              This permanently removes the auth account and profile for this signup. They will no longer appear in Recent accounts.
+            </p>
+            <p style={{ marginTop: 0 }}>
+              Account: <strong>{deleteAccountTarget.email ?? deleteAccountTarget.id.slice(0, 8)}</strong>
+            </p>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Type DELETE to confirm</span>
+              <input
+                className="input"
+                value={deleteAccountConfirm}
+                onChange={(e) => setDeleteAccountConfirm(e.target.value)}
+                placeholder="DELETE"
+              />
+            </label>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+              <button
+                className="btn btn-ghost"
+                type="button"
+                disabled={deletingAccount}
+                onClick={() => {
+                  setDeleteAccountTarget(null);
+                  setDeleteAccountConfirm("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                type="button"
+                disabled={deletingAccount || deleteAccountConfirm !== "DELETE"}
+                style={{ background: "var(--error, #e5534b)", borderColor: "var(--error, #e5534b)" }}
+                onClick={async () => {
+                  setDeletingAccount(true);
+                  try {
+                    const res = await fetch(`/api/admin/users/${deleteAccountTarget.id}`, { method: "DELETE" });
+                    const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+                    if (!res.ok) {
+                      setMessage(json.error ?? "Delete failed");
+                      return;
+                    }
+                    setDeleteAccountTarget(null);
+                    setDeleteAccountConfirm("");
+                    await load();
+                  } finally {
+                    setDeletingAccount(false);
+                  }
+                }}
+              >
+                {deletingAccount ? "Deleting..." : "Delete account"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
