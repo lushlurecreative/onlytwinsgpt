@@ -170,7 +170,6 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
     if (pa !== pb) return pa.localeCompare(pb);
     return (b.score ?? 0) - (a.score ?? 0) || new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
-  const debugRows = rows.slice(0, 5);
   const hardBtnStyle = {
     border: "2px solid #111",
     background: "#fff",
@@ -510,26 +509,6 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
 
   return (
     <div>
-      <div
-        style={{
-          background: "#ffef5a",
-          color: "#1b1b1b",
-          border: "2px solid #d4b400",
-          borderRadius: 10,
-          padding: "10px 12px",
-          fontWeight: 800,
-          letterSpacing: "0.02em",
-          marginBottom: 12,
-        }}
-      >
-        ADMIN LEAD CONTROLS ACTIVE
-      </div>
-      <div className="card" style={{ marginBottom: 12, border: "2px solid #08a0ff" }}>
-        <strong>ADMIN SESSION DEBUG</strong>
-        <p style={{ margin: "8px 0 0" }}>
-          Current session email: <strong>{sessionEmail ?? "none"}</strong> · isAdmin: <strong>{String(sessionIsAdmin)}</strong>
-        </p>
-      </div>
       {outreachPreview ? (
         <div
           role="dialog"
@@ -906,48 +885,6 @@ export default function AdminLeadsClient({ initialSessionEmail, initialIsAdmin }
         {message ? <p style={{ marginTop: 10 }}>{message}</p> : null}
         {loading ? <p>Loading...</p> : null}
         {!loading && rows.length === 0 ? <p className="muted">No leads yet. Click Run scrape to fetch leads from Reddit.</p> : null}
-      </div>
-      <div className="card" style={{ marginTop: 12, border: "2px solid #d4b400" }}>
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>ADMIN LEAD CONTROLS DEBUG</h3>
-        <p style={{ marginTop: 0 }}>
-          Total leads loaded: <strong>{rows.length}</strong>
-        </p>
-        {debugRows.length === 0 ? (
-          <p className="muted" style={{ marginBottom: 0 }}>No lead rows loaded yet.</p>
-        ) : (
-          <div style={{ display: "grid", gap: 8 }}>
-            {debugRows.map((row) => (
-              <div key={`debug-lead-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
-                <strong>{row.handle}</strong>
-                <code>{row.id}</code>
-                <span className="muted">{row.email ?? row.platform}</span>
-                <button style={hardBtnStyle} type="button" onClick={() => openEditLeadModal(row)}>Edit</button>
-                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setShowArchiveLeadModal(row)}>
-                  Archive
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="card" style={{ marginTop: 12, border: "2px dashed #d4b400" }}>
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Temporary lead action test bar</h3>
-        {rows.length === 0 ? (
-          <p className="muted" style={{ marginBottom: 0 }}>{loading ? "Loading leads..." : "No lead rows available."}</p>
-        ) : (
-          <div style={{ display: "grid", gap: 8 }}>
-            {rows.map((row) => (
-              <div key={`test-lead-${row.id}`} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--line)", paddingBottom: 8 }}>
-                <strong>{row.handle}</strong>
-                <span className="muted">{row.email ?? row.platform}</span>
-                <button style={hardBtnStyle} type="button" onClick={() => openEditLeadModal(row)}>Edit</button>
-                <button type="button" style={{ ...hardBtnStyle, color: "#a40000", borderColor: "#a40000" }} onClick={() => setShowArchiveLeadModal(row)}>
-                  Archive
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {!loading && sorted.length > 0 ? (

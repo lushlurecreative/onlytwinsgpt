@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { isAdminUser } from "@/lib/admin";
-import { getServiceCreatorId } from "@/lib/service-creator";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -29,12 +28,11 @@ export async function GET(_request: Request, { params }: Params) {
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
   const admin = getSupabaseAdmin();
-  const serviceCreatorId = getServiceCreatorId();
   const { data, error } = await admin
     .from("admin_payment_links")
     .select("id, email, plan, checkout_url, full_name, admin_notes, created_at")
     .eq("id", id)
-    .eq("creator_id", serviceCreatorId)
+    .eq("creator_id", auth.user.id)
     .maybeSingle();
 
   if (error || !data) {
@@ -61,12 +59,11 @@ export async function DELETE(_request: Request, { params }: Params) {
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
   const admin = getSupabaseAdmin();
-  const serviceCreatorId = getServiceCreatorId();
   const { error } = await admin
     .from("admin_payment_links")
     .delete()
     .eq("id", id)
-    .eq("creator_id", serviceCreatorId);
+    .eq("creator_id", auth.user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true }, { status: 200 });

@@ -7,10 +7,7 @@ const NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/customers", label: "Customers" },
   { href: "/admin/leads", label: "Leads" },
-  { href: "/admin/revenue", label: "Revenue" },
-  { href: "/admin/worker", label: "Worker / Jobs" },
-  { href: "/admin/webhook-health", label: "Health" },
-  { href: "/admin/user-reset", label: "User reset tools" },
+  { href: "/admin/revenue", label: "Billing / Revenue" },
 ];
 
 export default function AdminNav() {

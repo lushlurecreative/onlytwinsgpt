@@ -22,17 +22,16 @@ async function requireAdmin() {
   return { user };
 }
 
-/** GET: List pending payment links for the service creator. Admin only. */
+/** GET: List pending payment links created by this admin. Admin only. creator_id = admin's profile id. */
 export async function GET() {
   const auth = await requireAdmin();
   if ("error" in auth) return auth.error;
   const admin = getSupabaseAdmin();
-  const serviceCreatorId = getServiceCreatorId();
 
   const { data: rows, error } = await admin
     .from("admin_payment_links")
     .select("id, email, plan, checkout_url, full_name, admin_notes, created_at, stripe_checkout_session_id")
-    .eq("creator_id", serviceCreatorId)
+    .eq("creator_id", auth.user.id)
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -52,7 +51,7 @@ export async function GET() {
   return NextResponse.json({ paymentLinks: list }, { status: 200 });
 }
 
-/** POST: Create a pay-now checkout session and store the link. Admin only. */
+/** POST: Create a pay-now checkout session and store the link. Admin only. Uses admin's profile id as creator_id (FK). */
 export async function POST(request: Request) {
   const auth = await requireAdmin();
   if ("error" in auth) return auth.error;
@@ -78,6 +77,7 @@ export async function POST(request: Request) {
   const admin = getSupabaseAdmin();
   const stripe = getStripe();
   const serviceCreatorId = getServiceCreatorId();
+  const creatorId = auth.user.id;
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ?? (request.url ? new URL(request.url).origin : "https://onlytwins.dev");
 
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
   const { data: inserted, error } = await admin
     .from("admin_payment_links")
     .insert({
-      creator_id: serviceCreatorId,
+      creator_id: creatorId,
       email,
       plan: planRaw,
       stripe_checkout_session_id: session.id,
