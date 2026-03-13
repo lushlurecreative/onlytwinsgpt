@@ -86,7 +86,10 @@ export default function AdminCustomersClient({ initialSessionEmail, initialIsAdm
   }
 
   useEffect(() => {
-    void load();
+    const tid = setTimeout(() => {
+      load();
+    }, 0);
+    return () => clearTimeout(tid);
   }, []);
 
   useEffect(() => {

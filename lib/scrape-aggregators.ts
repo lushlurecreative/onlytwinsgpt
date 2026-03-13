@@ -264,7 +264,7 @@ async function scrapeOnlyFinderPage(
     const href = $el.attr("href") ?? "";
     const text = $el.text().trim();
 
-    let username =
+    const username =
       extractUsernameFromLinkText(text) ?? extractUsernameFromEncodedUrl(href);
     if (!username || seen.has(username.toLowerCase())) return;
     seen.add(username.toLowerCase());
