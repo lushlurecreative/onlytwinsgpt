@@ -2,8 +2,31 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { checkRateLimit, getClientIpFromHeaders } from "@/lib/rate-limit";
 import { RATE_LIMITS } from "@/lib/security-config";
+import { isAdminUser } from "@/lib/admin";
 
 const PROTECTED_ROUTES = ["/upload", "/admin"];
+
+/** Customer shell routes: redirect authenticated admins to /admin so they get admin experience. */
+const CUSTOMER_ROUTES = [
+  "/",
+  "/dashboard",
+  "/vault",
+  "/billing",
+  "/me",
+  "/requests",
+  "/subjects",
+  "/creator",
+  "/library",
+  "/training-vault",
+  "/upload",
+];
+
+function isCustomerRoute(pathname: string): boolean {
+  const p = pathname.replace(/\/$/, "") || "/";
+  if (CUSTOMER_ROUTES.includes(p)) return true;
+  if (p.startsWith("/onboarding/")) return true;
+  return false;
+}
 
 function applySecurityHeaders(response: NextResponse) {
   response.headers.set("X-Frame-Options", "DENY");
@@ -82,6 +105,31 @@ export async function proxy(request: NextRequest) {
           { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } }
         )
       );
+    }
+  }
+
+  if (isCustomerRoute(pathname)) {
+    const supabaseCustomer = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              response.cookies.set(name, value, (options as Record<string, unknown>) ?? {})
+            );
+          },
+        },
+      }
+    );
+    const {
+      data: { user: customerUser },
+    } = await supabaseCustomer.auth.getUser();
+    if (customerUser && isAdminUser(customerUser.id, customerUser.email)) {
+      return applySecurityHeaders(NextResponse.redirect(new URL("/admin", request.url)));
     }
   }
 
