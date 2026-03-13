@@ -20,11 +20,14 @@ function LoginPageInner() {
     const checkExistingSession = async () => {
       const { data } = await supabase.auth.getUser();
       if (data.user) {
-        window.location.replace("/dashboard");
+        const sessionRes = await fetch("/api/admin/session", { cache: "no-store" });
+        const sessionJson = (await sessionRes.json().catch(() => ({}))) as { isAdmin?: boolean };
+        const isAdmin = !!sessionJson.isAdmin;
+        window.location.replace(isAdmin ? "/admin" : (searchParams.get("redirectTo") ?? "/dashboard"));
       }
     };
     void checkExistingSession();
-  }, []);
+  }, [searchParams]);
 
   function doRedirect() {
     const url = redirectTo + (redirectTo.includes("?") ? "&" : "?") + "_=" + Date.now();
@@ -40,7 +43,9 @@ function LoginPageInner() {
     }
     setMsg("✅ Signup OK.");
     if (data.session) {
-      setTimeout(doRedirect, 400);
+      const sessionRes = await fetch("/api/admin/session", { cache: "no-store" });
+      const sessionJson = (await sessionRes.json().catch(() => ({}))) as { isAdmin?: boolean };
+      window.location.replace(sessionJson.isAdmin ? "/admin" : redirectTo || "/dashboard");
     } else {
       setMsg("✅ Check your email to confirm, then sign in.");
     }
@@ -54,7 +59,9 @@ function LoginPageInner() {
       return;
     }
     setMsg("✅ Signed in.");
-    setTimeout(doRedirect, 400);
+    const sessionRes = await fetch("/api/admin/session", { cache: "no-store" });
+    const sessionJson = (await sessionRes.json().catch(() => ({}))) as { isAdmin?: boolean };
+    window.location.replace(sessionJson.isAdmin ? "/admin" : redirectTo || "/dashboard");
   }
 
   async function continueWithGoogle() {
@@ -62,7 +69,7 @@ function LoginPageInner() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+        redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(redirectTo || "/dashboard")}`,
       },
     });
     if (error) {

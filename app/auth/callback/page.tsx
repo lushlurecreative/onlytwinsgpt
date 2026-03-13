@@ -18,7 +18,10 @@ export default function AuthCallback() {
 
       if (data.session) {
         await fetch("/api/thank-you/complete", { method: "POST" }).catch(() => null);
-        router.replace(next);
+        const sessionRes = await fetch("/api/admin/session", { cache: "no-store" });
+        const sessionJson = (await sessionRes.json().catch(() => ({}))) as { isAdmin?: boolean };
+        const isAdmin = !!sessionJson.isAdmin;
+        router.replace(isAdmin ? "/admin" : next);
       } else {
         router.replace("/login?error=oauth");
       }

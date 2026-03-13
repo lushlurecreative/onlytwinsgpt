@@ -31,7 +31,11 @@ export default function ThankYouPage() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
-      if (data?.user) router.replace("/dashboard");
+      if (data?.user) {
+        const sessionRes = await fetch("/api/admin/session", { cache: "no-store" });
+        const sessionJson = (await sessionRes.json().catch(() => ({}))) as { isAdmin?: boolean };
+        router.replace(sessionJson.isAdmin ? "/admin" : "/dashboard");
+      }
     })();
   }, [router, supabase]);
 
