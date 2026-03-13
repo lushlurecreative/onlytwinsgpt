@@ -333,8 +333,38 @@ export default function AdminCustomersClient({ initialSessionEmail: _initialSess
     setArchiveConfirmText("");
   }
 
-  function copyToClipboard(text: string) {
-    void navigator.clipboard.writeText(text).then(() => setMessage("Link copied to clipboard."));
+  async function copyToClipboard(text: string) {
+    if (!text?.trim()) {
+      setMessage("No link to copy.");
+      return;
+    }
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        setMessage("Link copied.");
+        return;
+      }
+    } catch {
+      // Fall through to fallback
+    }
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      if (ok) {
+        setMessage("Link copied.");
+      } else {
+        setMessage("Copy failed. Select the link above and copy manually.");
+      }
+    } catch {
+      setMessage("Copy failed. Select the link above and copy manually.");
+    }
   }
 
   return (
@@ -404,7 +434,7 @@ export default function AdminCustomersClient({ initialSessionEmail: _initialSess
               <button
                 className="btn btn-primary"
                 type="button"
-                onClick={() => copyToClipboard(createdPaymentLink.url)}
+                onClick={() => void copyToClipboard(createdPaymentLink.url)}
               >
                 Copy link
               </button>
@@ -462,7 +492,7 @@ export default function AdminCustomersClient({ initialSessionEmail: _initialSess
                         <button
                           className="btn btn-ghost"
                           type="button"
-                          onClick={() => copyToClipboard(pl.checkoutUrl!)}
+                          onClick={() => void copyToClipboard(pl.checkoutUrl ?? "")}
                         >
                           Copy pay link
                         </button>

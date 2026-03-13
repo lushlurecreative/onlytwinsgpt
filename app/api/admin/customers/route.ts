@@ -83,11 +83,21 @@ export async function GET(request: Request) {
       profileMap.set(row.id, { full_name: row.full_name, stripe_customer_id: row.stripe_customer_id });
     }
     try {
-      const { data } = await admin.auth.admin.listUsers({ perPage: 500 });
-      for (const u of data?.users ?? []) {
-        if (subscriberIds.includes(u.id)) {
-          emailMap.set(u.id, u.email ?? null);
+      // Paginate through auth users so we get email for every subscriber (not just first 500).
+      // Otherwise newly paid customers can be missing from emailMap and stay in "Awaiting payment".
+      let page = 1;
+      const perPage = 1000;
+      const maxPages = 10;
+      while (page <= maxPages) {
+        const { data } = await admin.auth.admin.listUsers({ perPage, page });
+        const users = data?.users ?? [];
+        for (const u of users) {
+          if (subscriberIds.includes(u.id)) {
+            emailMap.set(u.id, u.email ?? null);
+          }
         }
+        if (users.length < perPage) break;
+        page++;
       }
     } catch {
       // ignore auth admin listing failures
