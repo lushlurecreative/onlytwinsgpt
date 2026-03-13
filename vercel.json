@@ -16,11 +16,11 @@
     },
     {
       "path": "/api/cron/process-customer-generation",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 12 * * *"
     },
     {
       "path": "/api/cron/monthly-customer-generation",
-      "schedule": "0 * * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }
