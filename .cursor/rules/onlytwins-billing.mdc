@@ -1,0 +1,98 @@
+---
+description: OnlyTwins billing rules — Stripe checkout, webhook idempotency, subscriptions, entitlements
+alwaysApply: true
+---
+
+# Billing Rules
+
+## Before touching billing code
+
+Read ALL of:
+- `app/api/billing/checkout/route.ts`
+- `app/api/billing/webhook/route.ts`
+- `lib/stripe.ts`
+- `lib/package-plans.ts`
+- `lib/plan-entitlements.ts`
+- `lib/stripe-price-for-plan.ts`
+- `supabase/migrations/202602150004_create_subscriptions_table.sql`
+- `supabase/migrations/202602150005_add_stripe_columns.sql`
+- `supabase/migrations/202602150006_create_stripe_webhook_events_table.sql`
+- `supabase/migrations/202603100002_expand_subscription_statuses.sql`
+
+## Source of truth
+
+Stripe is authoritative. `subscriptions` table is a mirror.
+**Never write to `subscriptions` from any route except `app/api/billing/webhook/route.ts`.**
+
+## Webhook idempotency (mandatory)
+
+```
+1. lockStripeEvent(event) — INSERT into stripe_webhook_events
+   - PG 23505 (duplicate) → return 200 immediately, skip processing
+   - PG 42P01 (missing table) → throw (cannot guarantee idempotency)
+2. Process event
+3. markStripeEventProcessed(event.id)
+```
+
+If `stripe_webhook_events` does not exist, refuse to process.
+
+## Plans (lib/package-plans.ts)
+
+| Key | Price | Mode |
+|---|---|---|
+| `starter` | $299/mo | subscription |
+| `professional` | $599/mo | subscription |
+| `elite` | $1,299/mo | subscription |
+| `single_batch` | $399 | payment |
+| `partner_70_30` | $100/mo | subscription |
+| `partner_50_50` | $1/mo | subscription |
+
+Price IDs resolved from env vars: `STRIPE_PRICE_ID_STARTER`, `STRIPE_PRICE_ID_PROFESSIONAL`, etc.
+Map price ID → plan key via `getPlanKeyForStripePriceId()` in `lib/plan-entitlements.ts`.
+
+## Entitlements (lib/plan-entitlements.ts)
+
+| Plan | Images/mo | Videos/mo |
+|---|---|---|
+| starter | 45 | 5 |
+| professional | 90 | 15 |
+| elite | 200 | 35 |
+| single_batch | 45 | 0 |
+| partner_70_30 | 45 | 5 |
+| partner_50_50 | 90 | 15 |
+
+**Always check entitlements server-side.** Never trust client-side plan claims.
+Use `getCurrentSubscriptionSummary(admin, userId)` from `lib/request-planner.ts`.
+
+## Subscription status values
+
+Allowed in `subscriptions.status`:
+`active`, `trialing`, `past_due`, `canceled`, `expired`, `incomplete`, `needs_review`
+
+Stripe `unpaid` → maps to `past_due` in DB.
+`customer.subscription.deleted` event → always `canceled` regardless of Stripe status.
+
+## stripe_customer_id
+
+Stored on `profiles.stripe_customer_id`. Links Supabase user to Stripe customer.
+- Set by webhook when `checkout.session.completed` fires
+- Required before creating portal session (`/api/billing/portal` creates it if missing)
+
+## Checkout metadata
+
+Plan checkout sets: `source`, `plan`, `creator_id` (service creator), `subscriber_id`, optionally `lead_id`.
+Creator subscription sets: `creator_id`, `subscriber_id`.
+Admin payment link sets: `source = "admin_pay_link"`, `plan`, `creator_id`, optionally `lead_id`.
+
+## Webhook events handled
+
+- `checkout.session.completed` — provision user, profile, subscription
+- `customer.subscription.created/updated/deleted` — sync subscription status
+- `invoice.payment_failed` — mark `past_due`, log to `revenue_events`, log to `system_events`
+
+## Billing rules for UI
+
+- Never show Stripe IDs, price IDs, or subscription IDs to customers
+- Never use "invoice", "subscription object", "customer portal" in customer-facing copy
+- "Payment issue — please update your billing details" not "status: past_due"
+- Use `/billing` page for customer self-service (links to Stripe portal)

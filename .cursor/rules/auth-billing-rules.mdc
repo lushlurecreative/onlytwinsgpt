@@ -1,0 +1,68 @@
+---
+description: Auth and billing rules — inspect before touching these flows
+alwaysApply: true
+---
+
+# Auth & Billing Rules
+
+## Before Touching Auth Code
+
+Always inspect:
+- `proxy.ts` — middleware, route protection, admin redirect logic
+- `app/login/` — login page and form
+- `app/auth/callback/` — OAuth callback handler
+- `app/logout/` — logout page
+- `lib/admin.ts` — `isAdminUser()` implementation
+- `lib/roles.ts` — role utilities
+
+### Auth Architecture
+- Supabase Auth with cookie-based sessions (`@supabase/ssr`)
+- `proxy.ts` is the single enforcement point for route protection
+- Admin detection: `isAdminUser(userId, email)` checks against `ADMIN_OWNER_EMAILS` env var
+- Admin users hitting customer routes (`/`, `/dashboard`, `/vault`, etc.) are redirected to `/admin`
+- Customers hitting `/admin/**` are redirected to `/`
+- `/upload` and `/admin/**` require authenticated session — unauthenticated → `/login`
+- OAuth code exchange: `/` with `?code=` param → redirect to `/auth/callback`
+
+### Session Handling Rules
+- Never create a second auth session source — `proxy.ts` is the authority
+- Cookie name for checkout session: `ot_checkout_sid`
+- Never expose session tokens to the client unnecessarily
+- Logout must clear server-side session AND client cookies
+
+## Before Touching Billing Code
+
+Always inspect:
+- `app/api/billing/checkout/route.ts` — checkout session creation
+- `app/api/billing/webhook/route.ts` — Stripe webhook handler
+- `lib/stripe.ts` — Stripe client and utilities
+- `lib/subscriptions.ts` — subscription state machine
+- `lib/entitlements.ts` — plan feature entitlements
+- `lib/package-plans.ts` — plan definitions and pricing
+
+### Billing Architecture
+- Stripe is the source of truth for subscription state
+- `subscriptions` table mirrors Stripe data (updated via webhooks)
+- `stripe_customer_id` is the mapping key between `profiles` and Stripe
+- Webhook idempotency: `stripe_webhook_events` table with `stripe_event_id` unique constraint
+- Always check `stripe_webhook_events` before processing to prevent double-processing
+
+### Subscription Status Flow
+```
+incomplete → active → (past_due → canceled | active)
+                    → (canceled)
+trialing → active | canceled
+```
+
+### Billing Rules
+- Never break webhook idempotency — always insert into `stripe_webhook_events` first
+- Never expose raw Stripe error messages to customers
+- Never use Stripe language like "invoice", "subscription ID" in customer-facing UI
+- `stripe_customer_id` must be set before any checkout or portal session creation
+- Entitlements must be checked server-side — never trust client-side plan claims
+- Upgrades use a separate checkout flow (`/api/billing/upgrade-checkout/`)
+
+## Worker Authentication
+- Internal endpoints (`/api/internal/**`) require `X-Worker-Secret` header
+- Secret stored in `WORKER_SECRET` env var
+- Never expose worker secret to client or logs

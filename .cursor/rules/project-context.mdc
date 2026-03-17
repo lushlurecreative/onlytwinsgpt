@@ -1,0 +1,89 @@
+---
+description: OnlyTwins project context — stack, flows, hard rules, coding standards
+alwaysApply: true
+---
+
+# OnlyTwins Project Context
+
+## Stack
+- **Next.js 16** App Router (React 19)
+- **Supabase** — Auth, Postgres (RLS), Storage
+- **Stripe** — subscriptions, checkout, webhooks
+- **RunPod** — ML image/video generation workers
+- **Vercel** — hosting, cron jobs (5 scheduled tasks)
+- **Tailwind CSS v4**, TypeScript (strict), Framer Motion
+
+## Core Business Flow
+1. User subscribes via Stripe checkout
+2. User logs in → `/dashboard`
+3. User completes onboarding (`/onboarding/consumer` or `/onboarding/creator`)
+4. User uploads training photos (`/upload`)
+5. User sets generation preferences
+6. System generates monthly content batch via RunPod
+7. Results appear in `/vault`
+
+## Admin Flow
+- Admin users (by email, `ADMIN_OWNER_EMAILS` env var) are detected in `lib/admin.ts`
+- `proxy.ts` (middleware) redirects admins from all customer routes → `/admin`
+- Admin shell and customer shell must stay completely separate
+- Admin routes: `/admin/**`, `/api/admin/**`
+
+## Hard Rules
+- Never break billing, auth/session handling, or webhook idempotency
+- Never invent schema columns — always inspect current migrations before writing DB code
+- Keep one source of truth per domain
+- No dead UI or placeholder flows
+- No technical language exposed to customers
+- Keep admin UX separate from customer UX
+- Prefer modifying existing flows over creating parallel ones
+- Keep server-side enforcement for auth, billing, and usage
+
+## Key File Locations
+
+### Auth
+- `proxy.ts` — middleware (routing, auth gates, admin redirect, security headers)
+- `app/login/` — login page
+- `app/auth/callback/` — OAuth callback
+- `app/logout/` — logout page
+- `lib/admin.ts` — `isAdminUser()` — admin detection by email allowlist
+- `lib/roles.ts` — user role utilities
+
+### Billing
+- `app/api/billing/checkout/` — Stripe checkout session creation
+- `app/api/billing/webhook/` — Stripe webhook handler
+- `app/api/billing/portal/` — Customer portal
+- `lib/stripe.ts` — Stripe client
+- `lib/subscriptions.ts` — subscription state machine
+- `lib/entitlements.ts` — plan feature entitlements
+
+### Generation
+- `lib/customer-generation.ts` — orchestration
+- `lib/generation-engine.ts` — core logic
+- `lib/generation-jobs.ts` — job state
+- `app/api/cron/process-customer-generation/` — daily cron
+- `app/api/webhooks/runpod/` — RunPod completion webhook
+
+### Database
+- `supabase/migrations/` — 40+ migrations (source of truth)
+- `lib/supabase.ts`, `lib/supabase-admin.ts`, `lib/supabase-server.ts` — clients
+- `lib/run-migrations.ts` — migration runner
+
+### Lead Scraping / Outreach
+- `lib/scrape-aggregators.ts`, `lib/scrape-youtube.ts`, etc.
+- `lib/ingest-leads.ts`, `lib/outreach.ts`
+- `app/api/cron/daily-lead-scrape/`, `send-outreach/`
+
+## Cron Schedule (Vercel)
+| Time (UTC) | Job |
+|---|---|
+| 8am daily | `/api/cron/daily-lead-scrape` |
+| 9am daily | `/api/cron/enqueue-lead-samples` |
+| 10am daily | `/api/cron/send-outreach` |
+| 12pm daily | `/api/cron/process-customer-generation` |
+| Midnight daily | `/api/cron/monthly-customer-generation` |
+
+## Deployment
+- GitHub `main` branch → Vercel auto-deploy
+- Env vars live in Vercel dashboard (not `.env` files in production)
+- After any schema change: run SQL migration in Supabase dashboard
+- Prefer idempotent, safe migrations

@@ -1,0 +1,93 @@
+---
+description: OnlyTwins auth rules — proxy.ts routing, admin detection, session clients, logout
+alwaysApply: true
+---
+
+# Auth Rules
+
+## Before touching auth code
+
+Read ALL of:
+- `proxy.ts` (middleware — the single enforcement point)
+- `lib/admin.ts`
+- `app/auth/callback/page.tsx`
+- `app/admin/layout.tsx`
+- `app/api/admin/session/route.ts`
+- `app/logout/`
+
+## proxy.ts is the single authority
+
+Do not add auth logic elsewhere in middleware. All route gating and admin/customer routing lives in `proxy.ts`.
+
+## Routing logic (proxy.ts)
+
+```
+Every request → apply security headers
+/?code=...       → redirect /auth/callback (preserve query params, add next=/dashboard)
+/welcome?sid=    → set ot_checkout_sid cookie, redirect /thank-you
+/thank-you?sid=  → set ot_checkout_sid cookie, redirect /thank-you (strip param)
+/login           → rate limit by IP
+Customer route + admin session → redirect /admin
+/upload or /admin/** + no session → redirect /login?redirectTo=<path>
+```
+
+## Admin detection (lib/admin.ts)
+
+```ts
+isAdminUser(userId, email)
+// Reads ADMIN_OWNER_EMAILS (comma-separated, fallback: hardcoded email)
+// Lowercase comparison on email
+```
+
+Called in three places only:
+1. `proxy.ts` — checking customer routes
+2. `app/admin/layout.tsx` — server-side on every admin page
+3. Via `GET /api/admin/session` in `app/auth/callback/page.tsx`
+
+## Auth callback (app/auth/callback/page.tsx)
+
+Client component. After login:
+1. `supabase.auth.getSession()` — verify session exists
+2. `POST /api/thank-you/complete` — mark onboarding
+3. `GET /api/admin/session` → `{isAdmin: bool}`
+4. Admin → `router.replace('/admin')`, else → `router.replace(next)` (default: `/dashboard`)
+5. No session → `router.replace('/login?error=oauth')`
+
+## Admin layout (app/admin/layout.tsx)
+
+Server component — double-checks auth on every admin page load:
+- No session → `redirect('/login?redirectTo=/admin')`
+- Not admin → `redirect('/dashboard?unauthorized=admin')`
+
+## Supabase session clients
+
+| File | Use |
+|---|---|
+| `lib/supabase-server.ts` → `createClient()` | Server Components, Route Handlers |
+| `lib/supabase-admin.ts` → `getSupabaseAdmin()` | Admin, cron, webhook, worker — bypasses RLS |
+| `lib/supabase/client.ts` → `createClient()` | Client Components (browser) |
+
+Never mix these. Never use service role client-side.
+
+## ot_checkout_sid cookie
+
+Set by `proxy.ts` when `/welcome?sid=` or `/thank-you?sid=` is visited.
+- httpOnly, secure, sameSite: lax, maxAge: 6h
+- Consumed by `GET /api/thank-you/session`
+- Used to link post-login state to the Stripe checkout session
+
+## Logout
+
+- Admin nav links to `/logout` (`<a href="/logout">`)
+- `app/logout/` clears Supabase session server-side and redirects to `/`
+- After logout, protected routes must redirect to `/login`
+
+## Security headers (applied to every response by proxy.ts)
+
+```
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Strict-Transport-Security (production only)
+```

@@ -1,0 +1,72 @@
+---
+description: OnlyTwins core project rules — stack, hard rules, file locations, routing, cron
+alwaysApply: true
+---
+
+# OnlyTwins Core
+
+Production AI content generation platform. Not a demo.
+
+## Stack
+- Next.js 16 App Router, React 19, TypeScript (strict)
+- Supabase Auth + Postgres (RLS) + Storage
+- Stripe subscriptions + webhooks
+- RunPod serverless GPU workers
+- Vercel deployment (GitHub main → auto-deploy)
+- Tailwind CSS v4, Framer Motion
+
+## Hard rules — never violate
+- Never break billing (checkout → webhook → subscription provisioning)
+- Never break auth/session handling
+- Never break webhook idempotency — `stripe_webhook_events` insert must come first
+- Never invent schema columns — read `supabase/migrations/` before writing DB code
+- Never write to `subscriptions` table except from `app/api/billing/webhook/route.ts`
+- Never expose `supabase-admin.ts` (service role) to client-side code
+- Keep admin UX completely separate from customer UX
+- No dead UI or placeholder flows
+- No technical language exposed to customers
+- Prefer modifying existing flows over creating parallel ones
+
+## Customer routes (admins redirected away from these)
+`/`, `/dashboard`, `/vault`, `/billing`, `/me`, `/requests`, `/subjects`,
+`/creator`, `/library`, `/training-vault`, `/upload`, `/onboarding/**`
+
+## Protected routes (require session)
+`/upload`, `/admin/**`
+
+## Middleware
+`proxy.ts` — single file, all routing + security headers + rate limiting + admin redirect.
+Do not add routing logic anywhere else in middleware.
+
+## Admin detection
+`lib/admin.ts` → `isAdminUser(userId, email)` — checks `ADMIN_OWNER_EMAILS` env var.
+Called in `proxy.ts`, `app/admin/layout.tsx`, and `app/auth/callback/page.tsx` (via `/api/admin/session`).
+
+## Auth callback
+`app/auth/callback/page.tsx` — client component.
+After session: POST `/api/thank-you/complete` → GET `/api/admin/session` → route to `/admin` or `next` param.
+
+## Generation engine flag
+`lib/generation-engine.ts` → `isGenerationEngineEnabled()` — checks `GENERATION_ENGINE_ENABLED=true`.
+All generation entry points must check this first. Returns 503 if disabled.
+
+## Service creator
+`lib/service-creator.ts` → `getServiceCreatorId()` — platform's canonical creator ID.
+Used as `creator_id` for all done-for-you plan subscriptions.
+
+## Cron schedule (UTC)
+| Time | Path |
+|---|---|
+| 8am | `/api/cron/daily-lead-scrape` |
+| 9am | `/api/cron/enqueue-lead-samples` |
+| 10am | `/api/cron/send-outreach` |
+| 12pm | `/api/cron/process-customer-generation` — `processPendingCustomerGeneration(admin, 25)` |
+| Midnight | `/api/cron/monthly-customer-generation` — `scheduleMonthlyCustomerBatches` + process 25 |
+
+All cron routes verify `Authorization: Bearer <CRON_SECRET>`.
+
+## Deployment
+- Push to `main` → Vercel auto-deploys
+- Schema changes: run SQL migration in Supabase **before** pushing dependent code
+- Always include: SQL required? New env vars? Rollback plan? Test steps?
+- See `docs/deployment.md`

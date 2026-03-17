@@ -1,5 +1,12 @@
 .env
 .env.local
 .env.production
+.env.development
+.env.test
 node_modules
 supabase/.env
+.next
+.vercel
+*.log
+*.pem
+*.key

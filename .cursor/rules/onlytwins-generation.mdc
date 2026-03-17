@@ -1,0 +1,105 @@
+---
+description: OnlyTwins generation pipeline rules — mix save, batch creation, job processing, worker API
+alwaysApply: true
+---
+
+# Generation Pipeline Rules
+
+## Before touching generation code
+
+Read ALL of:
+- `lib/customer-generation.ts`
+- `lib/customer-generation-processor.ts`
+- `lib/generation-engine.ts`
+- `lib/request-planner.ts`
+- `app/api/me/request-preferences/route.ts`
+- `supabase/migrations/202603090001_customer_generation_engine.sql`
+
+## Feature flag — check first
+
+```ts
+import { isGenerationEngineEnabled } from '@/lib/generation-engine'
+if (!isGenerationEngineEnabled()) {
+  return { ok: false, status: 503, error: 'Generation engine is currently disabled.' }
+}
+```
+
+`GENERATION_ENGINE_ENABLED=true` env var must be set. All generation entry points must check this.
+
+## Mix save flow (PUT /api/me/request-preferences)
+
+1. Auth check
+2. `getCurrentSubscriptionSummary()` — requires `active`, `trialing`, or `past_due`
+3. `normalizeMixLines()` — validate + normalise input lines
+4. Enforce plan allowance: `totalPhotos <= includedImages`, `totalVideos <= includedVideos`
+5. Upsert `app_settings` key `request_mix:{userId}`
+6. `upsertRecurringMixForTargetCycle()` → `recurring_request_mixes` table
+7. Check prerequisites → `createCanonicalCustomerGenerationBatch()` → `processPendingCustomerGeneration(admin, 5)`
+
+Idempotency key format: `request-mix-save:{userId}:{cycleStartIso.slice(0, 10)}`
+
+## Batch creation (lib/customer-generation.ts)
+
+`createCanonicalCustomerGenerationBatch(admin, input)`:
+- Checks engine flag, subscription status, mix validity, allowance limits
+- `autoFillAllowance()` — fills remaining quota with default prompts
+- `createGenerationRequestWithUsage()` → inserts `generation_requests` row
+- Updates request with source, cycle dates, snapshots
+- Inserts `generation_request_lines` rows
+
+`input.source` values: `manual_save`, `monthly_scheduler`, `api_generation_request`, `vault_generate`, `generate_images`
+
+## Job processing (lib/customer-generation-processor.ts)
+
+`processPendingCustomerGeneration(admin, maxBatches)`:
+- Queries `generation_requests` where `status = 'pending'` and `cycle_start <= now`
+- For each: `claimRequest()` (atomic UPDATE — only succeeds if still `pending`)
+- Requires: approved subject (`getApprovedSubjectIdForUser()`) + LoRA ref + lines + sample paths (>= 1)
+- Creates `generation_jobs` for each photo line (video not yet implemented)
+- Marks request `failed` with `admin_notes` if any prerequisite missing
+
+`scheduleMonthlyCustomerBatches(admin, maxSubscribers)`:
+- Queries active/trialing/past_due subscriptions
+- Skips if: existing request for this cycle, no saved recurring mix, < 10 training photos
+- Idempotency key: `monthly-cycle:{userId}:{cycleStart.slice(0, 10)}`
+
+## generation_requests status states
+
+`pending` → `generating` → `completed` | `failed`
+
+Claim is atomic: `UPDATE WHERE status = 'pending'` — only one processor can claim a request.
+
+## Training photos requirement
+
+- Minimum 10 photos in Supabase Storage `uploads` bucket at path `{userId}/training/`
+- Supported: `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`
+- Monthly scheduler requires >= 10 (skips if fewer)
+- Mix save returns `saved_pending_training` state if fewer than 10
+
+## Cycle timing (lib/request-planner.ts)
+
+`computeCutoff(nextRenewalAt)`:
+- CUT_OFF_DAYS = 5
+- If now <= renewal - 5 days: `appliesTo = "next_cycle"`
+- If now > renewal - 5 days: `appliesTo = "following_cycle"`
+- Cycle length: 30 days from `current_period_end`
+
+## Subscription summary (lib/request-planner.ts)
+
+`getCurrentSubscriptionSummary(admin, userId)`:
+1. Query `subscriptions` for `subscriber_id = userId AND creator_id = serviceCreatorId`
+2. Fallback: any active/trialing subscription for userId
+3. `getPlanKeyForStripePriceId(stripe_price_id)` → entitlements
+4. Returns `{ planKey, includedImages, includedVideos, nextRenewalAt, status }`
+
+## Worker API (X-Worker-Secret auth)
+
+Internal endpoints require `X-Worker-Secret` header matching `WORKER_SECRET` env var:
+- `GET /api/internal/worker/jobs` — claim next job
+- `PUT /api/internal/worker/generation-jobs/[jobId]` — update status/result
+- `PUT /api/internal/worker/training-jobs/[jobId]` — update training status
+- `GET /api/internal/worker/subjects/[subjectId]` — get subject data
+- `GET /api/internal/worker/presets/[presetId]` — get scene preset config
+- `POST /api/internal/watermark/log` — log watermark event
+
+Never expose `WORKER_SECRET` client-side or in logs.

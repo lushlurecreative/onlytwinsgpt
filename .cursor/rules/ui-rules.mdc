@@ -1,0 +1,52 @@
+---
+description: UI/UX rules — premium, clean, no technical language, separate admin/customer shells
+alwaysApply: true
+---
+
+# UI Rules
+
+## Aesthetic Standards
+- Premium, modern, uncluttered — this is a paid product, not a free tool
+- Use Tailwind CSS v4 utility classes
+- Animations via Framer Motion where appropriate
+- Dark mode considered in all new UI
+
+## Customer-Facing UI Rules
+- No debug text, console output, or technical error messages in production UI
+- No raw Stripe language ("invoice", "subscription_id", "customer portal")
+- No RunPod job IDs or internal references visible to users
+- No redundant buttons or duplicate actions
+- Clear loading / error / success states on every interactive element
+- Copy must be clear, human, and action-oriented
+
+## Admin UI Rules
+- Admin pages live entirely under `/admin/**`
+- Admin nav components must not appear in customer shell
+- Customer nav/components must not appear in admin shell
+- Admin UI can use more technical language — it's operator-facing
+- Admin pages should show real data — no placeholder or mock content
+
+## Layout Architecture
+- `components/SiteShell.tsx` — customer layout wrapper (nav + footer)
+- `components/PrimaryNav.tsx` — customer top nav
+- Admin has its own layout in `app/admin/layout.tsx`
+- Never use `SiteShell` or `PrimaryNav` inside admin pages
+
+## Component Rules
+- Don't create a new component if an existing one can be extended
+- Keep components in `/components/` if shared across 3+ pages
+- Keep components co-located in their page folder if used in 1-2 places
+- No tiny fragmented boxes unless they serve a clear information purpose
+
+## State & Feedback
+- Every form submission needs: loading state, success state, error state
+- Use inline error messages (not alerts or console logs)
+- Disable submit buttons while loading to prevent double-submit
+- Show skeleton loaders or spinners for async data, not blank space
+
+## Copy Guidelines
+- "Your content" not "generated images"
+- "Your account" not "subscription object"
+- "Payment failed" not "invoice payment_failed"
+- "Renews monthly" not "subscription active"
+- "Something went wrong, please try again" for unexpected errors — never show stack traces

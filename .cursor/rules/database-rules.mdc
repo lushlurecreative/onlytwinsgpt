@@ -1,0 +1,59 @@
+---
+description: Database rules — always inspect schema before writing DB code
+alwaysApply: true
+---
+
+# Database Rules
+
+## Before Writing Any DB Code
+
+Always inspect **all** of the following before writing queries, RPCs, or migrations:
+
+1. Current table columns — read the relevant migration files in `supabase/migrations/`
+2. Existing RPCs — grep for `create or replace function` in migrations
+3. Existing route handlers that touch the same table
+4. RLS policies on the table
+
+**Do not assume a column exists. Do not invent columns.**
+
+## Core Tables Reference
+
+| Table | Purpose | Key Columns |
+|---|---|---|
+| `profiles` | Supabase auth users | `id`, `email`, `role`, `onboarding_pending` |
+| `subscriptions` | Stripe subscription mapping | `user_id`, `stripe_subscription_id`, `stripe_customer_id`, `status`, `plan` |
+| `posts` | Creator content | `id`, `creator_id`, `visibility`, `storage_path` |
+| `generation_requests` | Customer generation jobs | `id`, `user_id`, `status`, `content_mode` |
+| `generation_jobs` | Batch generation tracking | `id`, `request_id`, `runpod_job_id`, `status` |
+| `training_jobs` | Model training jobs | `id`, `user_id`, `runpod_job_id`, `status` |
+| `leads` | Scraped creator prospects | `id`, `platform`, `handle`, `status`, `email` |
+| `leads_sample_paths` | Lead sample images | `lead_id`, `path` |
+| `subjects` | Consent & identity verification | `id`, `user_id`, `status` |
+| `watermark_logs` | Content tracking | `id`, `post_id`, `user_id` |
+| `outreach_logs` | Lead outreach history | `lead_id`, `sent_at`, `message_type` |
+| `revenue_events` | Billing events | `id`, `user_id`, `event_type`, `amount` |
+| `audit_log` | Admin actions | `id`, `admin_id`, `action`, `target_id` |
+| `usage_ledger` | Usage tracking | `user_id`, `resource`, `amount` |
+| `user_notifications` | Push notifications | `id`, `user_id`, `type`, `read` |
+| `reply_inbox` | Outreach replies | `id`, `lead_id`, `body` |
+| `stripe_webhook_events` | Webhook idempotency | `stripe_event_id` (unique) |
+| `gpu_usage` | RunPod cost tracking | `job_id`, `seconds`, `cost_usd` |
+| `app_settings` | System config | `key`, `value` |
+| `system_events` | Operational events | `id`, `type`, `payload` |
+
+## Supabase Clients
+
+| Client | File | Use For |
+|---|---|---|
+| Server (cookie-based) | `lib/supabase-server.ts` | Server Components, Route Handlers |
+| Admin (service role) | `lib/supabase-admin.ts` | Bypasses RLS — admin & cron only |
+| Browser | `lib/supabase/client.ts` | Client Components only |
+
+## Migration Rules
+- File naming: `YYYYMMDDNNNN_description.sql`
+- All migrations must be idempotent where possible (`CREATE TABLE IF NOT EXISTS`, etc.)
+- Always add RLS policies for new tables with user data
+- Test migrations in Supabase dashboard before deploying
+
+## Enum Definitions
+See `lib/db-enums.ts` for TypeScript enum definitions matching database enums.

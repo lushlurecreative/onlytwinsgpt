@@ -1,0 +1,79 @@
+---
+description: OnlyTwins database rules — schema inspection, table reference, client usage, migrations
+alwaysApply: true
+---
+
+# Database Rules
+
+## Before writing any DB code
+
+Read ALL of:
+1. Relevant migration files in `supabase/migrations/` (sorted by name = chronological)
+2. Any existing route handlers that touch the same table
+3. RLS policies on the table
+4. Existing RPCs (`create or replace function` in migrations)
+
+**Never assume a column exists. Never invent a column.**
+
+## Supabase clients
+
+| File | Auth | Use |
+|---|---|---|
+| `lib/supabase-server.ts` → `createClient()` | Anon + cookies | Server Components, Route Handlers |
+| `lib/supabase-admin.ts` → `getSupabaseAdmin()` | Service role | Admin pages, cron, webhook, worker (bypasses RLS) |
+| `lib/supabase/client.ts` → `createClient()` | Anon + cookies | Client Components only |
+
+Never use `getSupabaseAdmin()` client-side. Never use the browser client in server code.
+
+## Key tables and their source-of-truth rules
+
+**`subscriptions`** — written only by `app/api/billing/webhook/route.ts`
+- Key columns: `subscriber_id`, `creator_id`, `status`, `stripe_subscription_id` (UNIQUE), `stripe_price_id`, `current_period_end`
+- Status values: `active`, `trialing`, `past_due`, `canceled`, `expired`, `incomplete`, `needs_review`
+
+**`stripe_webhook_events`** — idempotency log
+- Always insert `stripe_event_id` here before processing any Stripe webhook
+- Duplicate (PG `23505`) = already processed, return 200 and skip
+- Missing table (PG `42P01`) = throw error
+
+**`generation_requests`** — status: `pending`, `generating`, `completed`, `failed`
+- Extended by migration `202603090001` (added: `source`, `cycle_start`, `cycle_end`, `mix_snapshot_json`, `started_at`, `completed_at`, `failed_at`)
+
+**`generation_request_lines`** — created by `202603090001`
+- FK → `generation_requests.id`
+- `line_type`: `photo` | `video`
+- `source`: `user` | `auto_fill`
+
+**`recurring_request_mixes`** — created by `202603090001`
+- UNIQUE on `(user_id, applies_cycle_start)`
+- Stores the user's saved recurring generation preferences per cycle
+
+**`profiles`** — auto-created by Supabase Auth, extended:
+- `stripe_customer_id` (UNIQUE, added `202602150005`)
+- `onboarding_pending` (added `202602170014`)
+- `role`, `is_creator`, `subscription_status`
+
+**`admin_payment_links`** — created by `202603160001`
+- `creator_id`, `email`, `plan`, `stripe_checkout_session_id`, `checkout_url`
+
+## Subscription lookup pattern
+
+`lib/request-planner.ts` → `getCurrentSubscriptionSummary(admin, userId)`:
+1. Query for `subscriber_id = userId AND creator_id = serviceCreatorId` (done-for-you plan)
+2. Fallback: any active/trialing subscription for userId
+3. Map `stripe_price_id` → plan key via `getPlanKeyForStripePriceId()`
+4. Returns `{ planKey, includedImages, includedVideos, nextRenewalAt, status }`
+
+## Migration rules
+
+- File naming: `YYYYMMDDNNNN_description.sql`
+- Use `IF NOT EXISTS` / `IF EXISTS` / drop-before-recreate for idempotency
+- Drop constraints before recreating: `ALTER TABLE foo DROP CONSTRAINT IF EXISTS bar;`
+- Always add `GRANT` after creating tables
+- Always add RLS + policies for tables with user data
+- Run migrations in Supabase **before** deploying code that depends on them
+
+## Key RPCs (defined in migrations)
+
+- `convert_lead_to_customer(p_lead_id, p_subscriber_id, p_creator_id, p_stripe_subscription_id, p_plan)` — `202602170013`
+- `enforce_usage_limit(...)` — `202602260003`

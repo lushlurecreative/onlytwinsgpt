@@ -1,0 +1,86 @@
+---
+description: OnlyTwins UI rules — shell separation, copy standards, component patterns, interactive states
+alwaysApply: true
+---
+
+# UI Rules
+
+## Shell separation — hard rule
+
+**Customer shell:** `components/SiteShell.tsx` + `components/PrimaryNav.tsx`
+**Admin shell:** `app/admin/layout.tsx` + `app/admin/AdminNav.tsx`
+
+Never use customer shell components inside admin pages.
+Never use admin nav inside customer pages.
+These are completely separate UI trees.
+
+## Admin nav items (do not add to customer nav)
+Dashboard → `/admin`
+Customers → `/admin/customers`
+Leads → `/admin/leads`
+Billing / Revenue → `/admin/revenue`
+Log out → `/logout`
+
+## Customer-facing copy — never expose
+
+| Don't use | Use instead |
+|---|---|
+| "invoice" | "payment" |
+| "subscription_id" / "stripe_customer_id" | (never show IDs) |
+| "past_due" | "payment issue" or "please update your billing" |
+| "trialing" | "trial period" |
+| "RunPod job" / "generation_request_id" | (never show) |
+| Raw error messages / stack traces | "Something went wrong. Please try again." |
+| HTTP status codes | Human-readable message |
+| "customer portal" | "billing settings" |
+
+## Interactive states — required for all forms and async actions
+
+Every button or form must handle all three:
+- **Loading** — disable button, show spinner
+- **Success** — inline confirmation message or state change
+- **Error** — inline error message (not console.log, not alert())
+
+Prevent double-submit: disable the submit button while loading.
+
+## Shared components (components/)
+
+| Component | Use |
+|---|---|
+| `SiteShell.tsx` | Customer layout wrapper |
+| `PrimaryNav.tsx` | Customer top nav |
+| `AuthNav.tsx` | Auth-aware nav |
+| `AuthAwarePrimaryCta.tsx` | CTA aware of session state |
+| `OnlyTwinsAssistant.tsx` | AI chat widget |
+| `PremiumCard.tsx` | Pricing/plan cards |
+| `PremiumButton.tsx` | Premium-styled button |
+| `AnimatedBackground.tsx` | Background animation |
+| `PageTransition.tsx` | Page transition |
+| `BeforeAfterSlider.tsx` | Before/after comparison |
+| `BlurredNSFWCard.tsx` | NSFW content blur overlay |
+| `GalleryCategoryTabs.tsx` | Gallery filter tabs |
+
+Use existing components before creating new ones.
+Co-locate new components with their page if they're only used in 1-2 places.
+Move to `/components/` when shared across 3+ pages.
+
+## NSFW content
+
+- Use `BlurredNSFWCard` for sensitive content in galleries
+- Never show unblurred NSFW to unauthenticated users
+- Gated by `isSubscriber` from `lib/entitlements.ts`
+
+## No placeholder content in production
+
+- No "Coming soon" pages
+- No Lorem Ipsum
+- No buttons that don't function
+- No debug text
+
+## Design standards
+
+- Premium, uncluttered — every element must earn its place
+- Tailwind CSS v4 utility classes
+- Framer Motion for transitions and animations (see `PageTransition.tsx`)
+- Dark mode considered on all new UI
+- No tiny fragmented boxes unless they convey distinct information
