@@ -57,10 +57,14 @@ function extractStripeSubscriptionId(
 
 async function resolveSubscriptionParties(subscription: Stripe.Subscription) {
   const supabaseAdmin = getSupabaseAdmin();
-  let creatorId: string | null = subscription.metadata?.creator_id ?? null;
+  const rawCreatorId = (subscription.metadata?.creator_id ?? "").trim();
+  let creatorId: string | null =
+    (rawCreatorId && rawCreatorId !== "00000000-0000-4000-8000-000000000001")
+      ? rawCreatorId
+      : null;
   let subscriberId: string | null = subscription.metadata?.subscriber_id ?? null;
 
-  // Done-for-you plans may omit creator_id. In that case, use the service creator id.
+  // Done-for-you plans may omit creator_id (or used the old placeholder). Fall back to service creator.
   const planKey = (subscription.metadata?.plan ?? "").trim();
   if (!creatorId && planKey) {
     creatorId = getServiceCreatorId();
@@ -188,8 +192,11 @@ export async function POST(request: Request) {
       const source = (session.metadata?.source as string)?.trim() ?? "";
       const leadId = (session.metadata?.lead_id as string)?.trim();
       let subscriberId: string | null = (session.metadata?.subscriber_id as string)?.trim() ?? null;
+      const metaCreatorId = (session.metadata?.creator_id as string)?.trim() ?? "";
       const creatorId =
-        (session.metadata?.creator_id as string)?.trim() || getServiceCreatorId();
+        (metaCreatorId && metaCreatorId !== "00000000-0000-4000-8000-000000000001")
+          ? metaCreatorId
+          : getServiceCreatorId();
       const plan = (session.metadata?.plan as string)?.trim() || null;
       const isKnownPlan =
         !!plan && Object.prototype.hasOwnProperty.call(PACKAGE_PLANS, plan);
