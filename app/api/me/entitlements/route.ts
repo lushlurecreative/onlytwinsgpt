@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { ENTITLEMENTS_BY_PLAN, getPlanKeyForStripePriceId } from "@/lib/plan-entitlements";
+import { ENTITLEMENTS_BY_PLAN, loadPriceIdPlanMap } from "@/lib/plan-entitlements";
+import type { PlanKey } from "@/lib/package-plans";
 
 export async function GET() {
   const session = await createClient();
@@ -15,12 +16,15 @@ export async function GET() {
   }
 
   const admin = getSupabaseAdmin();
-  const { data, error } = await admin
-    .from("subscriptions")
-    .select("id, status, stripe_price_id, current_period_end, canceled_at, created_at, creator_id")
-    .eq("subscriber_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const [{ data, error }, priceMap] = await Promise.all([
+    admin
+      .from("subscriptions")
+      .select("id, status, stripe_price_id, current_period_end, canceled_at, created_at, creator_id")
+      .eq("subscriber_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(50),
+    loadPriceIdPlanMap(),
+  ]);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
@@ -35,16 +39,22 @@ export async function GET() {
     created_at?: string;
     creator_id?: string | null;
   }>;
+
+  function resolvePlanKey(priceId: string | null | undefined): PlanKey | null {
+    const pid = (priceId ?? "").trim();
+    return pid ? (priceMap.get(pid) ?? null) : null;
+  }
+
   const preferred =
     rows.find((row) => {
       const status = (row.status ?? "").toLowerCase();
-      return (status === "active" || status === "trialing") && !!getPlanKeyForStripePriceId(row.stripe_price_id ?? null);
+      return (status === "active" || status === "trialing") && !!resolvePlanKey(row.stripe_price_id);
     }) ??
     rows.find((row) => {
       const status = (row.status ?? "").toLowerCase();
       return status === "active" || status === "trialing";
     }) ??
-    rows.find((row) => !!getPlanKeyForStripePriceId(row.stripe_price_id ?? null)) ??
+    rows.find((row) => !!resolvePlanKey(row.stripe_price_id)) ??
     rows[0] ??
     null;
 
@@ -59,7 +69,7 @@ export async function GET() {
     !!profileRow?.stripe_customer_id ||
     ["active", "trialing", "past_due", "canceled"].includes(String(profileRow?.subscription_status ?? "").toLowerCase());
 
-  const planKey = getPlanKeyForStripePriceId(preferred?.stripe_price_id ?? null);
+  const planKey = resolvePlanKey(preferred?.stripe_price_id);
   if (!planKey) {
     return NextResponse.json(
       {

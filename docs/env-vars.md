@@ -20,24 +20,24 @@ All production env vars are set in Vercel → Project → Settings → Environme
 
 ### Stripe Price IDs
 Each plan requires its own price ID from Stripe. These must match live Stripe prices.
-| Variable | Plan |
-|---|---|
-| `STRIPE_PRICE_ID_STARTER` | starter ($299/mo) |
-| `STRIPE_PRICE_ID_PROFESSIONAL` | professional ($599/mo) |
-| `STRIPE_PRICE_ID_ELITE` | elite ($1,299/mo) |
-| `STRIPE_PRICE_ID_SINGLE_BATCH` | single_batch ($399 one-time) |
-| `STRIPE_PRICE_ID_PARTNER_70_30` | partner_70_30 ($100/mo) |
-| `STRIPE_PRICE_ID_PARTNER_50_50` | partner_50_50 ($1/mo) |
+| Variable | Plan | Status |
+|---|---|---|
+| `STRIPE_PRICE_ID_STARTER` | starter ($299/mo) | **Confirmed required** |
+| `STRIPE_PRICE_ID_PROFESSIONAL` | professional ($599/mo) | **Confirmed required** |
+| `STRIPE_PRICE_ID_ELITE` | elite ($1,299/mo) | **Confirmed required** |
+| `STRIPE_PRICE_ID_SINGLE_BATCH` | single_batch ($399 one-time) | **Confirmed required** |
+| `STRIPE_PRICE_ID_PARTNER_70_30` | partner_70_30 ($100/mo) | **Confirmed required** |
+| `STRIPE_PRICE_ID_PARTNER_50_50` | partner_50_50 ($1/mo) | **Confirmed required** |
 
-Used by `lib/plan-entitlements.ts` → `getPlanKeyForStripePriceId()` and `lib/stripe-price-for-plan.ts`.
+These env vars are read by `lib/plan-entitlements.ts` → `loadPriceIdPlanMap()` and `lib/stripe-price-for-plan.ts`. If not set, the system now falls back to the `app_settings` table (keys: `stripe_price_starter`, etc.) which is populated automatically when checkout sessions are created via `getOrCreatePriceIdForPlan()`. Both paths work — but setting the env vars is the simpler and more reliable option.
 
 ### RunPod / Worker
-| Variable | Notes |
-|---|---|
-| `WORKER_SECRET` | Shared secret — must match what the RunPod worker sends in `X-Worker-Secret` header |
-| `APP_URL` | Full app URL e.g. `https://onlytwins.dev` — used in worker callbacks |
-| `RUNPOD_API_KEY` | RunPod API key for submitting jobs |
-| `RUNPOD_ENDPOINT_ID` | RunPod serverless endpoint ID |
+| Variable | Notes | Status |
+|---|---|---|
+| `WORKER_SECRET` | Shared secret — must match what the RunPod worker sends in `X-Worker-Secret` header | **Confirmed required** |
+| `APP_URL` | Full app URL e.g. `https://onlytwins.dev` — used in RunPod webhook callbacks | **Confirmed required** |
+| `RUNPOD_API_KEY` | RunPod API key for submitting jobs | **Optional as env var** — falls back to `app_settings.runpod_api_key` (set via admin UI). Required in one form or the other. |
+| `RUNPOD_ENDPOINT_ID` | RunPod serverless endpoint ID | **Optional as env var** — falls back to `app_settings.runpod_endpoint_id`. Required in one form or the other. |
 
 ### App URL
 | Variable | Notes |
@@ -75,10 +75,10 @@ Used by `lib/plan-entitlements.ts` → `getPlanKeyForStripePriceId()` and `lib/s
 | `FACE_FILTER_ENABLED` | Set to `"true"` to enable face quality filtering during lead ingest |
 
 ### Generation Engine
-| Variable | Notes |
-|---|---|
-| `GENERATION_ENGINE_ENABLED` | Must be `"true"` for generation to run. Checked by `lib/generation-engine.ts` → `isGenerationEngineEnabled()`. If not set or not `"true"`, all generation returns 503. |
-| `GENERATION_JOB_MAX_RETRIES` | Integer. Max RunPod retries for failed `job_type = "user"` jobs. Default `2`. Set in `app/api/webhooks/runpod/route.ts`. |
+| Variable | Notes | Status |
+|---|---|---|
+| `GENERATION_ENGINE_ENABLED` | Must be `"true"` for generation to run. Checked by `lib/generation-engine.ts` → `isGenerationEngineEnabled()`. No fallback — if not set, all generation silently returns 503. | **Confirmed required** |
+| `GENERATION_JOB_MAX_RETRIES` | Integer. Max RunPod retries for failed `job_type = "user"` jobs. Default `2`. Set in `app/api/webhooks/runpod/route.ts`. | Optional (defaults to 2) |
 
 ### Bitcoin / Coinbase Commerce
 | Variable | Notes |

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { logError, logInfo, logWarn } from "@/lib/observability";
 import { cookies } from "next/headers";
 
@@ -168,6 +169,37 @@ export async function GET(request: Request) {
           payment_status: session.payment_status ?? null,
         },
         { status: 400 }
+      );
+    }
+
+    // Wait for the webhook to provision the profile row before marking ready.
+    // The webhook creates profiles.stripe_customer_id — if it hasn't fired yet, the
+    // customer would land on /dashboard with no subscription row and see "no active plan".
+    const admin = getSupabaseAdmin();
+    const { data: profileRow } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("stripe_customer_id", stripeCustomerId)
+      .maybeSingle();
+
+    if (!profileRow?.id) {
+      logInfo("thank_you_session_waiting_for_webhook", {
+        requestId,
+        sessionId,
+        stripe_customer_id: stripeCustomerId,
+      });
+      return NextResponse.json(
+        {
+          state: "processing",
+          reason: "auth_user_not_ready",
+          email,
+          session_id: sessionId,
+          request_id: requestId,
+          payment_status: session.payment_status ?? null,
+          stripe_customer_id: stripeCustomerId,
+          stripe_subscription_id: stripeSubscriptionId,
+        },
+        { status: 200 }
       );
     }
 

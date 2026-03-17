@@ -106,15 +106,15 @@ These must be verified or fixed before Phase A is considered complete:
 
 ### P0 — Blockers (Phase A cannot be called complete without these)
 
-1. **Fix plan key resolution** — Update `getPlanKeyForStripePriceId()` to also check `app_settings` as fallback, so entitlements work whether or not Stripe price ID env vars are set.
-   - File: `lib/plan-entitlements.ts`, `lib/stripe-price-for-plan.ts`
+1. ~~**Fix plan key resolution**~~ **FIXED** — `loadPriceIdPlanMap()` added to `lib/plan-entitlements.ts`. Falls back to `app_settings`. Entitlements route updated. Remaining gap: webhook revenue_events still uses env-only path — set `STRIPE_PRICE_ID_*` env vars to close fully.
 
-2. **Fix vault role elevation** — In `app/vault/page.tsx`, use `getSupabaseAdmin()` instead of user-scoped client when elevating subscriber to creator role.
-   - File: `app/vault/page.tsx`
+2. ~~**Fix vault role elevation**~~ — Current `app/vault/page.tsx` does not attempt role elevation; it redirects if `role != "creator"`. The webhook sets `role: "creator"` on checkout. This is the correct behaviour. Issue as originally documented no longer applies to current code.
 
-3. **Verify Phase A end-to-end** — Run the full test sequence from `docs/testing-checklist.md` sections 1–7 against production.
+3. ~~**Fix thank-you race condition**~~ **FIXED** — `app/api/thank-you/session/route.ts` now checks `profiles.stripe_customer_id` before returning `state: "ready"`. Customer will not be sent to login until the webhook has provisioned their profile row.
 
-4. **Set production env vars** — Confirm all required env vars from `docs/env-vars.md` are set in Vercel Production.
+4. **Verify Phase A end-to-end** — Run the full test sequence from `docs/testing-checklist.md` sections 1–7 against production.
+
+5. **Set production env vars** — Confirm all required env vars from `docs/env-vars.md` are set in Vercel Production.
 
 ### P1 — Fix before Phase B
 

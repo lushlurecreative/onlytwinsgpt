@@ -8,23 +8,25 @@ Last updated: 2026-03-17
 
 ## 1. Plan key resolution — entitlements break when price ID env vars are not set
 
-**Severity:** High — breaks entitlements and revenue tracking for all new customers
+**Severity:** High — breaks entitlements for all new customers if env vars are missing
 
-**What happens:**
-- `app/api/billing/checkout/route.ts` calls `getOrCreatePriceIdForPlan()` which reads/writes price IDs to `app_settings` table (key: `stripe_price_{plan}`)
-- `lib/plan-entitlements.ts` → `getPlanKeyForStripePriceId(priceId)` only checks env vars (`STRIPE_PRICE_ID_STARTER`, `STRIPE_PRICE_ID_PROFESSIONAL`, etc.)
-- If those env vars are not set in Vercel, `getPlanKeyForStripePriceId` returns `null`
+**Status: FIXED in `app/api/me/entitlements` route. Remaining gap: webhook revenue_events logging.**
 
-**Consequences:**
-- `GET /api/me/entitlements` returns "No plan entitlements found" — vault breaks
-- Webhook: `planKey` null → `amountCents` = 0 → revenue_events row wrong or skipped
+**What was happening:**
+- `lib/plan-entitlements.ts` → `getPlanKeyForStripePriceId(priceId)` only checked env vars
+- If `STRIPE_PRICE_ID_*` env vars were not set, returned null → vault broken, revenue events wrong
 
-**Fix needed:**
-Either:
-- (A) Set all `STRIPE_PRICE_ID_*` env vars in Vercel to match the Stripe price IDs used in production, **or**
-- (B) Update `getPlanKeyForStripePriceId()` to also check `app_settings` as a fallback
+**What was fixed:**
+- Added `loadPriceIdPlanMap()` to `lib/plan-entitlements.ts` — loads from env vars, falls back to `app_settings` table
+- Updated `app/api/me/entitlements/route.ts` to use `loadPriceIdPlanMap()` — entitlements now resolve from either source
+- Note: `lib/usage-limits.ts` already had this fallback independently
 
-**Files:** `lib/plan-entitlements.ts`, `lib/stripe-price-for-plan.ts`, `app/api/billing/checkout/route.ts`
+**Remaining gap:**
+- `app/api/billing/webhook/route.ts` line 411 still uses `getPlanKeyForStripePriceId()` (sync, env-only) for `revenue_events` logging. If env vars not set, `amountCents = 0` in revenue_events. Not customer-facing but data integrity issue.
+
+**Resolution:** Set `STRIPE_PRICE_ID_*` env vars in Vercel. This is still the cleanest fix and eliminates all gaps at once.
+
+**Files:** `lib/plan-entitlements.ts`, `app/api/me/entitlements/route.ts`, `app/api/billing/webhook/route.ts`
 
 ---
 
@@ -32,19 +34,21 @@ Either:
 
 **Severity:** High — customers see errors or cannot log in immediately after checkout
 
-**What happens:**
-- Stripe redirects browser to `/thank-you?sid=...` the moment payment succeeds
-- The webhook (`checkout.session.completed`) that creates the Supabase auth user hasn't necessarily fired yet
-- `/api/thank-you/session` returns `state: "processing"` with `reason: "auth_user_not_ready"` until the webhook runs
-- If the user tries to authenticate before webhook provisioning completes, "No account found" error
+**Status: FIXED. `/api/thank-you/session` now checks profile row before returning `state: "ready"`.**
 
-**Current mitigation:**
-- `/thank-you` page polls `/api/thank-you/session` and shows a loading state
-- Auth actions are only shown when `state = "ready"`
+**What was happening:**
+- `/api/thank-you/session` returned `state: "ready"` as soon as Stripe confirmed payment
+- The webhook that creates the Supabase user and profile had not necessarily fired yet
+- Customer sent to login with no account
+
+**What was fixed:**
+- `app/api/thank-you/session/route.ts` now queries `profiles` table for `stripe_customer_id` match before returning `state: "ready"`
+- If profile row not found yet: returns `state: "processing"`, `reason: "auth_user_not_ready"` — page continues polling
+- When webhook fires and creates the profile row, the next poll returns `state: "ready"`
 
 **Remaining risk:**
-- If webhook delivery is delayed (Stripe retry up to 72h), user is stuck on processing indefinitely
-- No timeout or fallback recovery flow for stuck users
+- If Stripe webhook delivery is delayed (Stripe can retry for up to 72h), user is stuck polling indefinitely
+- No timeout or fallback recovery flow for stuck users — manual support required
 
 **Files:** `app/thank-you/page.tsx`, `app/api/thank-you/session/route.ts`, `app/api/billing/webhook/route.ts`
 
