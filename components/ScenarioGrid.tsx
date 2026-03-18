@@ -3,64 +3,55 @@
 import { motion } from "framer-motion";
 import { galleryItems } from "@/lib/gallery-data";
 
-type Props = {
-  uploadedPhotos: string[];
-};
+type Props = { uploadedPhotos: string[] };
 
-const gridItems = galleryItems.filter((i) => i.type === "image").slice(0, 24);
+const sceneItems = galleryItems.filter((i) => i.type === "image").slice(0, 20);
 
 export default function ScenarioGrid({ uploadedPhotos }: Props) {
-  const userPhoto = uploadedPhotos[0] ?? null;
+  const userPhoto = uploadedPhotos[0];
 
   return (
     <section className="sg-section">
       <div className="sg-header">
-        <h2 className="sg-title">Your twin in every scenario</h2>
+        <h2 className="sg-title">Your face. Every scenario.</h2>
         <p className="sg-sub">
-          Your face, dropped into 20+ AI worlds. Subscribe and your actual results are trained
-          on your exact photos.
+          Your AI twin placed into 20+ worlds. This is what gets delivered to your vault every month.
         </p>
       </div>
 
       <div className="sg-grid">
-        {gridItems.map((item, i) => (
+        {sceneItems.map((item, i) => (
           <motion.div
             key={i}
-            className={`sg-card ${item.nsfw ? "sg-card-nsfw" : ""}`}
-            initial={{ opacity: 0, y: 24 }}
+            className={`sg-card${item.nsfw ? " sg-card-nsfw" : ""}`}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-40px" }}
-            transition={{ duration: 0.45, delay: (i % 4) * 0.07 }}
+            viewport={{ once: true, margin: "-30px" }}
+            transition={{ duration: 0.4, delay: (i % 4) * 0.06 }}
           >
-            {/* Scenario image */}
-            <div className="sg-img-wrap">
-              <img src={item.src} alt={item.title} className="sg-img" />
+            {/* Before/after split: user photo → AI scene */}
+            <div className="sg-split">
+              {/* Left — user's photo */}
+              <div className="sg-split-you">
+                <img src={userPhoto} alt="You" className="sg-split-img" />
+                <span className="sg-split-badge">You</span>
+              </div>
 
-              {/* User face — blended as overlay */}
-              {userPhoto && (
-                <div className="sg-face-overlay">
-                  <img src={userPhoto} alt="Your face" className="sg-face-img" />
-                </div>
-              )}
+              {/* Divider glow */}
+              <div className="sg-split-divider">
+                <span className="sg-split-arrow">→</span>
+              </div>
 
-              {/* NSFW blur */}
-              {item.nsfw && (
-                <div className="sg-nsfw-blur">
-                  <span className="sg-nsfw-badge">18+</span>
-                </div>
-              )}
+              {/* Right — AI scenario */}
+              <div className="sg-split-ai">
+                <img src={item.src} alt={item.title} className="sg-split-img" />
+                {item.nsfw && <div className="sg-nsfw-blur"><span className="sg-nsfw-badge">18+</span></div>}
+                <span className="sg-split-badge sg-split-badge-ai">AI Twin</span>
+              </div>
             </div>
 
-            {/* Card footer */}
+            {/* Label */}
             <div className="sg-foot">
-              <div className="sg-foot-left">
-                {userPhoto ? (
-                  <img src={userPhoto} alt="You" className="sg-foot-face" />
-                ) : (
-                  <div className="sg-foot-placeholder">You</div>
-                )}
-                <span className="sg-foot-arrow">→</span>
-              </div>
               <span className="sg-foot-label">{item.title}</span>
             </div>
           </motion.div>
