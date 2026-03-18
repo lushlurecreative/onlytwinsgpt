@@ -16,6 +16,10 @@ export default async function HomePage() {
     redirect("/admin");
   }
 
+  if (user) {
+    redirect("/dashboard");
+  }
+
   return (
     <Suspense fallback={<div />}>
       <HomeClient />

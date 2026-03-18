@@ -2273,3 +2273,861 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* =====================================================
+   HOMEPAGE — Upload Gate
+   ===================================================== */
+
+.homepage {
+  position: relative;
+}
+
+.upload-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.upload-gate-inner {
+  width: 100%;
+  max-width: 560px;
+  text-align: center;
+}
+
+.upload-gate-headline {
+  font-size: clamp(32px, 6vw, 56px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 0 0 12px;
+}
+
+.upload-gate-sub {
+  color: var(--muted);
+  font-size: 16px;
+  margin: 0 0 32px;
+}
+
+.upload-slots {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.upload-slot {
+  width: 120px;
+  height: 140px;
+  border-radius: 12px;
+  border: 2px dashed var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: border-color 0.2s, background 0.2s;
+  padding: 0;
+  position: relative;
+}
+
+.upload-slot:hover {
+  border-color: var(--border-accent);
+  background: var(--surface-soft);
+}
+
+.upload-slot-drag {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.upload-slot-filled {
+  border-style: solid;
+  border-color: var(--border-accent);
+}
+
+.upload-slot-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.upload-slot-icon {
+  font-size: 28px;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.upload-slot-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.upload-slot-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-gate-cta {
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.btn-gate-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.upload-gate-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.upload-gate-divider::before,
+.upload-gate-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.upload-gate-samples {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.upload-sample-thumb {
+  width: 80px;
+  cursor: pointer;
+  background: none;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  padding: 0;
+  transition: border-color 0.2s, transform 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+
+.upload-sample-thumb:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.upload-sample-thumb img {
+  width: 100%;
+  height: 64px;
+  object-fit: cover;
+  display: block;
+}
+
+.upload-sample-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  padding: 4px 4px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =====================================================
+   CHIP HERO
+   ===================================================== */
+
+.chip-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+  padding: 80px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.chip-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chip-hero-headline {
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  margin: 0;
+}
+
+.chip-hero-sub {
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 440px;
+}
+
+.chip-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.chip-photo-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--border-accent);
+  flex-shrink: 0;
+}
+
+.chip-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.chip-photo-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+.chip-hero-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chip-wrap {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Floating incoming photo */
+.chip-incoming-photo {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--border-accent);
+  box-shadow: 0 0 16px var(--glow, rgba(0,174,239,0.4));
+  z-index: 2;
+}
+
+.chip-incoming-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Connection line from photo to chip */
+.chip-connection-line {
+  position: absolute;
+  top: 54px;
+  left: 86px;
+  width: 48px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  transform-origin: left center;
+  z-index: 1;
+}
+
+/* Chip graphic */
+.chip-graphic {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  background: linear-gradient(135deg, #1a1a22 0%, #0f0f16 100%);
+  clip-path: polygon(
+    18px 0%, calc(100% - 18px) 0%,
+    100% 18px, 100% calc(100% - 18px),
+    calc(100% - 18px) 100%, 18px 100%,
+    0% calc(100% - 18px), 0% 18px
+  );
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+/* Pin rows */
+.chip-pins {
+  position: absolute;
+}
+
+.chip-pins::before,
+.chip-pins::after {
+  content: "";
+  position: absolute;
+  background: #b87333;
+  border-radius: 2px;
+}
+
+.chip-pins-top,
+.chip-pins-bottom {
+  left: 20px;
+  right: 20px;
+  height: 8px;
+}
+
+.chip-pins-top { top: -8px; }
+.chip-pins-bottom { bottom: -8px; }
+
+.chip-pins-left,
+.chip-pins-right {
+  top: 20px;
+  bottom: 20px;
+  width: 8px;
+}
+
+.chip-pins-left { left: -8px; }
+.chip-pins-right { right: -8px; }
+
+.chip-pins-top::before,
+.chip-pins-bottom::before {
+  width: 8px;
+  height: 8px;
+  top: 0;
+  left: 10px;
+  box-shadow: 22px 0 #b87333, 44px 0 #b87333, 66px 0 #b87333, 88px 0 #b87333;
+}
+
+.chip-pins-left::before,
+.chip-pins-right::before {
+  width: 8px;
+  height: 8px;
+  left: 0;
+  top: 10px;
+  box-shadow: 0 22px #b87333, 0 44px #b87333, 0 66px #b87333;
+}
+
+/* Die */
+.chip-die {
+  width: 108px;
+  height: 108px;
+  background: linear-gradient(135deg, #1e1e2e 0%, #12121c 100%);
+  border-radius: 8px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(184, 115, 51, 0.3);
+}
+
+.chip-die-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+}
+
+.chip-die-cell {
+  background: rgba(255,255,255,0.03);
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.chip-die-center {
+  background: radial-gradient(circle, rgba(255,140,0,0.25) 0%, rgba(255,80,0,0.12) 50%, transparent 100%);
+  border: 1px solid rgba(255,140,0,0.25) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.chip-core-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: radial-gradient(circle, rgba(0,174,239,0.5) 0%, transparent 70%);
+}
+
+.chip-monogram {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  z-index: 1;
+  position: relative;
+}
+
+/* Pulse ring */
+.chip-pulse-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  border: 2px solid var(--accent);
+  pointer-events: none;
+}
+
+/* Chip pulsed state */
+.chip-pulsed .chip-die-center {
+  background: radial-gradient(circle, rgba(0,174,239,0.3) 0%, rgba(255,140,0,0.12) 50%, transparent 100%);
+}
+
+/* =====================================================
+   IPHONE MOCKUP SECTION
+   ===================================================== */
+
+.iphone-section {
+  height: 300vh;
+  position: relative;
+}
+
+.iphone-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 64px;
+  padding: 0 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.iphone-beats {
+  display: flex;
+  flex-direction: column;
+  gap: 100vh;
+}
+
+.iphone-beat {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.iphone-phone-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Phone frame */
+.phone-frame {
+  width: 260px;
+  height: 520px;
+  background: #111118;
+  border-radius: 40px;
+  border: 2px solid rgba(255,255,255,0.12);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04),
+    0 32px 80px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 0 20px;
+}
+
+.phone-notch {
+  width: 90px;
+  height: 26px;
+  background: #111118;
+  border-radius: 0 0 16px 16px;
+  margin: 0 auto 8px;
+  border: 2px solid rgba(255,255,255,0.08);
+  border-top: none;
+  flex-shrink: 0;
+}
+
+.phone-screen {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+
+.phone-home-bar {
+  width: 100px;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+
+.phone-panel {
+  position: absolute;
+  inset: 0;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Profile panel */
+.phone-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.phone-profile-photo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #e1306c;
+  flex-shrink: 0;
+}
+
+.phone-profile-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.phone-profile-stats {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  justify-content: space-around;
+}
+
+.phone-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.phone-stat-num {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.phone-stat-label {
+  font-size: 9px;
+  color: var(--muted);
+}
+
+.phone-handle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.phone-bio {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.phone-ig-btn {
+  width: 100%;
+  background: #e1306c;
+  color: #fff;
+  border-radius: 6px;
+  text-align: center;
+  padding: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* Grid panel */
+.phone-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 2px;
+  margin: 0 -14px;
+}
+
+.phone-grid-cell {
+  aspect-ratio: 1;
+  overflow: hidden;
+}
+
+.phone-grid-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Post panel */
+.phone-post {
+  display: flex;
+  flex-direction: column;
+}
+
+.phone-post-img {
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  margin: 0 -14px;
+  width: calc(100% + 28px);
+}
+
+.phone-post-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.phone-post-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+
+.phone-heart {
+  color: #e1306c;
+  font-size: 16px;
+}
+
+.phone-post-likes {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.phone-post-caption {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.phone-post-caption strong {
+  color: var(--text);
+}
+
+/* =====================================================
+   SCENARIO GRID
+   ===================================================== */
+
+.scenario-grid-section {
+  padding: 80px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.scenario-card {
+  background: var(--surface);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.scenario-card:hover {
+  border-color: var(--border-accent);
+  transform: translateY(-2px);
+}
+
+.scenario-card-img {
+  position: relative;
+  aspect-ratio: 3/4;
+  overflow: hidden;
+}
+
+.scenario-card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.scenario-card-blur {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(14px);
+  background: rgba(9,9,11,0.4);
+}
+
+.scenario-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+}
+
+.scenario-card-user {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.scenario-user-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--border-accent);
+}
+
+.scenario-user-placeholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  border: 1.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.scenario-arrow {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.scenario-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* =====================================================
+   HOW IT WORKS
+   ===================================================== */
+
+.how-it-works-section {
+  padding: 80px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.how-it-works-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.hiw-step-num {
+  font-size: 40px;
+  font-weight: 900;
+  color: var(--accent);
+  opacity: 0.5;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.hiw-step-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+/* =====================================================
+   CTA FINAL
+   ===================================================== */
+
+.cta-final {
+  padding: 100px 48px !important;
+  text-align: center;
+}
+
+/* =====================================================
+   RESPONSIVE — Homepage
+   ===================================================== */
+
+@media (max-width: 900px) {
+  .chip-hero {
+    grid-template-columns: 1fr;
+    padding: 60px 24px;
+    gap: 48px;
+  }
+
+  .chip-hero-visual {
+    order: -1;
+  }
+
+  .iphone-sticky {
+    grid-template-columns: 1fr;
+    padding: 0 24px;
+  }
+
+  .iphone-phone-wrap {
+    display: none;
+  }
+
+  .iphone-beat {
+    height: auto;
+    min-height: 50vh;
+  }
+
+  .scenario-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .how-it-works-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .scenario-grid-section,
+  .how-it-works-section {
+    padding: 60px 24px;
+  }
+
+  .upload-slots {
+    gap: 8px;
+  }
+
+  .upload-slot {
+    width: 96px;
+    height: 112px;
+  }
+}
+
+@media (max-width: 480px) {
+  .scenario-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .upload-gate-samples {
+    gap: 8px;
+  }
+}
