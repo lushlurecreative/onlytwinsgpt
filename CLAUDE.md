@@ -17,6 +17,19 @@ Claude operates in full implementation mode:
 
 When something must be done by Shaun (Stripe dashboard, Supabase SQL Editor, Vercel env vars), explain it in plain English with numbered steps — no technical jargon, no assumptions about technical knowledge.
 
+## Autonomy rule (critical)
+
+**Work through multi-step tasks from start to finish without stopping to ask permission.**
+
+Do NOT pause between steps with phrases like "shall I proceed?", "want me to continue?", "ready for the next step?", or "should I go ahead?". Execute the full task, then report what was done.
+
+Only stop mid-task if:
+1. A product/business decision is required that cannot be inferred from context
+2. A destructive or irreversible action is about to affect production (dropping tables, force-pushing, deleting real user data)
+3. An action requires Shaun's credentials or dashboard access (Stripe, Vercel, Supabase SQL Editor)
+
+Everything else: just do it and report at the end.
+
 ---
 
 ## Mission
