@@ -46,7 +46,7 @@ test("/admin → redirects to /login when not logged in (middleware)", async ({ 
 // ── Public routes do not redirect ───────────────────────────────────────────
 
 test.describe("Public routes are accessible", () => {
-  const PUBLIC_ROUTES = ["/", "/pricing", "/login"];
+  const PUBLIC_ROUTES = ["/", "/pricing"]; // /login excluded — URL always contains "/login"
 
   for (const route of PUBLIC_ROUTES) {
     test(`${route} → does not redirect to /login`, async ({ page }) => {

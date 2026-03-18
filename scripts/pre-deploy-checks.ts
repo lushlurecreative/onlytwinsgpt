@@ -6,10 +6,24 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync, readdirSync, statSync } from "fs";
+import { readFileSync, readdirSync, statSync, existsSync } from "fs";
 import { join } from "path";
 
 const REPO_ROOT = new URL("..", import.meta.url).pathname;
+
+// Load .env.local if present (Vercel local dev — run `vercel env pull` to populate it).
+const envLocalPath = join(REPO_ROOT, ".env.local");
+if (existsSync(envLocalPath)) {
+  for (const line of readFileSync(envLocalPath, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+    if (key && !process.env[key]) process.env[key] = val;
+  }
+}
 let failures = 0;
 
 function pass(label: string) {
@@ -31,6 +45,8 @@ section("Debug string check");
 const BANNED = ["start-gating-debug", "start-gating-debug-reconcile"];
 const SCAN_DIRS = ["app", "lib", "scripts"].map((d) => join(REPO_ROOT, d));
 
+const SELF = import.meta.url.replace("file://", "");
+
 function scanDir(dir: string, banned: string[]): string[] {
   const hits: string[] = [];
   let entries: string[];
@@ -46,6 +62,7 @@ function scanDir(dir: string, banned: string[]): string[] {
     if (stat.isDirectory()) {
       hits.push(...scanDir(full, banned));
     } else if (full.endsWith(".ts") || full.endsWith(".tsx")) {
+      if (full === SELF) continue; // skip self to avoid false positives
       const src = readFileSync(full, "utf8");
       for (const pattern of banned) {
         if (src.includes(pattern)) {
@@ -94,19 +111,20 @@ for (const key of REQUIRED_ENV) {
 }
 
 // ── 3. Schema: system_events table columns ──────────────────────────────────
-section("Schema check — system_events");
+async function checkSchema() {
+  section("Schema check — system_events");
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!url || !serviceKey) {
-  fail("Cannot check schema — NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing");
-} else {
+  if (!url || !serviceKey) {
+    fail("Cannot check schema — NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing");
+    return;
+  }
+
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
 
-  // Query information_schema directly via raw SQL via rpc or via a table query.
-  // Use a select on information_schema.columns — works with Supabase postgres.
-  const { data, error } = await admin
+  const { error } = await admin
     .from("system_events")
     .select("event_type, payload")
     .limit(0);
@@ -132,11 +150,17 @@ if (!url || !serviceKey) {
 }
 
 // ── Result ───────────────────────────────────────────────────────────────────
-console.log("");
-if (failures === 0) {
-  console.log("All pre-deploy checks passed.");
-  process.exit(0);
-} else {
-  console.error(`${failures} check(s) failed. Fix before deploying.`);
-  process.exit(1);
+async function main() {
+  await checkSchema();
+
+  console.log("");
+  if (failures === 0) {
+    console.log("All pre-deploy checks passed.");
+    process.exit(0);
+  } else {
+    console.error(`${failures} check(s) failed. Fix before deploying.`);
+    process.exit(1);
+  }
 }
+
+main();

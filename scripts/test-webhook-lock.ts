@@ -16,6 +16,24 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { readFileSync, existsSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+// Load .env.local if present.
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const envLocalPath = join(repoRoot, ".env.local");
+if (existsSync(envLocalPath)) {
+  for (const line of readFileSync(envLocalPath, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+    if (key && !process.env[key]) process.env[key] = val;
+  }
+}
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -46,6 +64,7 @@ async function cleanup() {
     .eq("stripe_event_id", TEST_EVENT_ID);
 }
 
+async function main() {
 // ── Test 1: insert lock row ──────────────────────────────────────────────────
 const { error: insertError } = await admin.from("stripe_webhook_events").insert({
   stripe_event_id: TEST_EVENT_ID,
@@ -55,6 +74,7 @@ const { error: insertError } = await admin.from("stripe_webhook_events").insert(
 
 if (insertError) {
   fail("Insert lock row (processed_at = null)", insertError.message);
+  await cleanup();
   process.exit(1);
 } else {
   pass("Insert lock row (processed_at = null)");
@@ -106,11 +126,14 @@ if (updateError) {
 // ── Cleanup ──────────────────────────────────────────────────────────────────
 await cleanup();
 
-console.log("");
-if (failures === 0) {
-  console.log("Webhook lock tests passed.");
-  process.exit(0);
-} else {
-  console.error(`${failures} test(s) failed.`);
-  process.exit(1);
+  console.log("");
+  if (failures === 0) {
+    console.log("Webhook lock tests passed.");
+    process.exit(0);
+  } else {
+    console.error(`${failures} test(s) failed.`);
+    process.exit(1);
+  }
 }
+
+main();
