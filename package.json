@@ -13,7 +13,8 @@
     "test:webhook-lock": "tsx scripts/test-webhook-lock.ts",
     "test:gating": "npx playwright test test-gating.spec.ts",
     "test:auth-billing": "npx playwright test test-auth-billing.spec.ts",
-    "test:self-heal": "tsx scripts/test-self-heal.ts"
+    "test:self-heal": "tsx scripts/test-self-heal.ts",
+    "webhook-sanity": "tsx scripts/webhook-sanity.ts"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.8.7",
