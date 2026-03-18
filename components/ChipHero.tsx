@@ -8,98 +8,132 @@ type Props = {
   uploadedPhotos: string[];
 };
 
+const PINS = Array.from({ length: 8 });
+
 export default function ChipHero({ uploadedPhotos }: Props) {
-  const [chipPulsed, setChipPulsed] = useState(false);
+  const [chipLoaded, setChipLoaded] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setChipPulsed(true), 1100);
+    // Fire 1400ms after mount — after the spring animation has landed (~1.2s)
+    const t = setTimeout(() => setChipLoaded(true), 1400);
     return () => clearTimeout(t);
   }, []);
 
   return (
-    <section className="chip-hero">
-      {/* Left: text */}
-      <div className="chip-hero-text">
+    <section className="ch-section">
+      {/* Left */}
+      <div className="ch-text">
         <p className="eyebrow">Your face. Powered by AI.</p>
-        <h1 className="chip-hero-headline">
+        <h1 className="ch-headline">
           20+ scenarios.<br />
           <span style={{ color: "var(--accent)" }}>One subscription.</span>
         </h1>
-        <p className="chip-hero-sub">
-          We train a custom AI model on your photos and generate ready-to-post content for your
-          social channels every single month.
+        <p className="ch-sub">
+          We train a custom AI model on your photos and generate ready-to-post content
+          for your social channels every single month.
         </p>
 
-        {/* Uploaded photo row */}
-        <div className="chip-photo-row">
+        <div className="ch-photo-row">
           {uploadedPhotos.slice(0, 3).map((src, i) => (
-            <div key={i} className="chip-photo-thumb">
+            <div key={i} className="ch-photo-thumb">
               <img src={src} alt={`Your photo ${i + 1}`} />
             </div>
           ))}
-          <span className="chip-photo-label">↑ Your photos going in</span>
+          <span className="ch-photo-label">↑ Your photos going in</span>
         </div>
 
-        <div className="cta-row" style={{ marginTop: 24 }}>
+        <div className="cta-row" style={{ marginTop: 32 }}>
           <PremiumButton href="/pricing">Subscribe &amp; Get Started</PremiumButton>
           <PremiumButton href="/gallery" variant="secondary">See All Scenarios</PremiumButton>
         </div>
       </div>
 
-      {/* Right: chip graphic */}
-      <div className="chip-hero-visual">
-        <div className="chip-wrap">
-          {/* Floating photo that animates into chip */}
+      {/* Right — chip stage */}
+      <div className="ch-visual">
+        {/*
+          chip-stage: 440×440 relative container.
+          chip-body is centred at offset (60,60) — 320×320.
+          The photo's natural CSS position is centred in the stage (220,220).
+          Framer Motion x/y are offsets from that natural position.
+          Initial x:-300 y:-280 puts it at (-80,-60) — off-screen top-left.
+          Final x:0 y:0 puts it at stage centre = chip die centre. ✓
+        */}
+        <div className="ch-stage">
+
+          {/* Pin strips — OUTSIDE chip-body, no clip-path affecting them */}
+          <div className="ch-pins ch-pins-top">
+            {PINS.map((_, i) => <span key={i} className={`ch-pin ${chipLoaded ? "ch-pin-lit" : ""}`} style={{ animationDelay: `${i * 0.06}s` }} />)}
+          </div>
+          <div className="ch-pins ch-pins-bottom">
+            {PINS.map((_, i) => <span key={i} className={`ch-pin ${chipLoaded ? "ch-pin-lit" : ""}`} style={{ animationDelay: `${i * 0.06}s` }} />)}
+          </div>
+          <div className="ch-pins ch-pins-left">
+            {PINS.map((_, i) => <span key={i} className={`ch-pin ch-pin-v ${chipLoaded ? "ch-pin-lit" : ""}`} style={{ animationDelay: `${i * 0.06}s` }} />)}
+          </div>
+          <div className="ch-pins ch-pins-right">
+            {PINS.map((_, i) => <span key={i} className={`ch-pin ch-pin-v ${chipLoaded ? "ch-pin-lit" : ""}`} style={{ animationDelay: `${i * 0.06}s` }} />)}
+          </div>
+
+          {/* Chip body — clip-path only affects this element and its children */}
+          <div className={`ch-body ${chipLoaded ? "ch-body-lit" : ""}`}>
+            <div className="ch-surface" />
+
+            {/* Die area */}
+            <div className="ch-die">
+              <div className="ch-die-trace-h" />
+              <div className="ch-die-trace-v" />
+              <div className={`ch-die-core ${chipLoaded ? "ch-die-core-lit" : ""}`}>
+                <div className="ch-die-core-glow" />
+                <span className="ch-monogram">OT</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Pulse ring — expands when chip loads */}
           <motion.div
-            className="chip-incoming-photo"
-            initial={{ x: -90, y: -70, scale: 0.5, opacity: 0 }}
-            animate={{ x: 0, y: 0, scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 120, damping: 20, delay: 0.3 }}
+            className="ch-pulse-ring"
+            animate={chipLoaded ? { scale: [0.3, 2.2], opacity: [0.8, 0] } : { scale: 0.3, opacity: 0 }}
+            transition={{ duration: 0.9, ease: "easeOut" }}
+          />
+
+          {/* The user's photo — flies from outside into chip centre */}
+          <motion.div
+            className="ch-photo"
+            initial={{ x: -300, y: -280, scale: 1.2, opacity: 0 }}
+            animate={
+              chipLoaded
+                ? { x: 0, y: 0, scale: 1, opacity: 0 }  // absorbed into chip
+                : { x: 0, y: 0, scale: 1, opacity: 1 }  // lands at centre
+            }
+            transition={
+              chipLoaded
+                ? { duration: 0.35, ease: "easeIn" }
+                : { type: "spring", stiffness: 75, damping: 16, delay: 0.4 }
+            }
           >
             <img src={uploadedPhotos[0]} alt="Your photo" />
           </motion.div>
 
-          {/* The chip */}
-          <div className={`chip-graphic ${chipPulsed ? "chip-pulsed" : ""}`}>
-            {/* Pin rows */}
-            <div className="chip-pins chip-pins-top" />
-            <div className="chip-pins chip-pins-bottom" />
-            <div className="chip-pins chip-pins-left" />
-            <div className="chip-pins chip-pins-right" />
-
-            {/* Inner die */}
-            <div className="chip-die">
-              <div className="chip-die-grid">
-                <div className="chip-die-cell" />
-                <div className="chip-die-cell" />
-                <div className="chip-die-cell chip-die-center">
-                  <motion.div
-                    className="chip-core-glow"
-                    animate={chipPulsed ? { scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] } : {}}
-                    transition={{ duration: 0.6, ease: "easeInOut" }}
-                  />
-                  {/* OT monogram */}
-                  <span className="chip-monogram">OT</span>
-                </div>
-                <div className="chip-die-cell" />
-              </div>
-            </div>
-
-            {/* Blue glow pulse ring */}
-            <motion.div
-              className="chip-pulse-ring"
-              animate={chipPulsed ? { scale: [1, 1.4], opacity: [0.6, 0] } : {}}
-              transition={{ duration: 0.7, ease: "easeOut" }}
+          {/* Connection trace — SVG line from start position to chip */}
+          <motion.svg
+            className="ch-trace-svg"
+            viewBox="0 0 440 440"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: chipLoaded ? 0 : 1 }}
+            transition={{ delay: 0.5, duration: 0.4 }}
+          >
+            <motion.path
+              d="M 50 50 Q 120 130 220 220"
+              stroke="rgba(0,174,239,0.4)"
+              strokeWidth="1.5"
+              fill="none"
+              strokeDasharray="1"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: chipLoaded ? 0 : 1 }}
+              transition={{ delay: 0.6, duration: 0.7, ease: "easeOut" }}
             />
-          </div>
+          </motion.svg>
 
-          {/* Connection line from photo to chip */}
-          <motion.div
-            className="chip-connection-line"
-            initial={{ scaleX: 0, opacity: 0 }}
-            animate={{ scaleX: 1, opacity: 1 }}
-            transition={{ delay: 0.9, duration: 0.4 }}
-          />
         </div>
       </div>
     </section>

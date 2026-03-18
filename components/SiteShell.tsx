@@ -14,6 +14,11 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin") ?? false;
 
+  // Homepage is guests-only (server redirects authenticated users); render bare — no header/footer
+  if (pathname === "/") {
+    return <div className="site">{children}</div>;
+  }
+
   if (isAdmin) {
     return (
       <div className="site site-shell">
