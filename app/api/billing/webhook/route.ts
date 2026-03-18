@@ -142,6 +142,7 @@ async function markStripeEventProcessed(eventId: string) {
 }
 
 export async function POST(request: Request) {
+  let lockedEventId: string | undefined;
   try {
     const stripe = getStripe();
     const supabaseAdmin = getSupabaseAdmin();
@@ -182,6 +183,7 @@ export async function POST(request: Request) {
     if (lock.duplicate) {
       return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
     }
+    lockedEventId = event.id;
     const failAfterLock = async (status: number, body: Record<string, unknown>) => {
       await markStripeEventProcessed(event.id);
       return NextResponse.json(body, { status });
@@ -418,13 +420,25 @@ export async function POST(request: Request) {
       const planKey = getPlanKeyForStripePriceId(priceId);
       const amountCents = planKey ? Math.round(PACKAGE_PLANS[planKey].amountUsd * 100) : 0;
       if (amountCents > 0) {
-        await supabaseAdmin.from("revenue_events").insert({
+        const { error: revenueInsertError } = await supabaseAdmin.from("revenue_events").insert({
           user_id: subscriberId,
           lead_id: (subscription.metadata?.lead_id as string) || null,
           amount_cents: amountCents,
           currency: "usd",
           stripe_event_id: event.id,
           plan_key: planKey,
+        });
+        if (revenueInsertError) {
+          logWarn("billing_webhook_revenue_event_insert_failed", {
+            stripeEventId: event.id,
+            subscriptionId: subscription.id,
+            message: revenueInsertError.message,
+          });
+        }
+      } else if (!planKey && priceId) {
+        logWarn("billing_webhook_unknown_price_id_no_revenue_recorded", {
+          stripeEventId: event.id,
+          priceId,
         });
       }
     }
@@ -529,6 +543,9 @@ export async function POST(request: Request) {
     await markStripeEventProcessed(event.id);
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
+    if (lockedEventId) {
+      await markStripeEventProcessed(lockedEventId);
+    }
     logError("billing_webhook_unhandled_error", error);
     await sendAlert("billing_webhook_unhandled_error", {
       route: "/api/billing/webhook",

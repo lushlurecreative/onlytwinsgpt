@@ -79,20 +79,7 @@ export async function requireActiveSubscriber(redirectPath: string) {
     return status === "active" || status === "trialing";
   });
 
-  // Fallback for post-checkout race window: profile exists and is linked to Stripe
-  // while subscription webhook is still finalizing.
-  let profileStripeCustomerId: string | null = null;
-  if (!isSubscriberFromSubscriptions) {
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("stripe_customer_id")
-      .eq("id", user.id)
-      .maybeSingle();
-    const profileRow = profile as { stripe_customer_id?: string | null } | null;
-    profileStripeCustomerId = profileRow?.stripe_customer_id ?? null;
-  }
-
-  let finalIsSubscriber = isSubscriberFromSubscriptions || !!profileStripeCustomerId;
+  let finalIsSubscriber = isSubscriberFromSubscriptions;
 
   // Self-heal: if logged-in user has no active entitlement, reconcile from
   // checkout sid cookie and transfer Stripe linkage/subscription to this auth user.
@@ -105,8 +92,14 @@ export async function requireActiveSubscriber(redirectPath: string) {
         const session = await stripe.checkout.sessions.retrieve(checkoutSid, {
           expand: ["customer", "subscription"],
         });
-        const stripeCustomerId = extractStripeCustomerId(session.customer);
-        const stripeSubscriptionId = extractStripeSubscriptionId(session.subscription);
+
+        // Reject sessions older than 24 hours to prevent replay of shared/leaked checkout URLs.
+        const sessionAgeMs = Date.now() - (session.created ?? 0) * 1000;
+        const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+        const sessionValid = sessionAgeMs <= SESSION_MAX_AGE_MS;
+
+        const stripeCustomerId = sessionValid ? extractStripeCustomerId(session.customer) : null;
+        const stripeSubscriptionId = sessionValid ? extractStripeSubscriptionId(session.subscription) : null;
 
         if (stripeCustomerId) {
           const { data: profileByCustomer } = await admin
@@ -127,6 +120,18 @@ export async function requireActiveSubscriber(redirectPath: string) {
               .update({ stripe_customer_id: null, updated_at: new Date().toISOString() })
               .eq("id", existingOwnerId)
               .eq("stripe_customer_id", stripeCustomerId);
+
+            // Audit trail: log every ownership transfer.
+            await admin.from("system_events").insert({
+              event_type: "subscription_ownership_transferred",
+              payload: {
+                severity: "warning",
+                from_user_id: existingOwnerId,
+                to_user_id: user.id,
+                stripe_customer_id: stripeCustomerId,
+                checkout_session_id: checkoutSid,
+              },
+            });
           }
 
           await admin.from("profiles").upsert(
@@ -169,22 +174,10 @@ export async function requireActiveSubscriber(redirectPath: string) {
           !!stripeCustomerId;
       }
     } catch (reconcileError) {
-      console.log("[start-gating-debug-reconcile-error]", {
-        userId: user.id,
-        message: reconcileError instanceof Error ? reconcileError.message : String(reconcileError),
-      });
+      // reconciliation errors are non-fatal; user will be redirected to /pricing
+      void reconcileError;
     }
   }
-
-  // TEMP DEBUG LOG: keep for diagnosing paid-user gating decisions.
-  console.log("[start-gating-debug]", {
-    userId: user.id,
-    subscriptionRowFound: subscriptionRows.length > 0,
-    subscriptionStatusValues: subscriptionRows.map((row) => row.status ?? null),
-    profileStripeCustomerIdFound: !!profileStripeCustomerId,
-    finalIsSubscriber,
-    subscriptionQueryError,
-  });
 
   if (!finalIsSubscriber) {
     redirect("/pricing");
