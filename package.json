@@ -11,7 +11,9 @@
     "add-scrape-env": "bash scripts/add-scrape-env-to-vercel.sh",
     "pre-deploy": "tsx scripts/pre-deploy-checks.ts",
     "test:webhook-lock": "tsx scripts/test-webhook-lock.ts",
-    "test:gating": "npx playwright test test-gating.spec.ts"
+    "test:gating": "npx playwright test test-gating.spec.ts",
+    "test:auth-billing": "npx playwright test test-auth-billing.spec.ts",
+    "test:self-heal": "tsx scripts/test-self-heal.ts"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.8.7",
