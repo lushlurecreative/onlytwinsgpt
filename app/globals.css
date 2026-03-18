@@ -2616,14 +2616,22 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
+  perspective: 1600px;
+  perspective-origin: 50% 35%;
 }
 
-/* Stage: 440x440. chip-body centred at (60,60). Photo centred at (220,220). */
+/* Stage: 440x440. CSS perspective makes flat SVG read as 3D chip */
 .ch-stage {
   position: relative;
   width: 440px;
   height: 440px;
   flex-shrink: 0;
+  transform: rotateX(22deg) rotateY(-20deg) rotateZ(3deg);
+  transform-style: preserve-3d;
+  filter:
+    drop-shadow(0 50px 100px rgba(0, 0, 0, 0.95))
+    drop-shadow(0 20px 40px rgba(0, 0, 0, 0.7))
+    drop-shadow(0 0 80px rgba(0, 174, 239, 0.1));
 }
 
 .ch-body {
@@ -3050,8 +3058,8 @@ a {
     padding: 80px 32px;
     gap: 60px;
   }
-  .ch-visual { order: -1; }
-  .ch-stage { width: 340px; height: 340px; }
+  .ch-visual { order: -1; perspective: 900px; }
+  .ch-stage { width: 320px; height: 320px; transform: rotateX(18deg) rotateY(-16deg) rotateZ(2deg); }
   .ch-body { left: 40px; top: 40px; width: 260px; height: 260px; }
   .ch-pins-top { top: 26px; left: 68px; right: 68px; }
   .ch-pins-bottom { bottom: 26px; left: 68px; right: 68px; }
@@ -3190,98 +3198,150 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
+  perspective: 1400px;
+  perspective-origin: 50% 50%;
 }
 
 @keyframes phone-float {
-  0%, 100% { transform: translateY(0px) rotate(-1deg); }
-  50% { transform: translateY(-14px) rotate(-1deg); }
+  0%, 100% { transform: rotateY(-8deg) rotateX(3deg) translateY(0px); }
+  50%       { transform: rotateY(-8deg) rotateX(3deg) translateY(-18px); }
 }
 
-/* iPhone 15 frame */
+/* iPhone 15 Pro — Space Black titanium */
 .iph-frame {
   position: relative;
-  width: 290px;
-  height: 588px;
-  background: linear-gradient(170deg, #2a2a2e 0%, #1a1a1e 40%, #111113 100%);
-  border-radius: 48px;
+  width: 300px;
+  height: 620px;
+  border-radius: 52px;
+
+  /* Titanium frame material */
+  background: linear-gradient(
+    160deg,
+    #242428 0%,
+    #1a1a1e 30%,
+    #101012 70%,
+    #080809 100%
+  );
+
   box-shadow:
-    0 0 0 1.5px rgba(255, 255, 255, 0.12),
-    0 0 0 3px rgba(0, 0, 0, 0.8),
-    0 30px 80px rgba(0, 0, 0, 0.7),
-    0 8px 30px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  animation: phone-float 4s ease-in-out infinite;
+    /* Titanium edge: top-left catchlight */
+    inset 1.5px 2px 0 rgba(255, 255, 255, 0.22),
+    /* Titanium edge: bottom-right shadow */
+    inset -1px -1.5px 0 rgba(255, 255, 255, 0.05),
+    /* Screen glass separation */
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.07),
+    /* Hard cast shadow layer 1 */
+    0 70px 160px rgba(0, 0, 0, 1),
+    /* Cast shadow layer 2 */
+    0 35px 80px rgba(0, 0, 0, 0.85),
+    /* Cast shadow layer 3 */
+    0 16px 40px rgba(0, 0, 0, 0.7),
+    /* Close contact shadow */
+    0 4px 12px rgba(0, 0, 0, 0.6),
+    /* Ambient screen glow bleed */
+    0 100px 220px rgba(20, 80, 200, 0.07);
+
+  animation: phone-float 5s ease-in-out infinite;
+  transform-style: preserve-3d;
   overflow: hidden;
 }
 
-/* Side buttons */
+/* Specular highlight: top glass reflection */
+.iph-frame::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 55%;
+  background: linear-gradient(
+    175deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.02) 40%,
+    transparent 100%
+  );
+  border-radius: 52px 52px 0 0;
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* Side buttons — titanium rails */
 .iph-btn-vol-up {
   position: absolute;
-  left: -3px;
-  top: 120px;
-  width: 4px;
-  height: 36px;
-  background: linear-gradient(90deg, #1a1a1e, #2e2e34);
-  border-radius: 2px 0 0 2px;
-  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.5);
+  left: -4px;
+  top: 130px;
+  width: 5px;
+  height: 38px;
+  background: linear-gradient(90deg, #1c1c20, #35353a);
+  border-radius: 3px 0 0 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    -2px 0 6px rgba(0, 0, 0, 0.7);
 }
 
 .iph-btn-vol-dn {
   position: absolute;
-  left: -3px;
-  top: 168px;
-  width: 4px;
-  height: 36px;
-  background: linear-gradient(90deg, #1a1a1e, #2e2e34);
-  border-radius: 2px 0 0 2px;
-  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.5);
+  left: -4px;
+  top: 180px;
+  width: 5px;
+  height: 38px;
+  background: linear-gradient(90deg, #1c1c20, #35353a);
+  border-radius: 3px 0 0 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    -2px 0 6px rgba(0, 0, 0, 0.7);
 }
 
 .iph-btn-silent {
   position: absolute;
-  left: -3px;
-  top: 78px;
-  width: 4px;
-  height: 24px;
-  background: linear-gradient(90deg, #1a1a1e, #2e2e34);
-  border-radius: 2px 0 0 2px;
-  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.5);
+  left: -4px;
+  top: 88px;
+  width: 5px;
+  height: 26px;
+  background: linear-gradient(90deg, #1c1c20, #35353a);
+  border-radius: 3px 0 0 3px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    -2px 0 6px rgba(0, 0, 0, 0.7);
 }
 
 .iph-btn-power {
   position: absolute;
-  right: -3px;
-  top: 140px;
-  width: 4px;
-  height: 64px;
-  background: linear-gradient(270deg, #1a1a1e, #2e2e34);
-  border-radius: 0 2px 2px 0;
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.5);
+  right: -4px;
+  top: 150px;
+  width: 5px;
+  height: 68px;
+  background: linear-gradient(270deg, #1c1c20, #35353a);
+  border-radius: 0 3px 3px 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    2px 0 6px rgba(0, 0, 0, 0.7);
 }
 
-/* Dynamic Island */
+/* Dynamic Island — black pill embedded in OLED screen */
 .iph-island {
   position: absolute;
-  top: 14px;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%);
-  width: 120px;
-  height: 34px;
+  width: 122px;
+  height: 36px;
   background: #000;
   border-radius: 20px;
-  z-index: 10;
+  z-index: 20;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    inset 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 /* Status bar */
 .iph-status {
   position: absolute;
-  top: 58px;
+  top: 60px;
   left: 0; right: 0;
-  padding: 0 20px;
+  padding: 0 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  z-index: 5;
+  z-index: 15;
 }
 
 .iph-time {
@@ -3326,20 +3386,21 @@ a {
   border-radius: 1px;
 }
 
-/* Screen */
+/* Screen — OLED, nearly edge-to-edge */
 .iph-screen {
   position: absolute;
-  top: 80px;
-  left: 10px; right: 10px; bottom: 10px;
-  border-radius: 36px;
+  top: 5px;
+  left: 5px; right: 5px; bottom: 5px;
+  border-radius: 47px;
   overflow: hidden;
-  background: #fff;
+  background: #000;
 }
 
-/* Each state panel */
+/* Each state panel — content starts below island + status */
 .iph-panel {
   position: absolute;
-  inset: 0;
+  top: 76px;
+  left: 0; right: 0; bottom: 0;
   background: #fafafa;
   overflow: hidden;
 }
@@ -3731,9 +3792,11 @@ a {
 }
 
 @media (max-width: 600px) {
-  .iph-frame { width: 240px; height: 488px; border-radius: 40px; }
-  .iph-island { width: 100px; height: 28px; }
-  .iph-screen { top: 68px; left: 8px; right: 8px; bottom: 8px; border-radius: 30px; }
+  .iph-frame { width: 240px; height: 496px; border-radius: 44px; }
+  .iph-island { width: 100px; height: 30px; top: 12px; }
+  .iph-screen { top: 4px; left: 4px; right: 4px; bottom: 4px; border-radius: 40px; }
+  .iph-status { top: 50px; }
+  .iph-panel { top: 66px; }
   .sg-split { height: 140px; }
   .sg-split-divider { width: 20px; }
   .sg-split-arrow { width: 18px; height: 18px; font-size: 8px; }
