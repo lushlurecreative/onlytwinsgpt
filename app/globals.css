@@ -3068,3 +3068,673 @@ a {
   .ug-samples { gap: 8px; }
   .sg-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
 }
+
+/* =====================================================
+   CHIP HERO — SVG classes
+   ===================================================== */
+
+.ch-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  transition: filter 0.6s;
+}
+
+.ch-svg-lit {
+  filter: drop-shadow(0 0 24px rgba(0, 174, 239, 0.35));
+}
+
+.ch-svg-ambient {
+  transition: opacity 0.6s;
+}
+
+.ch-svg-pin {
+  transition: filter 0.3s;
+}
+
+.ch-svg-lit .ch-svg-pin {
+  animation: pin-glow 0.8s ease forwards;
+}
+
+.ch-svg-core-border {
+  transition: stroke 0.4s;
+}
+
+.ch-svg-core-fill {
+  transition: opacity 0.4s;
+}
+
+.ch-svg-ot {
+  fill: var(--accent);
+}
+
+/* Photo — stays visible on chip after landing */
+.ch-photo {
+  position: absolute;
+  left: 50%; top: 50%;
+  margin-left: -40px; margin-top: -40px;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2.5px solid var(--accent);
+  box-shadow: 0 0 20px rgba(0, 174, 239, 0.5);
+  z-index: 5;
+}
+
+.ch-photo img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+
+.ch-photo-loaded {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 32px rgba(0, 174, 239, 0.75), 0 0 8px rgba(0, 174, 239, 0.4);
+}
+
+/* =====================================================
+   IPHONE MOCKUP
+   ===================================================== */
+
+.iph-section {
+  height: 300vh;
+  position: relative;
+}
+
+.iph-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 80px;
+  padding: 0 64px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Left text beats */
+.iph-beats {
+  flex: 1;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+}
+
+.iph-beat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.iph-beat-title {
+  font-size: clamp(28px, 3.5vw, 48px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  margin: 0;
+  line-height: 1.08;
+}
+
+.iph-beat-copy {
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.7;
+  margin: 0;
+  max-width: 380px;
+}
+
+/* Phone wrapper — floating animation */
+.iph-phone-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes phone-float {
+  0%, 100% { transform: translateY(0px) rotate(-1deg); }
+  50% { transform: translateY(-14px) rotate(-1deg); }
+}
+
+/* iPhone 15 frame */
+.iph-frame {
+  position: relative;
+  width: 290px;
+  height: 588px;
+  background: linear-gradient(170deg, #2a2a2e 0%, #1a1a1e 40%, #111113 100%);
+  border-radius: 48px;
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, 0.12),
+    0 0 0 3px rgba(0, 0, 0, 0.8),
+    0 30px 80px rgba(0, 0, 0, 0.7),
+    0 8px 30px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  animation: phone-float 4s ease-in-out infinite;
+  overflow: hidden;
+}
+
+/* Side buttons */
+.iph-btn-vol-up {
+  position: absolute;
+  left: -3px;
+  top: 120px;
+  width: 4px;
+  height: 36px;
+  background: linear-gradient(90deg, #1a1a1e, #2e2e34);
+  border-radius: 2px 0 0 2px;
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.iph-btn-vol-dn {
+  position: absolute;
+  left: -3px;
+  top: 168px;
+  width: 4px;
+  height: 36px;
+  background: linear-gradient(90deg, #1a1a1e, #2e2e34);
+  border-radius: 2px 0 0 2px;
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.iph-btn-silent {
+  position: absolute;
+  left: -3px;
+  top: 78px;
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(90deg, #1a1a1e, #2e2e34);
+  border-radius: 2px 0 0 2px;
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.iph-btn-power {
+  position: absolute;
+  right: -3px;
+  top: 140px;
+  width: 4px;
+  height: 64px;
+  background: linear-gradient(270deg, #1a1a1e, #2e2e34);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Dynamic Island */
+.iph-island {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 34px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 10;
+}
+
+/* Status bar */
+.iph-status {
+  position: absolute;
+  top: 58px;
+  left: 0; right: 0;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 5;
+}
+
+.iph-time {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.iph-status-icons {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #fff;
+}
+
+.iph-battery {
+  width: 22px;
+  height: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  border-radius: 3px;
+  position: relative;
+}
+
+.iph-battery::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 0 2px 2px 0;
+}
+
+.iph-battery-fill {
+  position: absolute;
+  left: 2px; top: 2px; bottom: 2px;
+  width: 65%;
+  background: #4cd964;
+  border-radius: 1px;
+}
+
+/* Screen */
+.iph-screen {
+  position: absolute;
+  top: 80px;
+  left: 10px; right: 10px; bottom: 10px;
+  border-radius: 36px;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* Each state panel */
+.iph-panel {
+  position: absolute;
+  inset: 0;
+  background: #fafafa;
+  overflow: hidden;
+}
+
+/* Instagram header */
+.iph-ig-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+}
+
+.iph-ig-handle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #000;
+  letter-spacing: -0.02em;
+}
+
+/* Profile row */
+.iph-ig-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px 10px;
+}
+
+.iph-ig-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+  padding: 2px;
+}
+
+.iph-ig-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+.iph-ig-stats {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  justify-content: space-around;
+}
+
+.iph-ig-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.iph-ig-stat-n {
+  font-size: 15px;
+  font-weight: 700;
+  color: #000;
+  line-height: 1;
+}
+
+.iph-ig-stat-l {
+  font-size: 11px;
+  color: #666;
+}
+
+.iph-ig-bio-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #000;
+  padding: 0 14px 3px;
+}
+
+.iph-ig-bio-text {
+  font-size: 11px;
+  color: #333;
+  padding: 0 14px 10px;
+}
+
+.iph-ig-follow-btn {
+  margin: 0 14px 10px;
+  background: #0095f6;
+  color: #fff;
+  text-align: center;
+  padding: 6px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Story highlights */
+.iph-ig-stories {
+  display: flex;
+  gap: 12px;
+  padding: 8px 14px 10px;
+  overflow: hidden;
+}
+
+.iph-ig-story {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+  padding: 2px;
+}
+
+.iph-ig-story img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #fafafa;
+}
+
+/* Post grid */
+.iph-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.iph-grid-cell {
+  position: relative;
+  aspect-ratio: 1/1;
+  overflow: hidden;
+  background: #e0e0e0;
+}
+
+.iph-grid-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.iph-grid-you {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.iph-grid-you img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Single post */
+.iph-post-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  background: #fff;
+}
+
+.iph-post-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+  padding: 1.5px;
+}
+
+.iph-post-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+}
+
+.iph-post-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #000;
+}
+
+.iph-post-location {
+  font-size: 10px;
+  color: #888;
+}
+
+.iph-post-more {
+  margin-left: auto;
+  font-size: 16px;
+  color: #000;
+  letter-spacing: 1px;
+}
+
+.iph-post-img {
+  width: 100%;
+  aspect-ratio: 1/1;
+  overflow: hidden;
+  background: #e0e0e0;
+}
+
+.iph-post-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.iph-post-actions {
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px 4px;
+  font-size: 20px;
+  background: #fff;
+}
+
+.iph-post-heart { color: #000; }
+.iph-post-comment { color: #000; }
+.iph-post-share { color: #000; }
+
+.iph-post-likes {
+  font-size: 12px;
+  font-weight: 700;
+  color: #000;
+  padding: 0 12px 4px;
+  background: #fff;
+}
+
+.iph-post-caption {
+  font-size: 11px;
+  color: #000;
+  padding: 0 12px 10px;
+  background: #fff;
+  line-height: 1.4;
+}
+
+/* Home indicator */
+.iph-home-bar {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  z-index: 10;
+}
+
+/* =====================================================
+   SCENARIO GRID — split card layout
+   ===================================================== */
+
+.sg-split {
+  display: flex;
+  align-items: stretch;
+  height: 220px;
+  position: relative;
+}
+
+.sg-split-you,
+.sg-split-ai {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.sg-split-you {
+  border-radius: 14px 0 0 0;
+}
+
+.sg-split-ai {
+  border-radius: 0 14px 0 0;
+}
+
+.sg-split-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sg-split-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.sg-split-badge-ai {
+  left: auto;
+  right: 6px;
+  border-color: rgba(0, 174, 239, 0.4);
+  background: rgba(0, 100, 160, 0.7);
+}
+
+.sg-split-divider {
+  position: absolute;
+  left: 50%;
+  top: 0; bottom: 0;
+  transform: translateX(-50%);
+  width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+
+.sg-split-divider::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, var(--accent) 30%, var(--accent) 70%, transparent);
+  transform: translateX(-50%);
+}
+
+.sg-split-arrow {
+  width: 22px;
+  height: 22px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 0 12px rgba(0, 174, 239, 0.7);
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.sg-foot {
+  padding: 8px 10px;
+  background: var(--surface);
+}
+
+.sg-foot-label {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+/* =====================================================
+   RESPONSIVE — iPhone + split grid
+   ===================================================== */
+
+@media (max-width: 1024px) {
+  .iph-sticky {
+    flex-direction: column;
+    gap: 40px;
+    padding: 40px 32px;
+    height: auto;
+    position: relative;
+  }
+  .iph-section { height: auto; }
+  .iph-beats { max-width: 100%; gap: 32px; }
+  .iph-beat-title { font-size: 28px; }
+  .sg-split { height: 160px; }
+}
+
+@media (max-width: 600px) {
+  .iph-frame { width: 240px; height: 488px; border-radius: 40px; }
+  .iph-island { width: 100px; height: 28px; }
+  .iph-screen { top: 68px; left: 8px; right: 8px; bottom: 8px; border-radius: 30px; }
+  .sg-split { height: 140px; }
+  .sg-split-divider { width: 20px; }
+  .sg-split-arrow { width: 18px; height: 18px; font-size: 8px; }
+}
