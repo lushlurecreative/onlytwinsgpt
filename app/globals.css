@@ -3081,6 +3081,20 @@ a {
    CHIP HERO — SVG classes
    ===================================================== */
 
+/* Stage lit state — adds warm amber glow on top of base drop-shadows */
+.ch-stage-lit {
+  filter:
+    drop-shadow(0 50px 100px rgba(0, 0, 0, 0.95))
+    drop-shadow(0 20px 40px rgba(0, 0, 0, 0.7))
+    drop-shadow(0 0 80px rgba(255, 140, 0, 0.28))
+    drop-shadow(0 0 40px rgba(0, 174, 239, 0.18));
+}
+
+/* Individual pin elements in SVG */
+.ch-pin-el {
+  transition: filter 0.2s;
+}
+
 .ch-svg {
   width: 100%;
   height: 100%;
@@ -3200,6 +3214,57 @@ a {
   justify-content: center;
   perspective: 1400px;
   perspective-origin: 50% 50%;
+  position: relative;
+}
+
+/* Scenic purple/blue glow behind the phone */
+.iph-scene-glow {
+  position: absolute;
+  width: 420px;
+  height: 560px;
+  background: radial-gradient(
+    ellipse 60% 70% at 50% 50%,
+    rgba(130, 60, 255, 0.22) 0%,
+    rgba(0, 80, 200, 0.12) 45%,
+    transparent 70%
+  );
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Phone unit — PNG frame overlaid on screen content */
+.iph-phone-unit {
+  position: relative;
+  width: 300px;
+  flex-shrink: 0;
+  animation: phone-float 5s ease-in-out infinite;
+  transform-style: preserve-3d;
+  z-index: 1;
+  filter:
+    drop-shadow(0 60px 120px rgba(0, 0, 0, 0.95))
+    drop-shadow(0 25px 60px rgba(0, 0, 0, 0.75))
+    drop-shadow(0 0 100px rgba(100, 40, 220, 0.12));
+}
+
+/* Screen content area — sits behind the PNG frame */
+.iph-screen-inner {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  border-radius: 47px;
+  background: #000;
+}
+
+/* Real iPhone 15 Pro frame PNG — overlaid on top of screen content */
+.iph-frame-png {
+  display: block;
+  width: 100%;
+  height: auto;
+  position: relative;
+  z-index: 10;
+  pointer-events: none;
 }
 
 @keyframes phone-float {

@@ -18,7 +18,6 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
   const userPhoto = uploadedPhotos[0];
   const gridPhotos = sfwItems.slice(0, 9).map((i) => i.src);
 
-  // Three states fade in/out based on scroll progress
   const op0 = useTransform(scrollYProgress, [0, 0.2, 0.4, 0.52], [1, 1, 1, 0]);
   const op1 = useTransform(scrollYProgress, [0.4, 0.52, 0.72, 0.84], [0, 1, 1, 0]);
   const op2 = useTransform(scrollYProgress, [0.72, 0.84, 1, 1], [0, 1, 1, 1]);
@@ -52,41 +51,37 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
           </div>
         </div>
 
-        {/* Right: floating iPhone */}
+        {/* Right: phone with real frame PNG */}
         <div className="iph-phone-wrap">
-          <div className="iph-frame">
-            {/* Side buttons */}
-            <div className="iph-btn-vol-up" />
-            <div className="iph-btn-vol-dn" />
-            <div className="iph-btn-silent" />
-            <div className="iph-btn-power" />
+          {/* Scenic glow backdrop */}
+          <div className="iph-scene-glow" />
 
-            {/* Dynamic Island */}
-            <div className="iph-island" />
+          {/* Phone unit — content behind, real frame PNG on top */}
+          <div className="iph-phone-unit">
 
-            {/* Status bar */}
-            <div className="iph-status">
-              <span className="iph-time">9:41</span>
-              <div className="iph-status-icons">
-                <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor">
-                  <rect x="0" y="3" width="3" height="9" rx="1" opacity="0.4"/>
-                  <rect x="4" y="2" width="3" height="10" rx="1" opacity="0.6"/>
-                  <rect x="8" y="0" width="3" height="12" rx="1" opacity="0.8"/>
-                  <rect x="12" y="0" width="3" height="12" rx="1"/>
-                </svg>
-                <svg width="15" height="12" viewBox="0 0 15 12" fill="currentColor">
-                  <path d="M7.5 2.5C9.8 2.5 11.9 3.5 13.3 5L14.5 3.8C12.8 2 10.3 1 7.5 1S2.2 2 0.5 3.8L1.7 5C3.1 3.5 5.2 2.5 7.5 2.5Z" opacity="0.4"/>
-                  <path d="M7.5 5C9 5 10.4 5.6 11.4 6.6L12.6 5.4C11.3 4.1 9.5 3.3 7.5 3.3S3.7 4.1 2.4 5.4L3.6 6.6C4.6 5.6 6 5 7.5 5Z" opacity="0.7"/>
-                  <circle cx="7.5" cy="10" r="1.5"/>
-                </svg>
-                <div className="iph-battery">
-                  <div className="iph-battery-fill" />
+            {/* Screen content — sits inside the transparent frame area */}
+            <div className="iph-screen-inner">
+
+              {/* Status bar */}
+              <div className="iph-status">
+                <span className="iph-time">9:41</span>
+                <div className="iph-status-icons">
+                  <svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor">
+                    <rect x="0" y="3" width="3" height="9" rx="1" opacity="0.4"/>
+                    <rect x="4" y="2" width="3" height="10" rx="1" opacity="0.6"/>
+                    <rect x="8" y="0" width="3" height="12" rx="1" opacity="0.8"/>
+                    <rect x="12" y="0" width="3" height="12" rx="1"/>
+                  </svg>
+                  <svg width="15" height="12" viewBox="0 0 15 12" fill="currentColor">
+                    <path d="M7.5 2.5C9.8 2.5 11.9 3.5 13.3 5L14.5 3.8C12.8 2 10.3 1 7.5 1S2.2 2 0.5 3.8L1.7 5C3.1 3.5 5.2 2.5 7.5 2.5Z" opacity="0.4"/>
+                    <path d="M7.5 5C9 5 10.4 5.6 11.4 6.6L12.6 5.4C11.3 4.1 9.5 3.3 7.5 3.3S3.7 4.1 2.4 5.4L3.6 6.6C4.6 5.6 6 5 7.5 5Z" opacity="0.7"/>
+                    <circle cx="7.5" cy="10" r="1.5"/>
+                  </svg>
+                  <div className="iph-battery">
+                    <div className="iph-battery-fill" />
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* Screen content */}
-            <div className="iph-screen">
 
               {/* State 0: Instagram profile */}
               <motion.div className="iph-panel" style={{ opacity: op0 }}>
@@ -109,7 +104,6 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
                 <div className="iph-ig-bio-name">Your AI Twin ✨</div>
                 <div className="iph-ig-bio-text">AI-generated content • OnlyTwins powered</div>
                 <div className="iph-ig-follow-btn">Follow</div>
-                {/* Story highlights */}
                 <div className="iph-ig-stories">
                   {gridPhotos.slice(0, 4).map((src, i) => (
                     <div key={i} className="iph-ig-story">
@@ -164,8 +158,17 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
                 </div>
               </motion.div>
 
+              <div className="iph-home-bar" />
             </div>
-            <div className="iph-home-bar" />
+
+            {/* Real iPhone 15 Pro frame PNG overlaid on top */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/assets/iphone-frame.png"
+              className="iph-frame-png"
+              alt=""
+              aria-hidden="true"
+            />
           </div>
         </div>
       </div>
