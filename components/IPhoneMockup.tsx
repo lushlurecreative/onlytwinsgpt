@@ -51,16 +51,22 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
           </div>
         </div>
 
-        {/* Right: phone with real frame PNG */}
+        {/* Right: CSS iPhone 15 Pro — Natural Titanium */}
         <div className="iph-phone-wrap">
-          {/* Scenic glow backdrop */}
           <div className="iph-scene-glow" />
 
-          {/* Phone unit — content behind, real frame PNG on top */}
-          <div className="iph-phone-unit">
+          <div className="iph-frame">
+            {/* Dynamic Island */}
+            <div className="iph-island" />
 
-            {/* Screen content — sits inside the transparent frame area */}
-            <div className="iph-screen-inner">
+            {/* Side hardware buttons */}
+            <div className="iph-btn-silent" />
+            <div className="iph-btn-vol-up" />
+            <div className="iph-btn-vol-dn" />
+            <div className="iph-btn-power" />
+
+            {/* OLED screen */}
+            <div className="iph-screen">
 
               {/* Status bar */}
               <div className="iph-status">
@@ -160,15 +166,6 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
 
               <div className="iph-home-bar" />
             </div>
-
-            {/* Real iPhone 15 Pro frame PNG overlaid on top */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/assets/iphone-frame.png"
-              className="iph-frame-png"
-              alt=""
-              aria-hidden="true"
-            />
           </div>
         </div>
       </div>
