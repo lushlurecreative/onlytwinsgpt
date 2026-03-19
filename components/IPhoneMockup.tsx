@@ -51,23 +51,20 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
           </div>
         </div>
 
-        {/* Right: CSS iPhone 15 Pro — Natural Titanium */}
+        {/* Right: actual iphone.png with Instagram overlay on screen */}
         <div className="iph-phone-wrap">
-          <div className="iph-scene-glow" />
+          <div className="iph-ref-phone">
+            {/* The real reference iPhone image, cropped to show just the phone */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/assets/iphone.png"
+              alt=""
+              className="iph-ref-bg"
+              aria-hidden="true"
+            />
 
-          <div className="iph-frame">
-            {/* Dynamic Island */}
-            <div className="iph-island" />
-
-            {/* Side hardware buttons */}
-            <div className="iph-btn-silent" />
-            <div className="iph-btn-vol-up" />
-            <div className="iph-btn-vol-dn" />
-            <div className="iph-btn-power" />
-
-            {/* OLED screen */}
-            <div className="iph-screen">
-
+            {/* Instagram content overlaid on the screen area */}
+            <div className="iph-ref-screen">
               {/* Status bar */}
               <div className="iph-status">
                 <span className="iph-time">9:41</span>
@@ -78,14 +75,7 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
                     <rect x="8" y="0" width="3" height="12" rx="1" opacity="0.8"/>
                     <rect x="12" y="0" width="3" height="12" rx="1"/>
                   </svg>
-                  <svg width="15" height="12" viewBox="0 0 15 12" fill="currentColor">
-                    <path d="M7.5 2.5C9.8 2.5 11.9 3.5 13.3 5L14.5 3.8C12.8 2 10.3 1 7.5 1S2.2 2 0.5 3.8L1.7 5C3.1 3.5 5.2 2.5 7.5 2.5Z" opacity="0.4"/>
-                    <path d="M7.5 5C9 5 10.4 5.6 11.4 6.6L12.6 5.4C11.3 4.1 9.5 3.3 7.5 3.3S3.7 4.1 2.4 5.4L3.6 6.6C4.6 5.6 6 5 7.5 5Z" opacity="0.7"/>
-                    <circle cx="7.5" cy="10" r="1.5"/>
-                  </svg>
-                  <div className="iph-battery">
-                    <div className="iph-battery-fill" />
-                  </div>
+                  <div className="iph-battery"><div className="iph-battery-fill" /></div>
                 </div>
               </div>
 
@@ -98,9 +88,7 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
                   </svg>
                 </div>
                 <div className="iph-ig-profile-row">
-                  <div className="iph-ig-avatar">
-                    <img src={userPhoto} alt="You" />
-                  </div>
+                  <div className="iph-ig-avatar"><img src={userPhoto} alt="You" /></div>
                   <div className="iph-ig-stats">
                     <div className="iph-ig-stat"><span className="iph-ig-stat-n">248</span><span className="iph-ig-stat-l">posts</span></div>
                     <div className="iph-ig-stat"><span className="iph-ig-stat-n">14.2k</span><span className="iph-ig-stat-l">followers</span></div>
@@ -112,27 +100,19 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
                 <div className="iph-ig-follow-btn">Follow</div>
                 <div className="iph-ig-stories">
                   {gridPhotos.slice(0, 4).map((src, i) => (
-                    <div key={i} className="iph-ig-story">
-                      <img src={src} alt="" />
-                    </div>
+                    <div key={i} className="iph-ig-story"><img src={src} alt="" /></div>
                   ))}
                 </div>
               </motion.div>
 
               {/* State 1: Post grid */}
               <motion.div className="iph-panel" style={{ opacity: op1 }}>
-                <div className="iph-ig-header">
-                  <span className="iph-ig-handle">youraitwin</span>
-                </div>
+                <div className="iph-ig-header"><span className="iph-ig-handle">youraitwin</span></div>
                 <div className="iph-grid">
                   {gridPhotos.map((src, i) => (
                     <div key={i} className="iph-grid-cell">
                       <img src={src} alt="" />
-                      {i === 0 && (
-                        <div className="iph-grid-you">
-                          <img src={userPhoto} alt="You" />
-                        </div>
-                      )}
+                      {i === 0 && <div className="iph-grid-you"><img src={userPhoto} alt="You" /></div>}
                     </div>
                   ))}
                 </div>
@@ -141,9 +121,7 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
               {/* State 2: Single post */}
               <motion.div className="iph-panel" style={{ opacity: op2 }}>
                 <div className="iph-post-header">
-                  <div className="iph-post-avatar">
-                    <img src={userPhoto} alt="You" />
-                  </div>
+                  <div className="iph-post-avatar"><img src={userPhoto} alt="You" /></div>
                   <div>
                     <div className="iph-post-name">youraitwin</div>
                     <div className="iph-post-location">AI Generated</div>
@@ -159,15 +137,14 @@ export default function IPhoneMockup({ uploadedPhotos }: Props) {
                   <span className="iph-post-share">✈</span>
                 </div>
                 <div className="iph-post-likes">2,841 likes</div>
-                <div className="iph-post-caption">
-                  <strong>youraitwin</strong> New drop from my AI twin ✨
-                </div>
+                <div className="iph-post-caption"><strong>youraitwin</strong> New drop from my AI twin ✨</div>
               </motion.div>
 
               <div className="iph-home-bar" />
             </div>
           </div>
         </div>
+
       </div>
     </section>
   );
