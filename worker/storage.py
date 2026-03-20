@@ -100,16 +100,21 @@ def upload_to_model_artifacts(local_path: str, storage_path: str) -> bool:
         return False
 
 
-def upload_to_uploads(local_path: str, storage_path: str, content_type: str = "image/jpeg") -> bool:
-    """Upload file to uploads bucket (e.g. generated image)."""
+def upload_to_uploads(local_path: str, storage_path: str, content_type: str = "image/jpeg") -> str | None:
+    """Upload file to uploads bucket (e.g. generated image). Returns public URL or None."""
     sb = get_supabase()
     if not sb:
-        return False
+        return None
     try:
         with open(local_path, "rb") as f:
             data = f.read()
         sb.storage.from_("uploads").upload(storage_path, data, file_options={"content-type": content_type})
-        return True
+        # Construct public URL
+        supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("SUPABASE_URL", "")
+        if not supabase_url:
+            return None
+        public_url = f"{supabase_url}/storage/v1/object/public/uploads/{storage_path}"
+        return public_url
     except Exception as e:
         print(f"Upload uploads error {storage_path}: {e}")
-        return False
+        return None
