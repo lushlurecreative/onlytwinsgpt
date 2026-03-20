@@ -12,7 +12,6 @@ const sceneItems = galleryItems.filter((i) => i.type === "image").slice(0, 20);
 type SwappedImage = {
   url: string;
   loading: boolean;
-  fallback: boolean;
 };
 
 export default function ScenarioGrid({ uploadedPhotos }: Props) {
@@ -35,7 +34,7 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
       // Set loading state
       setSwappedImages((prev) => ({
         ...prev,
-        [index]: { url: scenarioUrl, loading: true, fallback: false },
+        [index]: { url: "", loading: true },
       }));
 
       try {
@@ -55,14 +54,13 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
             [index]: {
               url: result.swappedImageUrl || scenarioUrl,
               loading: false,
-              fallback: result.fallback || false,
             },
           }));
         } else {
           // Fallback to original scenario
           setSwappedImages((prev) => ({
             ...prev,
-            [index]: { url: scenarioUrl, loading: false, fallback: true },
+            [index]: { url: scenarioUrl, loading: false },
           }));
         }
       } catch (error) {
@@ -70,7 +68,7 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
         // Fallback to original scenario
         setSwappedImages((prev) => ({
           ...prev,
-          [index]: { url: scenarioUrl, loading: false, fallback: true },
+          [index]: { url: scenarioUrl, loading: false },
         }));
       }
     },
@@ -82,14 +80,14 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
       <div className="sg-header">
         <h2 className="sg-title">20+ scenarios. Your face in all of them.</h2>
         <p className="sg-sub">
-          This is the style of content we generate. Subscribe to receive these with <em>your</em> face composited in — delivered to your vault every month.
+          Here's your face in our content. Subscribe to get 20+ new scenarios every month.
         </p>
       </div>
 
       <div className="sg-grid">
         {sceneItems.map((item, i) => {
           const swapped = swappedImages[i];
-          const displayImageUrl = swapped?.url || item.src;
+          const displayImageUrl = swapped?.url;
           const isLoading = swapped?.loading;
 
           // Trigger face swap when item is about to be visible
@@ -109,52 +107,57 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
               transition={{ duration: 0.4, delay: (i % 4) * 0.06 }}
               onViewportEnter={onViewportEnter}
             >
-              {/* Before/after split: user photo → AI scene (or face-swapped) */}
-              <div className="sg-split">
-                {/* Left — user's photo */}
-                <div className="sg-split-you">
-                  <img src={userPhoto} alt="You" className="sg-split-img" />
-                  <span className="sg-split-badge">You</span>
-                </div>
-
-                {/* Divider glow */}
-                <div className="sg-split-divider">
-                  <span className="sg-split-arrow">→</span>
-                </div>
-
-                {/* Right — face-swapped scenario or loading */}
-                <div className="sg-split-ai">
-                  {isLoading && (
+              {/* Face-swapped image only - no split view */}
+              <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", borderRadius: 8 }}>
+                {isLoading ? (
+                  <div style={{
+                    width: "100%",
+                    height: 200,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(0,0,0,0.3)",
+                    borderRadius: 8,
+                  }}>
                     <div style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "rgba(0,0,0,0.3)",
-                      borderRadius: 8,
-                    }}>
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      border: "3px solid rgba(124, 58, 237, 0.3)",
+                      borderTopColor: "var(--accent, #7c3aed)",
+                      animation: "spin 1s linear infinite",
+                    }} />
+                  </div>
+                ) : displayImageUrl ? (
+                  <>
+                    <img
+                      src={displayImageUrl}
+                      alt={item.title}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    />
+                    {item.nsfw && (
                       <div style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: "50%",
-                        border: "2px solid rgba(124, 58, 237, 0.3)",
-                        borderTopColor: "var(--accent, #7c3aed)",
-                        animation: "spin 1s linear infinite",
-                      }} />
-                    </div>
-                  )}
-                  <img
-                    src={displayImageUrl}
-                    alt={item.title}
-                    className="sg-split-img"
-                    style={{ opacity: isLoading ? 0.5 : 1 }}
-                  />
-                  {item.nsfw && <div className="sg-nsfw-blur"><span className="sg-nsfw-badge">18+</span></div>}
-                  <span className="sg-split-badge sg-split-badge-ai">
-                    {swapped?.fallback ? "Preview" : "Your AI Twin"}
-                  </span>
-                </div>
+                        position: "absolute",
+                        inset: 0,
+                        background: "rgba(0,0,0,0.5)",
+                        backdropFilter: "blur(8px)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}>
+                        <span style={{
+                          background: "rgba(0,0,0,0.8)",
+                          color: "#fff",
+                          padding: "8px 12px",
+                          borderRadius: 4,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          letterSpacing: "0.06em",
+                        }}>18+</span>
+                      </div>
+                    )}
+                  </>
+                ) : null}
               </div>
 
               {/* Label */}
@@ -168,7 +171,7 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
 
       <div style={{ textAlign: "center", marginTop: 48 }}>
         <p style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: 8 }}>
-          Ready to see these with your face?
+          Ready for your real AI twin?
         </p>
         <p className="muted" style={{ marginBottom: 24 }}>
           Subscribe and your first real batch is delivered within 24 hours.
