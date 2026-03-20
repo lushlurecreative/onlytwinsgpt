@@ -23,6 +23,12 @@ type RequestRow = {
   admin_notes: string | null;
 };
 
+type CustomerOption = {
+  workspaceId: string;
+  email: string | null;
+  creator: string;
+};
+
 type SignedAsset = { path: string; signedUrl: string | null; error?: string };
 type AssetsResponse = { requestId: string; samples: SignedAsset[]; outputs: SignedAsset[] };
 type UploadFile = { path: string; name: string };
@@ -43,6 +49,8 @@ export default function GenerationQueueClient() {
 
   // Create request modal state
   const [showCreate, setShowCreate] = useState(false);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
   const [createUserId, setCreateUserId] = useState("");
   const [createScene, setCreateScene] = useState<ScenePresetKey>(SCENE_PRESETS[0].key);
   const [createImages, setCreateImages] = useState(10);
@@ -64,6 +72,15 @@ export default function GenerationQueueClient() {
     setLoading(false);
   }
 
+  async function loadCustomers() {
+    setCustomersLoading(true);
+    const res = await fetch("/api/admin/customers");
+    const json = (await res.json().catch(() => ({}))) as { customers?: CustomerOption[]; error?: string };
+    setCustomersLoading(false);
+    if (!res.ok) return;
+    setCustomers(json.customers ?? []);
+  }
+
   useEffect(() => {
     void load();
   }, []);
@@ -74,6 +91,14 @@ export default function GenerationQueueClient() {
     const t = window.setInterval(() => void load(), 4000);
     return () => window.clearInterval(t);
   }, [rows]);
+
+  function openCreateModal() {
+    setShowCreate(true);
+    setCreateUserId("");
+    setAvailableUploads([]);
+    setSelectedPaths([]);
+    if (customers.length === 0) void loadCustomers();
+  }
 
   async function approve(id: string, approved: boolean) {
     setMessage("Updating...");
@@ -182,6 +207,7 @@ export default function GenerationQueueClient() {
   }
 
   async function createRequest() {
+    if (!createUserId) { setMessage("Select a customer first."); return; }
     setCreating(true);
     setMessage("");
     const res = await fetch("/api/admin/generation-requests", {
@@ -239,27 +265,42 @@ export default function GenerationQueueClient() {
           <div className="card" style={{ maxWidth: 560, width: "100%", margin: 16, padding: 20, maxHeight: "80vh", overflowY: "auto" }}>
             <h3 style={{ marginTop: 0 }}>Create generation request</h3>
             <div style={{ display: "grid", gap: 12 }}>
+
+              {/* Customer dropdown */}
               <label style={{ display: "grid", gap: 4 }}>
-                <span className="muted" style={{ fontSize: 12 }}>Customer ID (user_id)</span>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input
+                <span className="muted" style={{ fontSize: 12 }}>Customer</span>
+                {customersLoading ? (
+                  <p className="muted" style={{ margin: 0, fontSize: 13 }}>Loading customers…</p>
+                ) : (
+                  <select
                     className="input"
-                    placeholder="Paste user UUID"
                     value={createUserId}
-                    onChange={(e) => setCreateUserId(e.target.value)}
-                    style={{ flex: 1 }}
-                  />
-                  <button className="btn btn-ghost" type="button" onClick={() => void loadUploadsForUser(createUserId)}>
-                    Load uploads
-                  </button>
-                </div>
+                    onChange={(e) => {
+                      const uid = e.target.value;
+                      setCreateUserId(uid);
+                      if (uid) void loadUploadsForUser(uid);
+                      else { setAvailableUploads([]); setSelectedPaths([]); }
+                    }}
+                  >
+                    <option value="">— Select a customer —</option>
+                    {customers.map((c) => {
+                      const label = c.creator && c.creator !== c.workspaceId.slice(0, 8) + "…"
+                        ? `${c.creator}${c.email ? ` (${c.email})` : ""}`
+                        : (c.email ?? c.workspaceId.slice(0, 8) + "…");
+                      return (
+                        <option key={c.workspaceId} value={c.workspaceId}>{label}</option>
+                      );
+                    })}
+                  </select>
+                )}
               </label>
 
-              {uploadsLoading && <p className="muted">Loading uploads...</p>}
+              {uploadsLoading && <p className="muted" style={{ margin: 0, fontSize: 13 }}>Loading uploads…</p>}
+
               {availableUploads.length > 0 && (
                 <div>
                   <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                    Select photos to use ({selectedPaths.length} selected)
+                    Select photos to use as samples ({selectedPaths.length} selected)
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 200, overflowY: "auto" }}>
                     {availableUploads.map((f) => {
@@ -294,8 +335,11 @@ export default function GenerationQueueClient() {
                   </button>
                 </div>
               )}
-              {availableUploads.length === 0 && !uploadsLoading && createUserId && (
-                <p className="muted" style={{ fontSize: 12 }}>No uploads found. You can still create the request — customer must upload photos first.</p>
+
+              {createUserId && !uploadsLoading && availableUploads.length === 0 && (
+                <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+                  No uploads found for this customer. You can still create the request — customer must upload photos first.
+                </p>
               )}
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -318,12 +362,13 @@ export default function GenerationQueueClient() {
                 <input className="input" type="number" min={1} max={250} value={createImages} onChange={(e) => setCreateImages(Number(e.target.value))} />
               </label>
             </div>
+
             <div style={{ display: "flex", gap: 8, marginTop: 14, justifyContent: "flex-end" }}>
               <button className="btn btn-ghost" type="button" onClick={() => setShowCreate(false)}>Cancel</button>
               <button
                 className="btn btn-primary"
                 type="button"
-                disabled={creating || !createUserId.trim()}
+                disabled={creating}
                 onClick={() => void createRequest()}
               >
                 {creating ? "Creating…" : "Create request"}
@@ -339,7 +384,7 @@ export default function GenerationQueueClient() {
             <h2 style={{ marginTop: 0, marginBottom: 4 }}>Generation queue</h2>
             <p className="muted" style={{ margin: 0 }}>All generation requests across every customer. Approve, edit, and trigger runs here.</p>
           </div>
-          <button className="btn btn-primary" type="button" onClick={() => setShowCreate(true)}>
+          <button className="btn btn-primary" type="button" onClick={openCreateModal}>
             + Create request
           </button>
         </div>
@@ -450,15 +495,16 @@ export default function GenerationQueueClient() {
                                         <span className="muted" style={{ fontSize: 10, overflow: "hidden", textOverflow: "ellipsis" }}>
                                           {a.path.split("/").pop()}
                                         </span>
-                                        <button
-                                          type="button"
-                                          className="btn btn-ghost"
-                                          style={{ padding: 4, fontSize: 11 }}
-                                          onClick={() => void deleteSample(row.id, a.path)}
-                                          disabled={row.status === "generating" || row.status === "completed"}
-                                        >
-                                          ✕
-                                        </button>
+                                        {row.status !== "generating" && row.status !== "completed" && (
+                                          <button
+                                            type="button"
+                                            className="btn btn-ghost"
+                                            style={{ padding: 4, fontSize: 11 }}
+                                            onClick={() => void deleteSample(row.id, a.path)}
+                                          >
+                                            ✕
+                                          </button>
+                                        )}
                                       </div>
                                       {a.signedUrl ? (
                                         // eslint-disable-next-line @next/next/no-img-element
@@ -470,7 +516,7 @@ export default function GenerationQueueClient() {
                                   ))}
                                 </div>
                                 {row.status !== "generating" && row.status !== "completed" && (
-                                  <button type="button" className="btn btn-ghost" style={{ marginTop: 8, fontSize: 13 }} onClick={() => void requestNewPhotos(row.id)}>
+                                  <button type="button" className="btn btn-primary" style={{ marginTop: 8, fontSize: 13 }} onClick={() => void requestNewPhotos(row.id)}>
                                     Request new photos from creator
                                   </button>
                                 )}
@@ -525,30 +571,28 @@ export default function GenerationQueueClient() {
                                       />
                                     </label>
                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                      <button className="btn" type="button" onClick={() => void saveEdits(row.id)}>Save changes</button>
+                                      <button className="btn btn-primary" type="button" onClick={() => void saveEdits(row.id)}>
+                                        Save changes
+                                      </button>
 
-                                      {/* Approve — only when pending */}
                                       {row.status === "pending" && (
                                         <button className="btn btn-primary" type="button" onClick={() => void approve(row.id, true)}>
                                           Approve
                                         </button>
                                       )}
 
-                                      {/* Reject — only when pending */}
                                       {row.status === "pending" && (
-                                        <button className="btn btn-ghost" type="button" onClick={() => void approve(row.id, false)}>
+                                        <button className="btn" type="button" style={{ color: "var(--error, #e5534b)" }} onClick={() => void approve(row.id, false)}>
                                           Reject
                                         </button>
                                       )}
 
-                                      {/* Reset to pending — when approved or rejected (not terminal) */}
                                       {(row.status === "approved" || row.status === "rejected" || row.status === "failed") && (
-                                        <button className="btn btn-ghost" type="button" onClick={() => void requestNewPhotos(row.id)}>
+                                        <button className="btn btn-primary" type="button" onClick={() => void requestNewPhotos(row.id)}>
                                           Reset to pending
                                         </button>
                                       )}
 
-                                      {/* Generate now — only when approved or failed */}
                                       {(row.status === "approved" || row.status === "failed") && (
                                         <button
                                           className="btn btn-primary"

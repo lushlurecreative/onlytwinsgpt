@@ -329,16 +329,17 @@ export default function AdminGenerationRequestsSection({ workspaceId }: Props) {
                                     <div key={a.path} className="card" style={{ padding: 6, flex: "1 1 100px", maxWidth: 140 }}>
                                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                                         <span className="muted" style={{ fontSize: 10, overflow: "hidden", textOverflow: "ellipsis" }}>{a.path.split("/").pop()}</span>
-                                        <button
-                                          type="button"
-                                          className="btn btn-ghost"
-                                          style={{ padding: 4, fontSize: 11 }}
-                                          onClick={() => void deleteSample(row.id, a.path)}
-                                          disabled={row.status === "generating" || row.status === "completed"}
-                                          title="Remove this sample"
-                                        >
-                                          Delete
-                                        </button>
+                                        {row.status !== "generating" && row.status !== "completed" && (
+                                          <button
+                                            type="button"
+                                            className="btn btn-ghost"
+                                            style={{ padding: 4, fontSize: 11 }}
+                                            onClick={() => void deleteSample(row.id, a.path)}
+                                            title="Remove this sample"
+                                          >
+                                            ✕
+                                          </button>
+                                        )}
                                       </div>
                                       {a.signedUrl ? (
                                         // eslint-disable-next-line @next/next/no-img-element
@@ -359,7 +360,7 @@ export default function AdminGenerationRequestsSection({ workspaceId }: Props) {
                                 {row.status !== "generating" && row.status !== "completed" ? (
                                   <button
                                     type="button"
-                                    className="btn btn-ghost"
+                                    className="btn btn-primary"
                                     style={{ marginTop: 8, fontSize: 13 }}
                                     onClick={() => void requestNewPhotos(row.id)}
                                     title="Request new training photos from creator"
@@ -481,7 +482,7 @@ export default function AdminGenerationRequestsSection({ workspaceId }: Props) {
                                     </details>
 
                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                      <button className="btn" onClick={() => void saveEdits(row.id)}>
+                                      <button className="btn btn-primary" onClick={() => void saveEdits(row.id)}>
                                         Save changes
                                       </button>
                                       {row.status === "pending" && (
@@ -490,12 +491,12 @@ export default function AdminGenerationRequestsSection({ workspaceId }: Props) {
                                         </button>
                                       )}
                                       {row.status === "pending" && (
-                                        <button className="btn btn-ghost" onClick={() => void approve(row.id, false)}>
+                                        <button className="btn" style={{ color: "var(--error, #e5534b)" }} onClick={() => void approve(row.id, false)}>
                                           Reject
                                         </button>
                                       )}
                                       {(row.status === "approved" || row.status === "rejected" || row.status === "failed") && (
-                                        <button className="btn btn-ghost" onClick={() => void requestNewPhotos(row.id)}>
+                                        <button className="btn btn-primary" onClick={() => void requestNewPhotos(row.id)}>
                                           Reset to pending
                                         </button>
                                       )}
