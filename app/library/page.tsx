@@ -1,7 +1,5 @@
 import LibraryClient from "@/app/library/LibraryClient";
 import { requireActiveSubscriber } from "@/lib/require-active-subscriber";
-import PremiumCard from "@/components/PremiumCard";
-import PremiumButton from "@/components/PremiumButton";
 
 export const dynamic = "force-dynamic";
 
@@ -9,19 +7,14 @@ export default async function LibraryPage() {
   await requireActiveSubscriber("/library");
 
   return (
-    <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
-      <PremiumCard className="hero-refined">
-        <h1 style={{ marginTop: 0, fontSize: 34, letterSpacing: "-0.02em" }}>My AI Generated Content</h1>
-        <p style={{ opacity: 0.85, maxWidth: 680 }}>
-          Your completed assets are stored here and ready for download.
+    <main style={{ padding: "32px 24px", maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ marginBottom: 28 }}>
+        <h1 style={{ margin: 0, fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.02em" }}>My Content</h1>
+        <p style={{ margin: "6px 0 0", opacity: 0.6, fontSize: 15 }}>
+          Your AI-generated images and videos — download to your device anytime.
         </p>
-      </PremiumCard>
-      <div style={{ marginTop: 16 }}>
-        <LibraryClient />
       </div>
-      <div style={{ marginTop: 16 }}>
-        <PremiumButton href="/status">View Status</PremiumButton>
-      </div>
+      <LibraryClient />
     </main>
   );
 }

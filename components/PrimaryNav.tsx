@@ -42,11 +42,8 @@ export default function PrimaryNav() {
         <Link href="/dashboard" className="nav-link">
           Dashboard
         </Link>
-        <Link href="/gallery" className="nav-link">
-          Gallery
-        </Link>
-        <Link href="/results" className="nav-link">
-          Results
+        <Link href="/library" className="nav-link">
+          My Content
         </Link>
         <Link href="/status" className="nav-link">
           Status
