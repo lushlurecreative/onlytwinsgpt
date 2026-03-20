@@ -40,9 +40,11 @@ export async function GET(request: Request) {
     const uniqueUserIds = [...new Set(rows.map((r) => r.user_id as string))];
     const { data: profiles } = await admin
       .from("profiles")
-      .select("id, full_name")
+      .select("id, full_name, email")
       .in("id", uniqueUserIds);
-    const nameMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p.full_name as string | null]));
+    const nameMap = Object.fromEntries(
+      (profiles ?? []).map((p) => [p.id, (p.full_name as string | null) || (p.email as string | null)])
+    );
     return NextResponse.json({
       requests: rows.map((r) => ({ ...r, customer_name: nameMap[r.user_id as string] ?? null })),
     });

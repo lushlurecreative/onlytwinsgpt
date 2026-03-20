@@ -366,7 +366,7 @@ export default function AdminCustomerDetailClient({
 
       {/* Subject (Vault) / consent */}
       <div>
-        <AdminSubjectsSection initialSubjects={subjectsForVault} />
+        <AdminSubjectsSection initialSubjects={subjectsForVault} workspaceId={workspaceId} />
       </div>
 
       {/* Identity verification (Phase D) */}

@@ -13,16 +13,18 @@ export type SubjectRow = {
   updated_at: string;
 };
 
-type Props = { initialSubjects: SubjectRow[] };
+type Props = { initialSubjects: SubjectRow[]; workspaceId: string };
 
-export default function AdminSubjectsSection({ initialSubjects }: Props) {
+export default function AdminSubjectsSection({ initialSubjects, workspaceId }: Props) {
   const [subjects, setSubjects] = useState(initialSubjects);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [training, setTraining] = useState(false);
+  const [message, setMessage] = useState("");
 
   async function updateConsent(subjectId: string, consent_status: "pending" | "approved" | "revoked") {
     setUpdatingId(subjectId);
-    setError("");
+    setMessage("");
     try {
       const r = await fetch(`/api/subjects/${subjectId}`, {
         method: "PATCH",
@@ -35,7 +37,7 @@ export default function AdminSubjectsSection({ initialSubjects }: Props) {
       });
       const data = await r.json();
       if (!r.ok) {
-        setError(data.error ?? "Update failed");
+        setMessage(data.error ?? "Update failed");
         return;
       }
       setSubjects((prev) =>
@@ -55,13 +57,68 @@ export default function AdminSubjectsSection({ initialSubjects }: Props) {
     }
   }
 
+  async function createSubject() {
+    setCreating(true);
+    setMessage("");
+    try {
+      const r = await fetch(`/api/admin/users/${workspaceId}/subject`, { method: "POST" });
+      const data = await r.json() as { subject?: SubjectRow & { id: string; created?: boolean }; error?: string };
+      if (!r.ok) {
+        setMessage(data.error ?? "Failed to create subject");
+        return;
+      }
+      setMessage(data.subject?.created ? "Subject created and approved." : "Subject already exists — approved.");
+      // Reload subjects by adding a placeholder; page refresh will show full data
+      if (data.subject?.id && subjects.length === 0) {
+        setSubjects([
+          {
+            id: data.subject.id,
+            user_id: workspaceId,
+            label: "Creator",
+            consent_status: "approved",
+            consent_signed_at: new Date().toISOString(),
+            identity_verified_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ]);
+      }
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function startTraining() {
+    setTraining(true);
+    setMessage("");
+    try {
+      const r = await fetch(`/api/admin/users/${workspaceId}/training`, { method: "POST" });
+      const data = await r.json() as { job?: { id: string; sample_count: number }; runpod_dispatched?: boolean; error?: string };
+      if (!r.ok) {
+        setMessage(data.error ?? "Training dispatch failed");
+        return;
+      }
+      const dispatched = data.runpod_dispatched ? " Dispatched to RunPod." : " (RunPod not configured — job queued locally.)";
+      setMessage(`Training started with ${data.job?.sample_count ?? "?"} photos.${dispatched}`);
+    } finally {
+      setTraining(false);
+    }
+  }
+
+  const hasApprovedSubject = subjects.some((s) => s.consent_status === "approved");
+
   return (
     <div>
-      <h3 style={{ marginTop: 0, marginBottom: 8 }}>Subject (Vault / consent)</h3>
+      <h3 style={{ marginTop: 0, marginBottom: 8 }}>Subject &amp; Training</h3>
       <p className="muted" style={{ marginBottom: 12 }}>
-        Approve or revoke consent for this customer&apos;s subject (twin).
+        Manage the creator&apos;s subject (twin identity) and trigger LoRA model training.
       </p>
-      {error && <p style={{ color: "red", marginBottom: 16 }}>{error}</p>}
+      {message && (
+        <p style={{ color: message.includes("failed") || message.includes("Failed") ? "var(--error, #e5534b)" : "var(--color-muted)", marginBottom: 12 }}>
+          {message}
+        </p>
+      )}
+
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ textAlign: "left", borderBottom: "2px solid #eee" }}>
@@ -88,7 +145,7 @@ export default function AdminSubjectsSection({ initialSubjects }: Props) {
                   <>
                     <button
                       type="button"
-                      onClick={() => updateConsent(s.id, "approved")}
+                      onClick={() => void updateConsent(s.id, "approved")}
                       disabled={s.consent_status === "approved"}
                       style={{ marginRight: 8 }}
                     >
@@ -96,7 +153,7 @@ export default function AdminSubjectsSection({ initialSubjects }: Props) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => updateConsent(s.id, "revoked")}
+                      onClick={() => void updateConsent(s.id, "revoked")}
                       disabled={s.consent_status === "revoked"}
                     >
                       Revoke
@@ -108,7 +165,33 @@ export default function AdminSubjectsSection({ initialSubjects }: Props) {
           ))}
         </tbody>
       </table>
-      {subjects.length === 0 && <p className="muted">No subject for this customer.</p>}
+
+      {subjects.length === 0 && (
+        <p className="muted" style={{ marginBottom: 12 }}>No subject for this customer.</p>
+      )}
+
+      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+        {subjects.length === 0 && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => void createSubject()}
+            disabled={creating}
+          >
+            {creating ? "Creating…" : "Create & approve subject"}
+          </button>
+        )}
+        {hasApprovedSubject && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => void startTraining()}
+            disabled={training}
+          >
+            {training ? "Starting…" : "Start LoRA training"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

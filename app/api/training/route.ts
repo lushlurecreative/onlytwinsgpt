@@ -4,12 +4,12 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getApprovedSubjectIdForUser } from "@/lib/generation-jobs";
 import { dispatchTrainingJobToRunPod } from "@/lib/runpod";
 
-const MIN_PHOTOS = 30;
+const MIN_PHOTOS = 10;
 const MAX_PHOTOS = 60;
 
 /**
- * POST: Create a training job for the current user when they have 30-60 photos and an approved subject.
- * Sample paths are taken from posts (creator_id = user) in uploads. One training job per subject;
+ * POST: Create a training job for the current user when they have 10–60 uploaded training photos and an approved subject.
+ * Photos are read from the uploads bucket (userId/training/ prefix). One training job per subject;
  * if one is already pending/running, returns 400.
  */
 export async function POST(request: Request) {
@@ -25,31 +25,34 @@ export async function POST(request: Request) {
   const subjectId = await getApprovedSubjectIdForUser(user.id);
   if (!subjectId) {
     return NextResponse.json(
-      { error: "No approved subject. Create a subject and have consent approved before training." },
+      { error: "No approved subject. Create a subject and have identity approved before training." },
       { status: 400 }
     );
   }
 
   const admin = getSupabaseAdmin();
 
-  const { data: posts, error: postsError } = await admin
-    .from("posts")
-    .select("storage_path")
-    .eq("creator_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(MAX_PHOTOS);
+  // Read training photos from uploads bucket (the dedicated training folder).
+  const { data: rootFiles } = await admin.storage.from("uploads").list(user.id, { limit: MAX_PHOTOS });
+  const { data: trainingFiles } = await admin.storage.from("uploads").list(`${user.id}/training`, { limit: MAX_PHOTOS });
 
-  if (postsError) {
-    return NextResponse.json({ error: postsError.message }, { status: 400 });
-  }
-  const samplePaths = (posts ?? []).map((p: { storage_path: string }) => p.storage_path).filter(Boolean);
+  const imageExts = /\.(jpg|jpeg|png|webp)$/i;
+  const fromRoot = (rootFiles ?? [])
+    .filter((f) => f.name && imageExts.test(f.name))
+    .map((f) => `${user.id}/${f.name}`);
+  const fromTraining = (trainingFiles ?? [])
+    .filter((f) => f.name && imageExts.test(f.name))
+    .map((f) => `${user.id}/training/${f.name}`);
+
+  const samplePaths = [...fromTraining, ...fromRoot].slice(0, MAX_PHOTOS);
+
   if (samplePaths.length < MIN_PHOTOS) {
     return NextResponse.json(
-      { error: `At least ${MIN_PHOTOS} photos required (vault/posts). You have ${samplePaths.length}.` },
+      { error: `At least ${MIN_PHOTOS} training photos required. You have ${samplePaths.length}. Upload more at Training Photos.` },
       { status: 400 }
     );
   }
-  const pathsToUse = samplePaths.slice(0, MAX_PHOTOS);
+  const pathsToUse = samplePaths;
 
   const { data: existing } = await admin
     .from("training_jobs")

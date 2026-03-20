@@ -94,10 +94,12 @@ export default function DashboardClient() {
         setPlanLabel(entitlementsJson.entitlements?.planName ?? "Unknown");
       }
       const latestStatus = String(requestsJson.requests?.[0]?.status ?? "");
-      if (latestStatus === "pending") setLatestBatchStatus("Queued");
-      else if (latestStatus === "generating") setLatestBatchStatus("Processing");
+      if (latestStatus === "pending") setLatestBatchStatus("Awaiting review");
+      else if (latestStatus === "approved") setLatestBatchStatus("Approved — generating soon");
+      else if (latestStatus === "generating") setLatestBatchStatus("Generating now");
       else if (latestStatus === "completed") setLatestBatchStatus("Completed");
-      else if (latestStatus === "failed") setLatestBatchStatus("Failed");
+      else if (latestStatus === "failed") setLatestBatchStatus("Failed — contact support");
+      else if (latestStatus === "rejected") setLatestBatchStatus("Not approved — contact support");
       else setLatestBatchStatus("No batch queued");
 
       setCompleted({
