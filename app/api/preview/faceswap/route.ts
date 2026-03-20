@@ -23,7 +23,7 @@ async function callFalaiAsync(
   try {
     // Step 1: Submit async request
     const submitResponse = await fetch(
-      "https://api.fal.ai/queue/fal-ai/face-swap",
+      "https://api.fal.ai/queue/submit/fal-ai/face-swap",
       {
         method: "POST",
         headers,
