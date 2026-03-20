@@ -72,7 +72,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   const { data: existing, error: existingError } = await admin
     .from("generation_requests")
-    .select("id, status, admin_notes, sample_paths")
+    .select("id, user_id, status, admin_notes, sample_paths")
     .eq("id", requestId)
     .single();
 
@@ -80,7 +80,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: existingError?.message ?? "Request not found" }, { status: 404 });
   }
 
-  const existingRow = existing as { status: string; admin_notes?: string | null; sample_paths?: string[] };
+  const existingRow = existing as { user_id?: string; status: string; admin_notes?: string | null; sample_paths?: string[] };
   if (["generating", "completed"].includes(existingRow.status)) {
     return NextResponse.json({ error: "Cannot edit after generation starts" }, { status: 400 });
   }
@@ -89,6 +89,15 @@ export async function PATCH(request: Request, { params }: Params) {
     const note = `[${new Date().toISOString()}] Admin requested new training photos. Creator: please re-upload in Training Vault.`;
     patch.admin_notes = existingRow.admin_notes ? `${existingRow.admin_notes}\n\n${note}` : note;
     patch.status = "pending";
+    // Notify the creator in-app so they see it the next time they log in.
+    const userId = (existing as { user_id?: string }).user_id;
+    if (userId) {
+      await admin.from("user_notifications").insert({
+        user_id: userId,
+        type: "new_photos_requested",
+        payload_json: { request_id: requestId, message: "Please upload new training photos in your Training Vault so we can continue generating your content." },
+      }).then(() => null); // fire-and-forget, don't fail the request
+    }
   }
 
   if (Array.isArray(body.samplePaths) && body.samplePaths.length >= 1) {

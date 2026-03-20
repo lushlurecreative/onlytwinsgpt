@@ -469,7 +469,7 @@ export default function GenerationQueueClient() {
                                     </div>
                                   ))}
                                 </div>
-                                {(assets?.samples?.length ?? 0) > 0 && row.status !== "generating" && row.status !== "completed" && (
+                                {row.status !== "generating" && row.status !== "completed" && (
                                   <button type="button" className="btn btn-ghost" style={{ marginTop: 8, fontSize: 13 }} onClick={() => void requestNewPhotos(row.id)}>
                                     Request new photos from creator
                                   </button>
@@ -526,35 +526,45 @@ export default function GenerationQueueClient() {
                                     </label>
                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                       <button className="btn" type="button" onClick={() => void saveEdits(row.id)}>Save changes</button>
-                                      <button
-                                        className="btn btn-primary"
-                                        type="button"
-                                        onClick={() => void approve(row.id, true)}
-                                        disabled={row.status !== "pending"}
-                                      >
-                                        Approve
-                                      </button>
-                                      <button
-                                        className="btn btn-ghost"
-                                        type="button"
-                                        onClick={() => void approve(row.id, false)}
-                                        disabled={row.status !== "pending"}
-                                      >
-                                        Reject
-                                      </button>
-                                      <button
-                                        className="btn btn-primary"
-                                        type="button"
-                                        onClick={() => void generateNow(row.id)}
-                                        disabled={!(row.status === "approved" || row.status === "failed")}
-                                        title={row.status !== "approved" && row.status !== "failed" ? "Approve the request first" : "Run generation now"}
-                                      >
-                                        Generate now
-                                      </button>
+
+                                      {/* Approve — only when pending */}
+                                      {row.status === "pending" && (
+                                        <button className="btn btn-primary" type="button" onClick={() => void approve(row.id, true)}>
+                                          Approve
+                                        </button>
+                                      )}
+
+                                      {/* Reject — only when pending */}
+                                      {row.status === "pending" && (
+                                        <button className="btn btn-ghost" type="button" onClick={() => void approve(row.id, false)}>
+                                          Reject
+                                        </button>
+                                      )}
+
+                                      {/* Reset to pending — when approved or rejected (not terminal) */}
+                                      {(row.status === "approved" || row.status === "rejected" || row.status === "failed") && (
+                                        <button className="btn btn-ghost" type="button" onClick={() => void requestNewPhotos(row.id)}>
+                                          Reset to pending
+                                        </button>
+                                      )}
+
+                                      {/* Generate now — only when approved or failed */}
+                                      {(row.status === "approved" || row.status === "failed") && (
+                                        <button
+                                          className="btn btn-primary"
+                                          type="button"
+                                          onClick={() => void generateNow(row.id)}
+                                          title="Customer must have uploaded photos and a trained LoRA model"
+                                        >
+                                          Generate now
+                                        </button>
+                                      )}
                                     </div>
-                                    <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-                                      Workflow: Approve → Generate now. "Generate now" runs on the server — this may take a few minutes.
-                                    </p>
+                                    {row.status === "approved" && (
+                                      <p className="muted" style={{ fontSize: 12, margin: 0, padding: "8px 12px", background: "rgba(255,200,0,0.08)", borderRadius: 6, border: "1px solid rgba(255,200,0,0.2)" }}>
+                                        ⚠ "Generate now" requires the customer to have uploaded training photos AND have a completed LoRA model. If it fails, check their Training status in the customer detail page.
+                                      </p>
+                                    )}
                                   </div>
                                 )}
                               </div>

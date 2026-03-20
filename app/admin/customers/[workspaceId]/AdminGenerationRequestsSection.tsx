@@ -356,7 +356,7 @@ export default function AdminGenerationRequestsSection({ workspaceId }: Props) {
                                   ))}
                                 </div>
                                 {!assets ? <p className="muted">Loading signed URLs...</p> : null}
-                                {(assets?.samples?.length ?? 0) > 0 && row.status !== "generating" && row.status !== "completed" ? (
+                                {row.status !== "generating" && row.status !== "completed" ? (
                                   <button
                                     type="button"
                                     className="btn btn-ghost"
@@ -484,29 +484,36 @@ export default function AdminGenerationRequestsSection({ workspaceId }: Props) {
                                       <button className="btn" onClick={() => void saveEdits(row.id)}>
                                         Save changes
                                       </button>
-                                      <button
-                                        className="btn btn-primary"
-                                        onClick={() => void approve(row.id, true)}
-                                        disabled={row.status !== "pending"}
-                                      >
-                                        Approve
-                                      </button>
-                                      <button
-                                        className="btn btn-ghost"
-                                        onClick={() => void approve(row.id, false)}
-                                        disabled={row.status !== "pending"}
-                                      >
-                                        Reject
-                                      </button>
-                                      <button
-                                        className="btn btn-primary"
-                                        onClick={() => void generateNow(row.id)}
-                                        disabled={!(row.status === "approved" || row.status === "failed")}
-                                        title="Starts LoRA training and image generation"
-                                      >
-                                        Initialize training
-                                      </button>
+                                      {row.status === "pending" && (
+                                        <button className="btn btn-primary" onClick={() => void approve(row.id, true)}>
+                                          Approve
+                                        </button>
+                                      )}
+                                      {row.status === "pending" && (
+                                        <button className="btn btn-ghost" onClick={() => void approve(row.id, false)}>
+                                          Reject
+                                        </button>
+                                      )}
+                                      {(row.status === "approved" || row.status === "rejected" || row.status === "failed") && (
+                                        <button className="btn btn-ghost" onClick={() => void requestNewPhotos(row.id)}>
+                                          Reset to pending
+                                        </button>
+                                      )}
+                                      {(row.status === "approved" || row.status === "failed") && (
+                                        <button
+                                          className="btn btn-primary"
+                                          onClick={() => void generateNow(row.id)}
+                                          title="Requires completed LoRA model"
+                                        >
+                                          Generate now
+                                        </button>
+                                      )}
                                     </div>
+                                    {row.status === "approved" && (
+                                      <p className="muted" style={{ fontSize: 12, margin: 0, padding: "8px 12px", background: "rgba(255,200,0,0.08)", borderRadius: 6, border: "1px solid rgba(255,200,0,0.2)" }}>
+                                        ⚠ Generation requires the customer to have a completed LoRA model. Check Training status above.
+                                      </p>
+                                    )}
                                   </div>
                                 ) : null}
                               </div>
