@@ -46,6 +46,16 @@ def handler(job):
     job_type = inp.get("type")
     start = time.time()
     try:
+        if job_type == "faceswap":
+            from face_swap import do_face_swap
+            user_photo_url = inp.get("user_photo_url") or ""
+            scenario_image_url = inp.get("scenario_image_url") or ""
+            if not user_photo_url or not scenario_image_url:
+                return {"status": "failed", "error": "Missing user_photo_url or scenario_image_url"}
+            result_url = do_face_swap(user_photo_url, scenario_image_url)
+            if not result_url:
+                return {"status": "failed", "error": "Face swap processing failed"}
+            return {"status": "completed", "output": {"swapped_image_url": result_url}}
         if job_type == "decode_watermark":
             from watermark import decode_from_url
             image_url = inp.get("image_url") or ""

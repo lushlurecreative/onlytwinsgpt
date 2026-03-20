@@ -25,5 +25,9 @@ sentencepiece
 invisible-watermark>=0.2.0
 opencv-python-headless>=4.8.0
 
+# Face swap (homepage preview)
+insightface>=0.7.3
+onnxruntime-gpu>=1.16.0
+
 # Upscale (optional; generation still works without it)
 # realesrgan  # or: pip install git+https://github.com/sberbank-ai/Real-ESRGAN.git
