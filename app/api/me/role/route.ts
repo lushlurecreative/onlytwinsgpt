@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
-import { setUserRole, type UserRole } from "@/lib/roles";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
-/** PATCH: Set current user's role (self-service). Only allows setting to 'creator'. */
+/** PATCH: Set current user's role (self-service). Only allows setting to 'creator'.
+ *  Uses admin client for the DB write so RLS cannot silently block the update.
+ */
 export async function PATCH(request: Request) {
   const supabase = await createClient();
   const {
@@ -28,9 +30,10 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const result = await setUserRole(supabase, user.id, "creator" as UserRole);
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error ?? "Failed to update role" }, { status: 500 });
+  const admin = getSupabaseAdmin();
+  const { error } = await admin.from("profiles").update({ role: "creator" }).eq("id", user.id);
+  if (error) {
+    return NextResponse.json({ error: error.message ?? "Failed to update role" }, { status: 500 });
   }
   return NextResponse.json({ ok: true, role: "creator" });
 }

@@ -203,6 +203,41 @@ export async function GET(request: Request) {
       );
     }
 
+    // Also wait for the subscriptions row before marking ready.
+    // Profile is created in checkout.session.completed; subscriptions row is created
+    // in customer.subscription.created — a separate event that can arrive seconds later.
+    // If the user hits /dashboard between these two events, entitlement checks fail.
+    if (stripeSubscriptionId) {
+      const { data: subRow } = await admin
+        .from("subscriptions")
+        .select("id")
+        .eq("subscriber_id", profileRow.id)
+        .in("status", ["active", "trialing"])
+        .maybeSingle();
+
+      if (!subRow?.id) {
+        logInfo("thank_you_session_waiting_for_subscription", {
+          requestId,
+          sessionId,
+          stripe_customer_id: stripeCustomerId,
+          stripe_subscription_id: stripeSubscriptionId,
+        });
+        return NextResponse.json(
+          {
+            state: "processing",
+            reason: "subscription_not_ready",
+            email,
+            session_id: sessionId,
+            request_id: requestId,
+            payment_status: session.payment_status ?? null,
+            stripe_customer_id: stripeCustomerId,
+            stripe_subscription_id: stripeSubscriptionId,
+          },
+          { status: 200 }
+        );
+      }
+    }
+
     logInfo("thank_you_session_ready", {
       requestId,
       sessionId,
