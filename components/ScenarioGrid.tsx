@@ -18,36 +18,19 @@ type SwappedImage = {
 export default function ScenarioGrid({ uploadedPhotos }: Props) {
   const userPhoto = uploadedPhotos[0];
   const [swappedImages, setSwappedImages] = useState<Record<number, SwappedImage>>({});
-  const [userPhotoBase64, setUserPhotoBase64] = useState<string>("");
+  const [userPhotoUrl, setUserPhotoUrl] = useState<string>("");
 
-  // Convert uploaded photo to base64
+  // Store the user photo URL for face swap API calls
   useEffect(() => {
-    const convertToBase64 = async () => {
-      try {
-        const response = await fetch(userPhoto);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result as string;
-          // Remove the data:image/...;base64, prefix
-          const base64Data = base64.split(",")[1] || base64;
-          setUserPhotoBase64(base64Data);
-        };
-        reader.readAsDataURL(blob);
-      } catch (error) {
-        console.error("Error converting photo to base64:", error);
-      }
-    };
-
-    if (userPhoto && userPhoto.startsWith("blob:")) {
-      convertToBase64();
+    if (userPhoto) {
+      setUserPhotoUrl(userPhoto);
     }
   }, [userPhoto]);
 
   // Perform face swaps for visible scenarios
   const performFaceSwap = useCallback(
     async (index: number, scenarioUrl: string) => {
-      if (!userPhotoBase64 || swappedImages[index]?.url) return;
+      if (!userPhotoUrl || swappedImages[index]?.url) return;
 
       // Set loading state
       setSwappedImages((prev) => ({
@@ -60,7 +43,7 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userPhotoBase64,
+            userPhotoUrl,
             scenarioImageUrl: scenarioUrl,
           }),
         });
@@ -91,7 +74,7 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
         }));
       }
     },
-    [userPhotoBase64, swappedImages]
+    [userPhotoUrl, swappedImages]
   );
 
   return (
@@ -111,7 +94,7 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
 
           // Trigger face swap when item is about to be visible
           const onViewportEnter = () => {
-            if (userPhotoBase64 && !swappedImages[i]) {
+            if (userPhotoUrl && !swappedImages[i]) {
               performFaceSwap(i, item.src);
             }
           };
