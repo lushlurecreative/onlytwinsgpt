@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { galleryItems } from "@/lib/gallery-data";
 
@@ -13,9 +14,9 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
   return (
     <section className="sg-section">
       <div className="sg-header">
-        <h2 className="sg-title">Your face. Every scenario.</h2>
+        <h2 className="sg-title">20+ scenarios. Your face in all of them.</h2>
         <p className="sg-sub">
-          Your AI twin placed into 20+ worlds. This is what gets delivered to your vault every month.
+          This is the style of content we generate. Subscribe to receive these with <em>your</em> face composited in — delivered to your vault every month.
         </p>
       </div>
 
@@ -56,6 +57,31 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
             </div>
           </motion.div>
         ))}
+      </div>
+
+      <div style={{ textAlign: "center", marginTop: 48 }}>
+        <p style={{ fontSize: "1.1rem", fontWeight: 600, marginBottom: 8 }}>
+          Ready to see these with your face?
+        </p>
+        <p className="muted" style={{ marginBottom: 24 }}>
+          Subscribe and your first real batch is delivered within 24 hours.
+        </p>
+        <Link
+          href="/pricing"
+          style={{
+            display: "inline-block",
+            padding: "14px 36px",
+            borderRadius: 99,
+            background: "var(--accent, #7c3aed)",
+            color: "#fff",
+            fontWeight: 700,
+            fontSize: "1rem",
+            textDecoration: "none",
+            letterSpacing: "0.02em",
+          }}
+        >
+          Subscribe &amp; Get My AI Twin →
+        </Link>
       </div>
     </section>
   );

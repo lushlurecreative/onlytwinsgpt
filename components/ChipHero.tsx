@@ -27,7 +27,7 @@ export default function ChipHero({ uploadedPhotos }: Props) {
         </div>
         <div className="cta-row" style={{ marginTop: 32 }}>
           <PremiumButton href="/pricing">Subscribe &amp; Get Started</PremiumButton>
-          <PremiumButton href="/gallery" variant="secondary">See All Scenarios</PremiumButton>
+          <PremiumButton href="/pricing" variant="secondary">Get My AI Twin →</PremiumButton>
         </div>
       </div>
 

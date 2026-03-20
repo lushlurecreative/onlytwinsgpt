@@ -73,7 +73,7 @@ export default function UploadGate({ onComplete }: Props) {
           <span className="ug-headline-accent">20+ AI scenarios</span>
         </h1>
         <p className="ug-sub">
-          Drop 3 photos. In 30 seconds you'll see exactly what we'd create for you — free, before you pay anything.
+          Drop 3 photos. We&apos;ll show you the exact style of content we generate — free, before you pay anything.
         </p>
 
         {/* Drop zone */}
