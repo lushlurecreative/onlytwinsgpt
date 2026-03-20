@@ -343,6 +343,74 @@ export async function POST(request: Request) {
         }
       }
 
+      // Handle referral redemption
+      const referralCode = (session.metadata?.referral_code as string)?.trim();
+      if (referralCode && subscriberId) {
+        try {
+          const { data: referralRow } = await supabaseAdmin
+            .from("referrals")
+            .select("id, referrer_id, redeemed_at")
+            .eq("code", referralCode)
+            .maybeSingle();
+          const rr = referralRow as {
+            id: string;
+            referrer_id: string;
+            redeemed_at: string | null;
+          } | null;
+
+          // Only redeem once and don't let someone refer themselves
+          if (rr && !rr.redeemed_at && rr.referrer_id !== subscriberId) {
+            const now = new Date().toISOString();
+            await supabaseAdmin
+              .from("referrals")
+              .update({ referred_user_id: subscriberId, redeemed_at: now })
+              .eq("id", rr.id);
+
+            // Apply 20% discount to referrer's active subscription
+            const { data: referrerSub } = await supabaseAdmin
+              .from("subscriptions")
+              .select("stripe_subscription_id")
+              .eq("subscriber_id", rr.referrer_id)
+              .in("status", ["active", "trialing"])
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            const referrerSubRow = referrerSub as {
+              stripe_subscription_id: string | null;
+            } | null;
+
+            if (referrerSubRow?.stripe_subscription_id) {
+              try {
+                const coupon = await stripe.coupons.create({
+                  percent_off: 20,
+                  duration: "once",
+                  name: "Referral 20% — one cycle",
+                  metadata: { referral_id: rr.id, type: "referral" },
+                });
+                await stripe.subscriptions.update(
+                  referrerSubRow.stripe_subscription_id,
+                  { discounts: [{ coupon: coupon.id }] }
+                );
+                await supabaseAdmin
+                  .from("referrals")
+                  .update({ discount_applied_at: now })
+                  .eq("id", rr.id);
+              } catch (discountErr) {
+                logWarn("billing_webhook_referral_discount_failed", {
+                  referralId: rr.id,
+                  message: discountErr instanceof Error ? discountErr.message : String(discountErr),
+                });
+              }
+            }
+          }
+        } catch (referralErr) {
+          logWarn("billing_webhook_referral_processing_failed", {
+            referralCode,
+            message: referralErr instanceof Error ? referralErr.message : String(referralErr),
+          });
+        }
+      }
+
       if (source === "pricing" && isKnownPlan && leadId && subscriberId && creatorId) {
         const { error: rpcError } = await supabaseAdmin.rpc("convert_lead_to_customer", {
           p_lead_id: leadId,

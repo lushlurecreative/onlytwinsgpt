@@ -45,6 +45,9 @@ export default function PrimaryNav() {
         <Link href="/library" className="nav-link">
           My Content
         </Link>
+        <Link href="/referrals" className="nav-link">
+          Referrals
+        </Link>
         <Link href="/status" className="nav-link">
           Status
         </Link>

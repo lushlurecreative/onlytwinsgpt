@@ -6,24 +6,13 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync, readdirSync, statSync, existsSync } from "fs";
+import { readFileSync, readdirSync, statSync } from "fs";
 import { join } from "path";
+import { loadEnvLocal } from "./load-env.js";
 
 const REPO_ROOT = new URL("..", import.meta.url).pathname;
 
-// Load .env.local if present (Vercel local dev — run `vercel env pull` to populate it).
-const envLocalPath = join(REPO_ROOT, ".env.local");
-if (existsSync(envLocalPath)) {
-  for (const line of readFileSync(envLocalPath, "utf8").split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eq = trimmed.indexOf("=");
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq).trim();
-    const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
-    if (key && !process.env[key]) process.env[key] = val;
-  }
-}
+loadEnvLocal();
 let failures = 0;
 
 function pass(label: string) {

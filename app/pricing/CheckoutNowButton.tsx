@@ -18,11 +18,13 @@ export default function CheckoutNowButton({ plan, className, children }: Checkou
     setLoading(true);
     setError("");
     try {
+      const referralCode =
+        typeof window !== "undefined" ? (localStorage.getItem("ref_code") ?? undefined) : undefined;
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, referralCode }),
       });
       const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
       if (res.status === 401) {

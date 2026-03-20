@@ -1,90 +1,56 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import PremiumCard from "@/components/PremiumCard";
-import BillingPortalButton from "./BillingPortalButton";
-import PremiumButton from "@/components/PremiumButton";
 import { getCurrentSubscriptionSummary } from "@/lib/request-planner";
 import { WHATSAPP_LINK, WHATSAPP_NUMBER_DISPLAY } from "@/lib/support";
+import BillingClient from "./BillingClient";
 
-function labelStatus(status: string) {
-  const s = status.toLowerCase();
-  if (s === "active") return "Active";
-  if (s === "trialing") return "Trialing";
-  if (s === "past_due") return "Past due";
-  if (s === "canceled") return "Canceled";
-  return "Unknown";
+export const dynamic = "force-dynamic";
+
+function planDisplayName(planKey: string | null, fallback: string): string {
+  if (planKey === "starter") return "Starter";
+  if (planKey === "professional") return "Growth";
+  if (planKey === "elite") return "Scale";
+  return fallback;
 }
 
 export default async function BillingPage() {
-  const session = await createClient();
+  const supabase = await createClient();
   const admin = getSupabaseAdmin();
+
   const {
     data: { user },
-  } = await session.auth.getUser();
+  } = await supabase.auth.getUser();
 
   if (!user) {
     redirect("/login?redirectTo=/billing");
   }
 
   const summary = await getCurrentSubscriptionSummary(admin, user.id);
-  const planKey = summary.planKey;
-  const planName =
-    planKey === "starter"
-      ? "Starter"
-      : planKey === "professional"
-        ? "Growth"
-        : planKey === "elite"
-          ? "Scale"
-          : summary.planName;
-  const allowanceSummary = `Includes ${summary.includedImages} photos and ${summary.includedVideos} videos per month`;
+  const planName = planDisplayName(summary.planKey, summary.planName);
+  const allowanceSummary = `${summary.includedImages} photos + ${summary.includedVideos} videos / month`;
   const renewalLabel = summary.nextRenewalAt
-    ? `Renews ${new Date(summary.nextRenewalAt).toLocaleDateString("en-US", {
-        month: "short",
+    ? new Date(summary.nextRenewalAt).toLocaleDateString("en-US", {
+        month: "long",
         day: "numeric",
         year: "numeric",
-      })}`
+      })
     : "Renewal date unavailable";
-  const canUpgrade = planKey === "starter" || planKey === "professional";
+  const canUpgrade =
+    summary.planKey === "starter" || summary.planKey === "professional";
 
   return (
-    <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
-      <PremiumCard>
-        <h1 style={{ marginTop: 0, fontSize: 34, letterSpacing: "-0.02em" }}>Billing</h1>
-        <p className="section-copy" style={{ marginTop: 8 }}>
-          Your billing overview and current subscription details.
-        </p>
-        <div
-          style={{
-            marginTop: 16,
-            padding: 18,
-            borderRadius: 16,
-            border: "1px solid var(--line)",
-            background: "rgba(255,255,255,0.74)",
-            display: "grid",
-            gap: 8,
-          }}
-        >
-          <p style={{ margin: 0, opacity: 0.75 }}>Current plan</p>
-          <h2 style={{ margin: 0, fontSize: 24 }}>{planName}</h2>
-          <p style={{ margin: 0, opacity: 0.84 }}>{renewalLabel}</p>
-          <p style={{ margin: 0, opacity: 0.84 }}>Status: {labelStatus(summary.status)}</p>
-          <p style={{ margin: 0, opacity: 0.84 }}>{allowanceSummary}</p>
-          <div className="cta-row" style={{ marginTop: 8 }}>
-            {canUpgrade ? <PremiumButton href="/upgrade">Upgrade plan</PremiumButton> : null}
-            <BillingPortalButton compact />
-          </div>
-        </div>
-      </PremiumCard>
-
-      <PremiumCard style={{ marginTop: 14 }}>
-        <h3 style={{ marginTop: 0 }}>Need help with billing?</h3>
-        <p style={{ marginBottom: 12 }}>Message us on WhatsApp and we will help you directly.</p>
-        <a className="btn btn-secondary" href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
-          WhatsApp: {WHATSAPP_NUMBER_DISPLAY}
-        </a>
-      </PremiumCard>
+    <main style={{ padding: "32px 24px", maxWidth: 780, margin: "0 auto" }}>
+      <BillingClient
+        planName={planName}
+        planKey={summary.planKey}
+        status={summary.status}
+        renewalLabel={renewalLabel}
+        allowanceSummary={allowanceSummary}
+        canUpgrade={canUpgrade}
+        whatsappLink={WHATSAPP_LINK}
+        whatsappDisplay={WHATSAPP_NUMBER_DISPLAY}
+      />
     </main>
   );
 }
-

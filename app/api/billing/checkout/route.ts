@@ -18,6 +18,8 @@ type CheckoutBody = {
   plan?: PlanKey;
   /** When a lead converts via checkout, pass their lead_id so webhook can set status=converted. */
   leadId?: string;
+  /** Referral code from ?ref= query param — passed to webhook to credit referrer. */
+  referralCode?: string;
 };
 
 function isUuid(value: string) {
@@ -86,6 +88,7 @@ export async function POST(request: Request) {
       };
       if (!isGuestCheckout && user) metadata.subscriber_id = user.id;
       if (body.leadId?.trim()) metadata.lead_id = body.leadId.trim();
+      if (body.referralCode?.trim()) metadata.referral_code = body.referralCode.trim();
 
       session = await stripe.checkout.sessions.create({
         mode: isOneTime ? "payment" : "subscription",

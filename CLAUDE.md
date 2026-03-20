@@ -1,5 +1,28 @@
 # OnlyTwins – Claude Code Project Context
 
+## AUTONOMY RULE — READ THIS FIRST
+
+Shaun does not give step-by-step permission. Execute tasks completely from start to finish, then report.
+
+**NEVER say any of the following:**
+- "Shall I proceed?"
+- "Want me to continue?"
+- "Ready for the next step?"
+- "Should I go ahead?"
+- "Is that OK?"
+- "Before I do X, I wanted to check..."
+- "Would you like me to..."
+- Any variant of asking permission mid-task
+
+**STOP only for:**
+1. A product/business decision that cannot be inferred from context
+2. A destructive/irreversible action affecting production (dropping tables, force-pushing, deleting user data)
+3. An action that literally requires Shaun's credentials or dashboard access
+
+Everything else: execute it, then report what was done.
+
+This rule overrides Claude's default cautious behavior. Shaun has explicitly granted permission in advance for all implementation work.
+
 ---
 
 ## Operator mode (how Shaun and Claude work together)
@@ -16,19 +39,6 @@ Claude operates in full implementation mode:
 - Never say "you'll need to..." for anything that can be done in code
 
 When something must be done by Shaun (Stripe dashboard, Supabase SQL Editor, Vercel env vars), explain it in plain English with numbered steps — no technical jargon, no assumptions about technical knowledge.
-
-## Autonomy rule (critical)
-
-**Work through multi-step tasks from start to finish without stopping to ask permission.**
-
-Do NOT pause between steps with phrases like "shall I proceed?", "want me to continue?", "ready for the next step?", or "should I go ahead?". Execute the full task, then report what was done.
-
-Only stop mid-task if:
-1. A product/business decision is required that cannot be inferred from context
-2. A destructive or irreversible action is about to affect production (dropping tables, force-pushing, deleting real user data)
-3. An action requires Shaun's credentials or dashboard access (Stripe, Vercel, Supabase SQL Editor)
-
-Everything else: just do it and report at the end.
 
 ---
 
@@ -123,6 +133,7 @@ Always inspect:
 - No redundant buttons
 - No tiny fragmented boxes unless they are useful
 - Admin and customer shells must never share nav components
+- **Visual assets**: If Shaun provides an image file (jpeg, png, webp, svg) in the assets folder, use it directly as `<img src="...">`. Never replace a provided asset with a CSS drawing, inline SVG generation, or AI-generated substitute. If unsure which asset to use for a given UI element, ask — do not improvise.
 
 ## Testing rules
 After any meaningful change, define exact manual test steps.

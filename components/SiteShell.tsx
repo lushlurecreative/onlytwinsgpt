@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import BrandName from "@/app/components/BrandName";
@@ -8,6 +9,7 @@ import PrimaryNav from "@/components/PrimaryNav";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import PageTransition from "@/components/PageTransition";
 import OnlyTwinsAssistant from "@/components/OnlyTwinsAssistant";
+import ReferralCapture from "@/components/ReferralCapture";
 import { WHATSAPP_LINK, WHATSAPP_NUMBER_DISPLAY } from "@/lib/support";
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
@@ -16,7 +18,14 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
 
   // Homepage is guests-only (server redirects authenticated users); render bare — no header/footer
   if (pathname === "/") {
-    return <div className="site">{children}</div>;
+    return (
+      <div className="site">
+        <Suspense>
+          <ReferralCapture />
+        </Suspense>
+        {children}
+      </div>
+    );
   }
 
   if (isAdmin) {
@@ -30,6 +39,9 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="site site-shell">
+      <Suspense>
+        <ReferralCapture />
+      </Suspense>
       <AnimatedBackground />
       <header className="header">
         <div className="header-inner">

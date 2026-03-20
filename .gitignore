@@ -43,3 +43,6 @@ yarn-error.log*
 next-env.d.ts
 supabase/.temp/
 .env*.local
+
+# MCP server config (contains API keys — local only)
+.mcp.json
