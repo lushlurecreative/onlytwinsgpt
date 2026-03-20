@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
         method: "POST",
         headers,
         body: JSON.stringify({
-          swap_image: userPhotoUrl,
-          image: scenarioImageUrl,
+          swap_image_url: userPhotoUrl,
+          base_image_url: scenarioImageUrl,
         }),
       }
     );
