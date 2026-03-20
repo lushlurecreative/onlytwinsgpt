@@ -1,6 +1,6 @@
-# RunPod Serverless: one job per invocation via handler.py
-# Build: docker build -f Dockerfile.serverless -t onlytwins-worker-serverless ./worker
-# Deploy this image to RunPod Serverless; set endpoint ID (and optional API key) in admin.
+# RunPod Load Balancer: HTTP server via app.py
+# Build: docker build -f Dockerfile.serverless -t onlytwins-worker ./worker
+# Deploy to RunPod Load Balancer endpoint; workers handle /ping and / endpoints.
 
 FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
 
@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir torch torchvision --index-url https://download.py
 
 RUN pip install --no-cache-dir realesrgan 2>/dev/null || true
 
-COPY storage.py train_lora.py generate_flux.py main.py handler.py watermark.py ./
+COPY storage.py train_lora.py generate_flux.py main.py watermark.py face_swap.py app.py ./
 
-# Serverless: one job per request; app_url and worker_secret come in each request input
-CMD ["python3", "handler.py"]
+# Load Balancer: HTTP server for face-swap and other jobs
+CMD ["python3", "app.py"]

@@ -1,91 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRunPodConfig, submitRunPodJob } from "@/lib/runpod";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
  * Face swap preview API for homepage.
- * Uses your existing RunPod worker via polling.
+ * Calls RunPod synchronous endpoint directly (Load balancer type).
  */
-async function callRunPodFaceSwap(
+async function callRunPodFaceSwapSync(
   userPhotoUrl: string,
   scenarioImageUrl: string
 ): Promise<{ swappedImageUrl: string; fallback: boolean }> {
-  const config = await getRunPodConfig();
-  if (!config) {
-    console.warn("RunPod not configured, falling back to original image");
+  const endpointId = process.env.RUNPOD_ENDPOINT_ID;
+  const apiKey = process.env.RUNPOD_API_KEY;
+
+  if (!endpointId || !apiKey) {
+    console.warn("RunPod endpoint or API key not configured");
     return { swappedImageUrl: scenarioImageUrl, fallback: true };
   }
 
   try {
-    // Submit faceswap job to RunPod
-    const result = await submitRunPodJob(config, {
-      type: "faceswap",
-      user_photo_url: userPhotoUrl,
-      scenario_image_url: scenarioImageUrl,
-    });
+    // Direct synchronous call to RunPod Load Balancer endpoint
+    const response = await fetch(
+      `https://api.runpod.io/v2/${endpointId}/runsync`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          input: {
+            type: "faceswap",
+            user_photo_url: userPhotoUrl,
+            scenario_image_url: scenarioImageUrl,
+          },
+        }),
+      }
+    );
 
-    if (!result?.id) {
-      console.error("Failed to get RunPod job ID");
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `RunPod error: ${response.status}`,
+        errorText
+      );
       return { swappedImageUrl: scenarioImageUrl, fallback: true };
     }
 
-    const jobId = result.id;
+    const result = await response.json();
 
-    // Poll for completion (max 50 seconds to stay under 60s function limit)
-    const maxAttempts = 25;
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Check job status via RunPod API
-      const statusResponse = await fetch(
-        `https://api.runpod.ai/v2/${config.endpointId}/status/${jobId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${config.apiKey}`,
-          },
-        }
-      );
-
-      if (!statusResponse.ok) {
-        console.error(
-          `RunPod status check error: ${statusResponse.status}`,
-          await statusResponse.text()
-        );
-        continue;
-      }
-
-      const status = await statusResponse.json();
-
-      // Check for completion
-      if (status.status === "COMPLETED") {
-        const output = status.output;
-        if (output?.swapped_image_url) {
-          return {
-            swappedImageUrl: output.swapped_image_url,
-            fallback: false,
-          };
-        }
-        // If output exists but no image, still return it
-        if (output) {
-          return {
-            swappedImageUrl: output,
-            fallback: true,
-          };
-        }
-      }
-
-      // Check for failure
-      if (status.status === "FAILED") {
-        console.error("RunPod job failed:", status.error || status);
-        return { swappedImageUrl: scenarioImageUrl, fallback: true };
-      }
-
-      // Still processing, continue polling
+    // Check for completion status
+    if (result.status === "COMPLETED" && result.output) {
+      const swappedUrl = result.output.swapped_image_url;
+      return {
+        swappedImageUrl: swappedUrl || scenarioImageUrl,
+        fallback: !swappedUrl,
+      };
     }
 
-    console.error("RunPod polling timed out");
+    // If status is not completed or no output
+    if (result.status === "FAILED") {
+      console.error("RunPod job failed:", result.error);
+      return { swappedImageUrl: scenarioImageUrl, fallback: true };
+    }
+
+    console.error("Unexpected RunPod response:", result);
     return { swappedImageUrl: scenarioImageUrl, fallback: true };
   } catch (error) {
     console.error(
@@ -110,7 +90,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await callRunPodFaceSwap(userPhotoUrl, scenarioImageUrl);
+    const result = await callRunPodFaceSwapSync(userPhotoUrl, scenarioImageUrl);
 
     return NextResponse.json(result);
   } catch (error) {
