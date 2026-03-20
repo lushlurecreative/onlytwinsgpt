@@ -1,22 +1,25 @@
 #!/usr/bin/env python3
 """
 RunPod Load Balancer HTTP server for face-swap and other jobs.
-Listens on PORT environment variable.
-Implements /ping endpoint on PORT_HEALTH for health checks.
+Runs health check on PORT_HEALTH, main API on PORT.
 """
 
 import os
-import json
+import threading
 from flask import Flask, request, jsonify
 from face_swap import do_face_swap
-
-app = Flask(__name__)
 
 PORT = int(os.environ.get("PORT", 8000))
 PORT_HEALTH = int(os.environ.get("PORT_HEALTH", 8001))
 
+# Main API app
+app = Flask("api")
 
-@app.route("/ping", methods=["GET"])
+# Health check app
+health_app = Flask("health")
+
+
+@health_app.route("/ping", methods=["GET"])
 def ping():
     """Health check endpoint."""
     return jsonify({"status": "ok"}), 200
@@ -65,5 +68,12 @@ def handler():
 
 
 if __name__ == "__main__":
-    # Start main app server on PORT
+    # Run health check server on PORT_HEALTH in background thread
+    health_thread = threading.Thread(
+        target=lambda: health_app.run(host="0.0.0.0", port=PORT_HEALTH, debug=False, use_reloader=False),
+        daemon=True
+    )
+    health_thread.start()
+
+    # Run main API server on PORT
     app.run(host="0.0.0.0", port=PORT, debug=False)
