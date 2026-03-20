@@ -5,6 +5,35 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+/**
+ * Recursively list and delete all files under uploads/{userId}/.
+ * Handles nested folders (training/, generated/, outputs/, etc.).
+ */
+async function purgeUserStorage(admin: SupabaseClient, userId: string): Promise<void> {
+  const bucket = "uploads";
+  const pathsToDelete: string[] = [];
+  const prefixQueue: string[] = [userId];
+
+  while (prefixQueue.length > 0) {
+    const prefix = prefixQueue.shift()!;
+    const { data: items } = await admin.storage.from(bucket).list(prefix, { limit: 1000 });
+    for (const item of items ?? []) {
+      const fullPath = `${prefix}/${item.name}`;
+      if (item.id === null) {
+        // folder — recurse
+        prefixQueue.push(fullPath);
+      } else {
+        pathsToDelete.push(fullPath);
+      }
+    }
+  }
+
+  // Delete in batches of 100 (Supabase limit)
+  for (let i = 0; i < pathsToDelete.length; i += 100) {
+    await admin.storage.from(bucket).remove(pathsToDelete.slice(i, i + 100));
+  }
+}
+
 const ADMIN_EMAILS_KEY = "ADMIN_OWNER_EMAILS";
 const DEFAULT_ADMIN_EMAIL = "lush.lure.creative@gmail.com";
 
@@ -103,7 +132,10 @@ export async function deleteUserCompletely(
   // 16) profiles
   await admin.from("profiles").delete().eq("id", userId);
 
-  // 17) auth
+  // 17) storage — delete all files under uploads/{userId}/
+  await purgeUserStorage(admin, userId);
+
+  // 18) auth
   const { error } = await authAdmin.deleteUser(userId);
   if (error) {
     return { error: (error as { message?: string })?.message ?? "Failed to delete auth user." };
