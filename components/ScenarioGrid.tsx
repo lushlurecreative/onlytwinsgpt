@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { galleryItems } from "@/lib/gallery-data";
 
 type Props = { uploadedPhotos: string[] };
@@ -14,10 +14,18 @@ type SwappedImage = {
   loading: boolean;
 };
 
+type QueuedRequest = {
+  index: number;
+  scenarioUrl: string;
+};
+
 export default function ScenarioGrid({ uploadedPhotos }: Props) {
   const userPhoto = uploadedPhotos[0];
   const [swappedImages, setSwappedImages] = useState<Record<number, SwappedImage>>({});
   const [userPhotoUrl, setUserPhotoUrl] = useState<string>("");
+  const queueRef = useRef<QueuedRequest[]>([]);
+  const activeCountRef = useRef(0);
+  const MAX_CONCURRENT = 3; // Limit to 3 concurrent requests
 
   // Store the user photo URL for face swap API calls
   useEffect(() => {
@@ -26,10 +34,14 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
     }
   }, [userPhoto]);
 
-  // Perform face swaps for visible scenarios
-  const performFaceSwap = useCallback(
-    async (index: number, scenarioUrl: string) => {
-      if (!userPhotoUrl || swappedImages[index]?.url) return;
+  // Process the queue
+  const processQueue = useCallback(async () => {
+    while (activeCountRef.current < MAX_CONCURRENT && queueRef.current.length > 0) {
+      const request = queueRef.current.shift();
+      if (!request) break;
+
+      activeCountRef.current++;
+      const { index, scenarioUrl } = request;
 
       // Set loading state
       setSwappedImages((prev) => ({
@@ -57,7 +69,6 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
             },
           }));
         } else {
-          // Fallback to original scenario
           setSwappedImages((prev) => ({
             ...prev,
             [index]: { url: scenarioUrl, loading: false },
@@ -65,14 +76,32 @@ export default function ScenarioGrid({ uploadedPhotos }: Props) {
         }
       } catch (error) {
         console.error(`Face swap error for scenario ${index}:`, error);
-        // Fallback to original scenario
         setSwappedImages((prev) => ({
           ...prev,
           [index]: { url: scenarioUrl, loading: false },
         }));
+      } finally {
+        activeCountRef.current--;
+        // Continue processing queue
+        processQueue();
       }
+    }
+  }, [userPhotoUrl]);
+
+  // Perform face swaps for visible scenarios - uses queue
+  const performFaceSwap = useCallback(
+    (index: number, scenarioUrl: string) => {
+      if (!userPhotoUrl || swappedImages[index]?.url) return;
+
+      // Add to queue if not already queued
+      if (!queueRef.current.some((r) => r.index === index)) {
+        queueRef.current.push({ index, scenarioUrl });
+      }
+
+      // Start processing queue
+      processQueue();
     },
-    [userPhotoUrl, swappedImages]
+    [userPhotoUrl, swappedImages, processQueue]
   );
 
   return (
