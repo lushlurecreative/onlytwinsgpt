@@ -6,7 +6,7 @@ export const maxDuration = 60;
 /**
  * Face swap preview API for homepage.
  * Accepts user photos and scenario image, returns face-swapped preview.
- * Uses Hugging Face's InSwapper model for real face swapping.
+ * Uses Fal.ai's FastSwap for real face swapping.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -19,83 +19,54 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Use Hugging Face Inference API for face swapping
-    // Model: deepinsight/inswapper (open-source face swap model)
-    const hfApiKey = process.env.HUGGING_FACE_API_KEY;
+    // Use Fal.ai for face swapping
+    // Free tier available, no API key required (optional for higher limits)
+    const falApiKey = process.env.FAL_API_KEY;
 
-    // Build authorization header if API key exists
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
-    if (hfApiKey) {
-      headers["Authorization"] = `Bearer ${hfApiKey}`;
+    if (falApiKey) {
+      headers["Authorization"] = `Key ${falApiKey}`;
     }
 
-    // Hugging Face Inference API expects image data or URLs
-    // For inswapper, we need to pass two images: source (user) and target (scenario)
-    try {
-      const hfResponse = await fetch(
-        "https://router.huggingface.co/models/deepinsight/inswapper",
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify({
-            inputs: {
-              source_image: userPhotoUrl,
-              target_image: scenarioImageUrl,
-            },
-          }),
-        }
-      );
-
-      if (!hfResponse.ok) {
-        const errorText = await hfResponse.text();
-        console.error(
-          "Hugging Face error:",
-          hfResponse.status,
-          errorText
-        );
-        console.error("Request was:", {
-          source_image: userPhotoUrl,
-          target_image: scenarioImageUrl,
-        });
-        // Return fallback on error
-        return NextResponse.json({
-          swappedImageUrl: scenarioImageUrl,
-          fallback: true,
-        });
+    // Call Fal.ai face swap endpoint (fal-ai/face-swap)
+    // Uses the standard face swap model, free tier available
+    const falResponse = await fetch(
+      "https://fal.run/fal-ai/face-swap",
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          swap_image: userPhotoUrl,
+          image: scenarioImageUrl,
+        }),
       }
+    );
 
-      // Try to get the result as blob (image)
-      const contentType = hfResponse.headers.get("content-type");
-      if (contentType?.includes("image")) {
-        const imageBuffer = await hfResponse.arrayBuffer();
-        const base64 = Buffer.from(imageBuffer).toString("base64");
-        const swappedImageUrl = `data:image/jpeg;base64,${base64}`;
-
-        return NextResponse.json({
-          swappedImageUrl,
-          fallback: false,
-        });
-      } else {
-        // If response is JSON, it might be an error or status message
-        const result = await hfResponse.json();
-        console.log("HF response:", result);
-        return NextResponse.json({
-          swappedImageUrl: scenarioImageUrl,
-          fallback: true,
-        });
-      }
-    } catch (fetchError) {
-      console.error("Hugging Face fetch error:", fetchError);
+    if (!falResponse.ok) {
+      const errorText = await falResponse.text();
+      console.error("Fal.ai error:", falResponse.status, errorText);
       return NextResponse.json({
         swappedImageUrl: scenarioImageUrl,
         fallback: true,
       });
     }
+
+    const result = await falResponse.json();
+
+    // Fal.ai returns result directly with output.image containing the swapped image URL
+    const swappedUrl =
+      result?.output?.image?.url ||
+      result?.image?.url ||
+      scenarioImageUrl;
+
+    return NextResponse.json({
+      swappedImageUrl: swappedUrl,
+      fallback: swappedUrl === scenarioImageUrl,
+    });
   } catch (error) {
     console.error("Face swap preview error:", error);
-    // Return fallback on error
     return NextResponse.json(
       { error: "Face swap processing failed" },
       { status: 500 }
