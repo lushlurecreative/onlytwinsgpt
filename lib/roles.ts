@@ -1,12 +1,12 @@
 /**
- * Creator vs Consumer roles. Profiles.role: 'creator' | 'consumer' (default 'consumer').
- * Creator-only: /vault, /creator, /upload (and generation/training flows).
- * Consumer: feed, subscribe, view creator content.
+ * All users are creators — people generating AI content of themselves.
+ * The 'admin' role is reserved for platform operators.
+ * Profiles.role: 'creator' (default) | 'admin'
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type UserRole = "creator" | "consumer";
+export type UserRole = "creator" | "admin";
 
 export async function getUserRole(
   supabase: SupabaseClient,
@@ -18,8 +18,8 @@ export async function getUserRole(
     .eq("id", userId)
     .maybeSingle();
   const role = (data?.role as string)?.trim().toLowerCase();
-  if (role === "creator") return "creator";
-  return "consumer";
+  if (role === "admin") return "admin";
+  return "creator";
 }
 
 export async function setUserRole(

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 
 export default function BecomeCreatorClient() {
   const searchParams = useSearchParams();
@@ -48,9 +47,6 @@ export default function BecomeCreatorClient() {
         >
           {loading ? "Requesting…" : "Become a creator"}
         </button>
-        <Link href="/feed" className="btn btn-ghost">
-          Browse as consumer
-        </Link>
       </div>
     </main>
   );

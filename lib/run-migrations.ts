@@ -96,7 +96,7 @@ const MIGRATIONS = [
   `do $$ begin if exists (select 1 from information_schema.tables where table_schema = 'public' and table_name = 'generation_requests') then alter table public.generation_jobs add constraint generation_jobs_generation_request_id_fkey foreign key (generation_request_id) references public.generation_requests(id) on delete set null; end if; exception when duplicate_object then null; end $$;`,
 
   `create table if not exists public.app_settings ( key text primary key, value text not null default '', updated_at timestamptz not null default timezone('utc', now()) );`,
-  `alter table public.profiles add column if not exists role text not null default 'consumer' check (role in ('creator', 'consumer'));`,
+  `alter table public.profiles add column if not exists role text not null default 'creator' check (role in ('creator', 'admin'));`,
   `alter table public.profiles add column if not exists suspended_at timestamptz null;`,
   `create table if not exists public.consent_records ( id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, subject_id uuid null references public.subjects(id) on delete set null, document_type text null, storage_path text null, signed_at timestamptz null, created_at timestamptz not null default timezone('utc', now()), updated_at timestamptz not null default timezone('utc', now()) );`,
   `create index if not exists consent_records_user_id_idx on public.consent_records(user_id);`,
@@ -173,6 +173,10 @@ const MIGRATIONS = [
   `insert into public.presets (name, prompt, negative_prompt, parameter_json)
    select 'Beach', 'A realistic beach scene with natural daylight, ocean water movement, and authentic skin texture.', '', '{}'
    where not exists (select 1 from public.presets where name ilike 'Beach');`,
+
+  // Remove consumer role — all users are creators
+  `update public.profiles set role = 'creator' where role = 'consumer';`,
+  `do $$ begin if exists (select 1 from pg_constraint where conname = 'profiles_role_check') then alter table public.profiles drop constraint profiles_role_check; end if; alter table public.profiles add constraint profiles_role_check check (role in ('creator', 'admin')); alter table public.profiles alter column role set default 'creator'; exception when duplicate_object then null; end $$;`,
 ];
 
 export async function runMigrations(): Promise<{ ok: boolean; error?: string }> {
