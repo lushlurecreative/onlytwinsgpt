@@ -51,9 +51,11 @@ export async function POST(req: NextRequest) {
     if (!replicateResponse.ok) {
       const error = await replicateResponse.text();
       console.error("Replicate error:", replicateResponse.status, error);
+      console.error("Replicate token configured:", !!replicateToken);
       return NextResponse.json({
         swappedImageUrl: scenarioImageUrl,
         fallback: true,
+        error: `Replicate API error: ${replicateResponse.status}`,
       });
     }
 
