@@ -1,118 +1,95 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getRunPodConfig, submitRunPodJob } from "@/lib/runpod";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /**
  * Face swap preview API for homepage.
- * Uses Together.ai's face-swap API via their inference endpoint.
+ * Uses your existing RunPod worker via polling.
  */
-async function callTogetherAi(
+async function callRunPodFaceSwap(
   userPhotoUrl: string,
-  scenarioImageUrl: string,
-  togetherApiKey: string | undefined
+  scenarioImageUrl: string
 ): Promise<{ swappedImageUrl: string; fallback: boolean }> {
-  if (!togetherApiKey) {
-    console.warn("No Together.ai API key, falling back to original image");
+  const config = await getRunPodConfig();
+  if (!config) {
+    console.warn("RunPod not configured, falling back to original image");
     return { swappedImageUrl: scenarioImageUrl, fallback: true };
   }
 
   try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${togetherApiKey}`,
-    };
-
-    // Together.ai face swap endpoint
-    const response = await fetch(
-      "https://api.together.xyz/v1/images/faceswap",
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          image_url: scenarioImageUrl,
-          face_image_url: userPhotoUrl,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Together.ai error: ${response.status}`, errorText);
-
-      // If that endpoint doesn't exist, try their inference API
-      return await tryTogetherInference(
-        userPhotoUrl,
-        scenarioImageUrl,
-        togetherApiKey
-      );
-    }
-
-    const result = await response.json();
-    const swappedUrl = result?.result?.image || result?.image || scenarioImageUrl;
-
-    return {
-      swappedImageUrl: swappedUrl,
-      fallback: !result?.result?.image,
-    };
-  } catch (error) {
-    console.error(
-      "Together.ai face swap error:",
-      error instanceof Error ? error.message : String(error)
-    );
-    return {
-      swappedImageUrl: scenarioImageUrl,
-      fallback: true,
-    };
-  }
-}
-
-async function tryTogetherInference(
-  userPhotoUrl: string,
-  scenarioImageUrl: string,
-  togetherApiKey: string
-): Promise<{ swappedImageUrl: string; fallback: boolean }> {
-  try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${togetherApiKey}`,
-    };
-
-    // Try Together.ai inference endpoint with a face-swap model
-    const response = await fetch("https://api.together.xyz/inference", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model: "deepinsight/inswapper",
-        prompt: `Face swap: swap the face from ${userPhotoUrl} into ${scenarioImageUrl}`,
-        image_url: scenarioImageUrl,
-        face_image_url: userPhotoUrl,
-        negative_prompt: "blurry, low quality",
-        steps: 20,
-        temperature: 0.7,
-        top_p: 0.9,
-      }),
+    // Submit faceswap job to RunPod
+    const result = await submitRunPodJob(config, {
+      type: "faceswap",
+      user_photo_url: userPhotoUrl,
+      scenario_image_url: scenarioImageUrl,
     });
 
-    if (!response.ok) {
-      console.error(
-        `Together.ai inference error: ${response.status}`,
-        await response.text()
-      );
+    if (!result?.id) {
+      console.error("Failed to get RunPod job ID");
       return { swappedImageUrl: scenarioImageUrl, fallback: true };
     }
 
-    const result = await response.json();
-    const swappedUrl =
-      result?.output?.[0] || result?.data?.[0] || scenarioImageUrl;
+    const jobId = result.id;
 
-    return {
-      swappedImageUrl: swappedUrl,
-      fallback: !swappedUrl || swappedUrl === scenarioImageUrl,
-    };
+    // Poll for completion (max 50 seconds to stay under 60s function limit)
+    const maxAttempts = 25;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Check job status via RunPod API
+      const statusResponse = await fetch(
+        `https://api.runpod.ai/v2/${config.endpointId}/status/${jobId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${config.apiKey}`,
+          },
+        }
+      );
+
+      if (!statusResponse.ok) {
+        console.error(
+          `RunPod status check error: ${statusResponse.status}`,
+          await statusResponse.text()
+        );
+        continue;
+      }
+
+      const status = await statusResponse.json();
+
+      // Check for completion
+      if (status.status === "COMPLETED") {
+        const output = status.output;
+        if (output?.swapped_image_url) {
+          return {
+            swappedImageUrl: output.swapped_image_url,
+            fallback: false,
+          };
+        }
+        // If output exists but no image, still return it
+        if (output) {
+          return {
+            swappedImageUrl: output,
+            fallback: true,
+          };
+        }
+      }
+
+      // Check for failure
+      if (status.status === "FAILED") {
+        console.error("RunPod job failed:", status.error || status);
+        return { swappedImageUrl: scenarioImageUrl, fallback: true };
+      }
+
+      // Still processing, continue polling
+    }
+
+    console.error("RunPod polling timed out");
+    return { swappedImageUrl: scenarioImageUrl, fallback: true };
   } catch (error) {
     console.error(
-      "Together.ai inference error:",
+      "RunPod face swap error:",
       error instanceof Error ? error.message : String(error)
     );
     return {
@@ -133,12 +110,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const togetherApiKey = process.env.TOGETHER_API_KEY;
-    const result = await callTogetherAi(
-      userPhotoUrl,
-      scenarioImageUrl,
-      togetherApiKey
-    );
+    const result = await callRunPodFaceSwap(userPhotoUrl, scenarioImageUrl);
 
     return NextResponse.json(result);
   } catch (error) {
