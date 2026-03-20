@@ -22,12 +22,11 @@ async function callRunPodFaceSwapSync(
   try {
     // Direct synchronous call to RunPod Load Balancer endpoint
     const response = await fetch(
-      `https://api.runpod.io/v2/${endpointId}/runsync`,
+      `https://${endpointId}.api.runpod.ai/`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           input: {
@@ -42,20 +41,22 @@ async function callRunPodFaceSwapSync(
     if (!response.ok) {
       const errorText = await response.text();
       console.error(
-        `RunPod error: ${response.status}`,
+        `RunPod HTTP error: ${response.status}`,
         errorText
       );
       return { swappedImageUrl: scenarioImageUrl, fallback: true };
     }
 
     const result = await response.json();
+    console.log("RunPod response:", JSON.stringify(result).substring(0, 200));
 
     // Check for completion status
-    if (result.status === "COMPLETED" && result.output) {
+    if (result.status === "COMPLETED" && result.output?.swapped_image_url) {
       const swappedUrl = result.output.swapped_image_url;
+      console.log("Face swap successful:", swappedUrl.substring(0, 50));
       return {
-        swappedImageUrl: swappedUrl || scenarioImageUrl,
-        fallback: !swappedUrl,
+        swappedImageUrl: swappedUrl,
+        fallback: false,
       };
     }
 
@@ -65,7 +66,7 @@ async function callRunPodFaceSwapSync(
       return { swappedImageUrl: scenarioImageUrl, fallback: true };
     }
 
-    console.error("Unexpected RunPod response:", result);
+    console.error("Unexpected RunPod response status:", result.status);
     return { swappedImageUrl: scenarioImageUrl, fallback: true };
   } catch (error) {
     console.error(
