@@ -22,12 +22,20 @@ type CustomerRow = {
   modelStatus: string;
   lastActivity: string;
   adminNotes: string | null;
+  acquisitionSource: string | null;
 };
 
 type Summary = {
   activeCustomers: number;
   newThisWeek: number;
   canceledThisWeek: number;
+};
+
+type AdminReferralLink = {
+  id: string;
+  code: string;
+  label: string;
+  created_at: string;
 };
 
 const PLAN_KEYS: PlanKey[] = [
@@ -49,6 +57,11 @@ export default function AdminCustomersClient() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("active");
   const [showAddPanel, setShowAddPanel] = useState(false);
+  const [showRefPanel, setShowRefPanel] = useState(false);
+  const [refLinks, setRefLinks] = useState<AdminReferralLink[]>([]);
+  const [refLinksLoading, setRefLinksLoading] = useState(false);
+  const [newRefLabel, setNewRefLabel] = useState("");
+  const [creatingRef, setCreatingRef] = useState(false);
   const [creatingLink, setCreatingLink] = useState(false);
   const [createdLink, setCreatedLink] = useState<{ url: string } | null>(null);
   const [payLinkForm, setPayLinkForm] = useState({ email: "", plan: "" as PlanKey | "", fullName: "", adminNotes: "" });
@@ -101,6 +114,43 @@ export default function AdminCustomersClient() {
     try { await navigator.clipboard.writeText(url); setMessage("Link copied."); } catch { setMessage("Copy failed — select and copy manually."); }
   }
 
+  async function loadRefLinks() {
+    setRefLinksLoading(true);
+    const res = await fetch("/api/admin/referral-links");
+    const json = (await res.json().catch(() => ({}))) as { links?: AdminReferralLink[] };
+    setRefLinks(json.links ?? []);
+    setRefLinksLoading(false);
+  }
+
+  async function createRefLink() {
+    if (!newRefLabel.trim()) return;
+    setCreatingRef(true);
+    const res = await fetch("/api/admin/referral-links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: newRefLabel.trim() }),
+    });
+    const json = (await res.json().catch(() => ({}))) as { link?: AdminReferralLink; error?: string };
+    setCreatingRef(false);
+    if (!res.ok) { setMessage(json.error ?? "Failed"); return; }
+    setNewRefLabel("");
+    await loadRefLinks();
+  }
+
+  async function deleteRefLink(id: string) {
+    await fetch("/api/admin/referral-links", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    setRefLinks((prev) => prev.filter((l) => l.id !== id));
+  }
+
+  function refLinkUrl(code: string) {
+    const base = typeof window !== "undefined" ? window.location.origin : "https://onlytwins.dev";
+    return `${base}/?ref=${code}`;
+  }
+
   return (
     <div>
       {/* Header */}
@@ -113,9 +163,21 @@ export default function AdminCustomersClient() {
             <span className="muted"><strong style={{ color: "var(--foreground)" }}>{summary.canceledThisWeek}</strong> canceled this week</span>
           </div>
         </div>
-        <button className="btn btn-primary" type="button" onClick={() => setShowAddPanel((v) => !v)}>
-          {showAddPanel ? "Close" : "+ Add customer"}
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-primary" type="button" onClick={() => setShowAddPanel((v) => !v)}>
+            {showAddPanel ? "Close" : "+ Add customer"}
+          </button>
+          <button
+            className="btn btn-secondary"
+            type="button"
+            onClick={() => {
+              setShowRefPanel((v) => !v);
+              if (!showRefPanel) void loadRefLinks();
+            }}
+          >
+            Referral links
+          </button>
+        </div>
       </div>
 
       {/* Add customer panel */}
@@ -155,6 +217,64 @@ export default function AdminCustomersClient() {
         </div>
       )}
 
+      {/* Referral links panel */}
+      {showRefPanel && (
+        <div className="card" style={{ marginBottom: 20, padding: 16 }}>
+          <h3 style={{ marginTop: 0, marginBottom: 4 }}>Referral &amp; affiliate links</h3>
+          <p className="muted" style={{ marginTop: 0, marginBottom: 12, fontSize: 13 }}>
+            Generate tracking links for campaigns, partners, or influencers. Each link sets a ?ref= code that is recorded on signup.
+          </p>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+            <input
+              className="input"
+              placeholder="Label (e.g. Instagram campaign, Partner Jane)"
+              value={newRefLabel}
+              onChange={(e) => setNewRefLabel(e.target.value)}
+              style={{ flex: 1, minWidth: 220 }}
+            />
+            <button
+              className="btn btn-primary"
+              type="button"
+              disabled={creatingRef || !newRefLabel.trim()}
+              onClick={() => void createRefLink()}
+            >
+              {creatingRef ? "Creating…" : "Generate link"}
+            </button>
+          </div>
+          {refLinksLoading && <p className="muted" style={{ fontSize: 13 }}>Loading…</p>}
+          {!refLinksLoading && refLinks.length === 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>No referral links yet.</p>
+          )}
+          {refLinks.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {refLinks.map((link) => (
+                <div
+                  key={link.id}
+                  style={{
+                    display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap",
+                    padding: "10px 12px", background: "rgba(255,255,255,0.04)", borderRadius: 10,
+                    border: "1px solid var(--line)",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{link.label}</div>
+                    <div className="muted" style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {refLinkUrl(link.code)}
+                    </div>
+                  </div>
+                  <button className="btn btn-primary" style={{ fontSize: 12, padding: "6px 12px" }} type="button" onClick={() => void copyLink(refLinkUrl(link.code))}>
+                    Copy
+                  </button>
+                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: "6px 12px" }} type="button" onClick={() => void deleteRefLink(link.id)}>
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <input
@@ -181,6 +301,7 @@ export default function AdminCustomersClient() {
             <thead>
               <tr style={{ borderBottom: "2px solid var(--line, #333)" }}>
                 <th style={{ textAlign: "left", padding: "10px 14px" }}>Customer</th>
+                <th style={{ textAlign: "left", padding: "10px 14px" }}>Source</th>
                 <th style={{ textAlign: "left", padding: "10px 14px" }}>Plan</th>
                 <th style={{ textAlign: "left", padding: "10px 14px" }}>Status</th>
                 <th style={{ textAlign: "left", padding: "10px 14px" }}>Model</th>
@@ -194,6 +315,12 @@ export default function AdminCustomersClient() {
                   <td style={{ padding: "10px 14px" }}>
                     <div style={{ fontWeight: 500 }}>{row.creator}</div>
                     <div className="muted" style={{ fontSize: 12 }}>{row.email ?? "—"}</div>
+                  </td>
+                  <td style={{ padding: "10px 14px", fontSize: 12, color: "var(--muted)" }}>
+                    {row.acquisitionSource === "direct" ? "Direct" :
+                     row.acquisitionSource === "referral" ? "Referral" :
+                     row.acquisitionSource === "scraper" ? "Lead" :
+                     row.acquisitionSource ?? "—"}
                   </td>
                   <td style={{ padding: "10px 14px", fontSize: 13 }}>{row.plan}</td>
                   <td style={{ padding: "10px 14px" }}>

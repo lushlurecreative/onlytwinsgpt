@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import AdminGenerationRequestsSection from "./AdminGenerationRequestsSection";
 import AdminSubjectsSection, { type SubjectRow } from "./AdminSubjectsSection";
 
@@ -47,6 +48,7 @@ type Props = {
   workspaceId: string;
   email: string | null;
   fullName: string | null;
+  acquisitionSource: string | null;
   subjectId: string | null;
   subscription: Subscription;
   stripeCustomerId: string | null;
@@ -54,7 +56,6 @@ type Props = {
   generations: GenerationRow[];
   assets: { path: string; createdAt: string; requestId?: string }[];
   failures: FailureRow[];
-  suspendedAt: string | null;
   posts: PostRow[];
   subjectsForVault: SubjectRow[];
 };
@@ -63,6 +64,7 @@ export default function AdminCustomerDetailClient({
   workspaceId,
   email,
   fullName,
+  acquisitionSource,
   subjectId,
   subscription,
   stripeCustomerId,
@@ -70,15 +72,15 @@ export default function AdminCustomerDetailClient({
   generations,
   assets,
   failures,
-  suspendedAt,
   posts,
   subjectsForVault,
 }: Props) {
+  const router = useRouter();
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
-  const [suspended, setSuspended] = useState(!!suspendedAt);
-  const [showArchiveModal, setShowArchiveModal] = useState(false);
-  const [archiveConfirmText, setArchiveConfirmText] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [postList, setPostList] = useState(posts);
   const [customerForm, setCustomerForm] = useState({
     fullName: fullName ?? "",
@@ -90,35 +92,12 @@ export default function AdminCustomerDetailClient({
     adminNotes: subscription?.admin_notes ?? "",
   });
 
-  async function toggleSuspend() {
-    setMessage("");
-    try {
-      const res = await fetch(`/api/admin/users/${workspaceId}/suspend`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ suspended: !suspended }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-      if (!res.ok) {
-        setMessage(data.error ?? "Failed");
-        return;
-      }
-      setSuspended(!suspended);
-      setMessage(suspended ? "User unsuspended." : "User suspended.");
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Failed");
-    }
-  }
-
   async function unpublishPost(postId: string) {
     setMessage("");
     try {
       const res = await fetch(`/api/admin/posts/${postId}`, { method: "DELETE" });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-      if (!res.ok) {
-        setMessage(data.error ?? "Failed to unpublish");
-        return;
-      }
+      if (!res.ok) { setMessage(data.error ?? "Failed to unpublish"); return; }
       setPostList((prev) => prev.map((p) => (p.id === postId ? { ...p, is_published: false } : p)));
       setMessage("Post unpublished.");
     } catch (e) {
@@ -133,13 +112,10 @@ export default function AdminCustomerDetailClient({
       if (type === "generation") {
         const res = await fetch(`/api/admin/generation-requests/${id}/generate`, { method: "POST" });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setMessage((json as { error?: string }).error ?? "Failed to retry");
-          return;
-        }
+        if (!res.ok) { setMessage((json as { error?: string }).error ?? "Failed to retry"); return; }
         setMessage("Generation queued.");
       } else {
-        setMessage("Retry training: use Training API when available.");
+        setMessage("Retry training: use Training API.");
       }
     } finally {
       setLoading(null);
@@ -147,7 +123,7 @@ export default function AdminCustomerDetailClient({
   }
 
   async function saveCustomerOverview() {
-    setMessage("Saving customer...");
+    setMessage("Saving…");
     const res = await fetch(`/api/admin/customers/${workspaceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -162,144 +138,96 @@ export default function AdminCustomerDetailClient({
       }),
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string };
-    if (!res.ok) {
-      setMessage(data.error ?? "Failed to save customer");
-      return;
-    }
-    setMessage("Customer updated.");
+    setMessage(res.ok ? "Saved." : (data.error ?? "Failed to save"));
   }
 
-  async function archiveCustomer() {
-    setMessage("Archiving customer...");
-    const res = await fetch(`/api/admin/customers/${workspaceId}`, {
+  async function hardDelete() {
+    if (deleteConfirmText.trim().toUpperCase() !== "DELETE") return;
+    setDeleting(true);
+    setMessage("");
+    const res = await fetch("/api/admin/customers/hard-delete", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ confirmText: "ARCHIVE" }),
+      body: JSON.stringify({ workspaceId, confirmText: "DELETE", userEmail: email }),
     });
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
-      setMessage(data.error ?? "Failed to archive customer");
+      setDeleting(false);
+      setMessage(data.error ?? "Delete failed");
       return;
     }
-    setMessage("Customer archived.");
+    router.push("/admin/customers");
   }
 
   const planLabel = subscription?.stripe_price_id ? "Subscription" : "—";
   const statusLabel =
-    subscription?.status === "trialing"
-      ? "Trial"
-      : subscription?.status === "active"
-        ? "Active"
-        : subscription?.status === "past_due"
-          ? "Past Due"
-          : subscription?.status === "canceled"
-            ? "Canceled"
-            : subscription?.status ?? "—";
+    subscription?.status === "trialing" ? "Trial" :
+    subscription?.status === "active" ? "Active" :
+    subscription?.status === "past_due" ? "Past Due" :
+    subscription?.status === "canceled" ? "Canceled" :
+    subscription?.status ?? "—";
+
+  const sourceLabel =
+    acquisitionSource === "direct" ? "Direct signup" :
+    acquisitionSource === "referral" ? "Referral link" :
+    acquisitionSource === "scraper" ? "Lead (scraper)" :
+    acquisitionSource ?? "Unknown";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {showArchiveModal ? (
+      {/* Hard delete modal */}
+      {showDeleteModal && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-labelledby="archive-customer-title"
           style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)",
+            display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
           }}
           onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowArchiveModal(false);
-              setArchiveConfirmText("");
-            }
+            if (e.target === e.currentTarget) { setShowDeleteModal(false); setDeleteConfirmText(""); }
           }}
         >
-          <div className="card" style={{ maxWidth: 520, width: "100%", margin: 16, padding: 16 }}>
-            <h3 id="archive-customer-title" style={{ marginTop: 0 }}>
-              Archive customer
-            </h3>
+          <div className="card" style={{ maxWidth: 520, width: "100%", margin: 16, padding: 20, border: "1px solid rgba(239,68,68,0.4)" }}>
+            <h3 style={{ marginTop: 0, color: "#ef4444" }}>Delete customer permanently?</h3>
             <p className="muted" style={{ marginTop: 0 }}>
-              This cancels and archives the customer subscription.
+              This permanently deletes the user account, all uploads, generated content, training data, and subscription records.
+              <strong style={{ color: "#ef4444" }}> This cannot be undone.</strong>
             </p>
             <label style={{ display: "grid", gap: 6 }}>
-              <span className="muted">Type ARCHIVE to confirm</span>
+              <span className="muted">Type DELETE to confirm</span>
               <input
                 className="input"
-                value={archiveConfirmText}
-                onChange={(e) => setArchiveConfirmText(e.target.value)}
-                placeholder="ARCHIVE"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
               />
             </label>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
               <button
                 className="btn btn-ghost"
                 type="button"
-                onClick={() => {
-                  setShowArchiveModal(false);
-                  setArchiveConfirmText("");
-                }}
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(""); }}
               >
                 Cancel
               </button>
               <button
-                className="btn btn-primary"
+                className="btn"
                 type="button"
-                disabled={archiveConfirmText.trim().toUpperCase() !== "ARCHIVE"}
-                onClick={() => {
-                  void archiveCustomer();
-                  setShowArchiveModal(false);
-                  setArchiveConfirmText("");
-                }}
+                disabled={deleteConfirmText.trim().toUpperCase() !== "DELETE" || deleting}
+                onClick={() => void hardDelete()}
+                style={{ background: "#ef4444", color: "#fff", border: "none", opacity: deleting ? 0.6 : 1 }}
               >
-                Archive customer
+                {deleting ? "Deleting…" : "Delete permanently"}
               </button>
             </div>
           </div>
         </div>
-      ) : null}
+      )}
+
       {message ? <p style={{ margin: 0, color: "var(--color-muted)" }}>{message}</p> : null}
 
-      {/* Moderation */}
-      <div>
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Moderation</h3>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button
-            type="button"
-            className={suspended ? "btn btn-ghost" : "btn"}
-            style={suspended ? undefined : { color: "var(--error, #e5534b)" }}
-            onClick={() => void toggleSuspend()}
-          >
-            {suspended ? "Unsuspend user" : "Suspend user"}
-          </button>
-          {suspended ? <span className="muted">User is suspended and cannot access creator areas.</span> : null}
-        </div>
-        {postList.length > 0 ? (
-          <div style={{ marginTop: 12 }}>
-            <h4 style={{ marginBottom: 8 }}>Posts (content removal)</h4>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-              {postList.map((p) => (
-                <li key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                  <span className="muted" style={{ fontSize: 13 }}>
-                    {p.created_at.slice(0, 10)} · {p.visibility} · {p.is_published ? "Published" : "Unpublished"}
-                  </span>
-                  {p.is_published ? (
-                    <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => void unpublishPost(p.id)}>
-                      Unpublish
-                    </button>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
-
-      {/* Section A: Subscription */}
+      {/* Customer overview */}
       <div>
         <h3 style={{ marginTop: 0, marginBottom: 8 }}>Customer overview</h3>
         <div className="card" style={{ padding: 12 }}>
@@ -311,6 +239,10 @@ export default function AdminCustomerDetailClient({
             <label style={{ display: "grid", gap: 6 }}>
               <span className="muted">Full name</span>
               <input className="input" value={customerForm.fullName} onChange={(e) => setCustomerForm((f) => ({ ...f, fullName: e.target.value }))} />
+            </label>
+            <label style={{ display: "grid", gap: 6 }}>
+              <span className="muted">Acquisition source</span>
+              <input className="input" value={sourceLabel} readOnly />
             </label>
             <label style={{ display: "grid", gap: 6 }}>
               <span className="muted">Status</span>
@@ -345,32 +277,58 @@ export default function AdminCustomerDetailClient({
             <button type="button" className="btn btn-primary" onClick={() => void saveCustomerOverview()}>
               Save changes
             </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setCustomerForm((f) => ({ ...f, status: "active" }))}>
+            <button type="button" className="btn btn-primary" onClick={() => setCustomerForm((f) => ({ ...f, status: "active" }))}>
               Set active
             </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setCustomerForm((f) => ({ ...f, status: "past_due" }))}>
+            <button type="button" className="btn btn-primary" onClick={() => setCustomerForm((f) => ({ ...f, status: "past_due" }))}>
               Set past due
             </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setCustomerForm((f) => ({ ...f, status: "canceled" }))}>
+            <button type="button" className="btn btn-primary" onClick={() => setCustomerForm((f) => ({ ...f, status: "canceled" }))}>
               Set canceled
             </button>
-            <button type="button" className="btn btn-ghost" onClick={() => setShowArchiveModal(true)}>
-              Archive customer
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setShowDeleteModal(true)}
+              style={{ color: "#ef4444", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)" }}
+            >
+              Delete customer
             </button>
           </div>
         </div>
         <p className="muted" style={{ marginTop: 10, marginBottom: 0 }}>
-          Current status: <strong>{statusLabel}</strong> · Current plan: <strong>{planLabel}</strong>
+          Status: <strong>{statusLabel}</strong> · Plan: <strong>{planLabel}</strong>
         </p>
       </div>
 
-      {/* Subject (Vault) / consent */}
+      {/* Content moderation */}
+      {postList.length > 0 && (
+        <div>
+          <h3 style={{ marginTop: 0, marginBottom: 8 }}>Content</h3>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {postList.map((p) => (
+              <li key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span className="muted" style={{ fontSize: 13 }}>
+                  {p.created_at.slice(0, 10)} · {p.visibility} · {p.is_published ? "Published" : "Unpublished"}
+                </span>
+                {p.is_published && (
+                  <button type="button" className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => void unpublishPost(p.id)}>
+                    Unpublish
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Subject / consent */}
       <div>
         <AdminSubjectsSection initialSubjects={subjectsForVault} workspaceId={workspaceId} />
       </div>
 
-      {/* Identity verification (Phase D) */}
-      {subjectId ? (
+      {/* Identity verification */}
+      {subjectId && (
         <div>
           <h3 style={{ marginTop: 0, marginBottom: 8 }}>Identity verification</h3>
           <p className="muted" style={{ marginBottom: 8 }}>Approve identity for this subject so training can proceed.</p>
@@ -382,11 +340,7 @@ export default function AdminCustomerDetailClient({
               try {
                 const res = await fetch(`/api/admin/subjects/${subjectId}/verify-identity`, { method: "POST" });
                 const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-                if (!res.ok) {
-                  setMessage(data.error ?? "Failed");
-                  return;
-                }
-                setMessage("Identity approved.");
+                setMessage(res.ok ? "Identity approved." : (data.error ?? "Failed"));
               } catch (e) {
                 setMessage(e instanceof Error ? e.message : "Failed");
               }
@@ -395,9 +349,9 @@ export default function AdminCustomerDetailClient({
             Approve identity
           </button>
         </div>
-      ) : null}
+      )}
 
-      {/* Section B: Dataset + Training */}
+      {/* Dataset + Training */}
       <div>
         <h3 style={{ marginTop: 0, marginBottom: 8 }}>Dataset &amp; Training</h3>
         <table style={{ borderCollapse: "collapse" }}>
@@ -412,11 +366,7 @@ export default function AdminCustomerDetailClient({
             </tr>
             <tr>
               <td style={{ padding: "4px 12px 4px 0", fontWeight: 500 }}>Last Training Date</td>
-              <td style={{ padding: 4 }}>
-                {training.lastTrainingDate
-                  ? new Date(training.lastTrainingDate).toLocaleString()
-                  : "—"}
-              </td>
+              <td style={{ padding: 4 }}>{training.lastTrainingDate ? new Date(training.lastTrainingDate).toLocaleString() : "—"}</td>
             </tr>
             <tr>
               <td style={{ padding: "4px 12px 4px 0", fontWeight: 500 }}>Active Model Version</td>
@@ -425,20 +375,15 @@ export default function AdminCustomerDetailClient({
           </tbody>
         </table>
         {(training.trainingStatus === "failed" || training.trainingStatus === "Failed") && (
-          <button
-            type="button"
-            onClick={() => retryJob("training", workspaceId)}
-            disabled={loading !== null}
-            style={{ marginTop: 8 }}
-          >
+          <button type="button" className="btn btn-primary" onClick={() => retryJob("training", workspaceId)} disabled={loading !== null} style={{ marginTop: 8 }}>
             Retry training
           </button>
         )}
       </div>
 
-      {/* Section C: Generations (summary) + full generation requests section */}
+      {/* Generations summary */}
       <div>
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Generations (summary)</h3>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Generations</h3>
         {generations.length === 0 ? (
           <p className="muted">No generation jobs.</p>
         ) : (
@@ -456,22 +401,13 @@ export default function AdminCustomerDetailClient({
               <tbody>
                 {generations.map((g) => (
                   <tr key={g.id}>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222", fontSize: 12 }}>
-                      <code>{g.id.slice(0, 8)}…</code>
-                    </td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222", fontSize: 12 }}><code>{g.id.slice(0, 8)}…</code></td>
                     <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{g.scene_preset}</td>
                     <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{g.status}</td>
-                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
-                      {new Date(g.created_at).toLocaleString()}
-                    </td>
+                    <td style={{ padding: 8, borderBottom: "1px solid #222" }}>{new Date(g.created_at).toLocaleString()}</td>
                     <td style={{ padding: 8, borderBottom: "1px solid #222" }}>
                       {(g.status === "failed" || g.status === "rejected") && (
-                        <button
-                          type="button"
-                          onClick={() => retryJob("generation", g.id)}
-                          disabled={loading !== null}
-                          style={{ marginRight: 8 }}
-                        >
+                        <button type="button" className="btn btn-primary" style={{ fontSize: 12 }} onClick={() => retryJob("generation", g.id)} disabled={loading !== null}>
                           Retry
                         </button>
                       )}
@@ -488,7 +424,7 @@ export default function AdminCustomerDetailClient({
         <AdminGenerationRequestsSection workspaceId={workspaceId} />
       </div>
 
-      {/* Section D: Assets (Vault) */}
+      {/* Assets */}
       <div>
         <h3 style={{ marginTop: 0, marginBottom: 8 }}>Assets (Vault)</h3>
         {assets.length === 0 ? (
@@ -508,7 +444,7 @@ export default function AdminCustomerDetailClient({
         )}
       </div>
 
-      {/* Section E: Failures */}
+      {/* Failures */}
       {failures.length > 0 && (
         <div>
           <h3 style={{ marginTop: 0, marginBottom: 8 }}>Failures</h3>
@@ -517,12 +453,7 @@ export default function AdminCustomerDetailClient({
               <li key={f.id}>
                 <strong>{f.type}</strong>: {f.message}
                 {f.lastError ? ` — ${f.lastError}` : ""}
-                <button
-                  type="button"
-                  onClick={() => retryJob(f.type, f.id)}
-                  disabled={loading !== null}
-                  style={{ marginLeft: 8 }}
-                >
+                <button type="button" className="btn btn-primary" style={{ fontSize: 12, marginLeft: 8 }} onClick={() => retryJob(f.type, f.id)} disabled={loading !== null}>
                   Retry
                 </button>
               </li>

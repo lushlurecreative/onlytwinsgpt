@@ -290,12 +290,20 @@ export async function POST(request: Request) {
           );
         }
 
+        // Determine acquisition source
+        let acquisitionSource = "direct";
+        const metaReferralCode = (session.metadata?.referral_code as string)?.trim();
+        const metaLeadId = (session.metadata?.lead_id as string)?.trim();
+        if (metaReferralCode) acquisitionSource = "referral";
+        else if (metaLeadId) acquisitionSource = "scraper";
+
         const { error: profileUpsertError } = await supabaseAdmin.from("profiles").upsert(
           {
             id: subscriberId,
             stripe_customer_id: stripeCustomerId,
             onboarding_pending: true,
             role: "creator",
+            acquisition_source: acquisitionSource,
           },
           { onConflict: "id" }
         );

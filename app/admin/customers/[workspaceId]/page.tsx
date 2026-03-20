@@ -41,7 +41,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
       .eq("subscriber_id", workspaceId)
       .is("archived_at", null)
       .maybeSingle(),
-    admin.from("profiles").select("id, full_name, suspended_at, stripe_customer_id").eq("id", workspaceId).maybeSingle(),
+    admin.from("profiles").select("id, full_name, suspended_at, stripe_customer_id, acquisition_source").eq("id", workspaceId).maybeSingle(),
     admin.from("subjects").select("id, user_id, label, consent_status, consent_signed_at, identity_verified_at, created_at, updated_at").eq("user_id", workspaceId),
     admin
       .from("generation_requests")
@@ -64,6 +64,7 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
     full_name?: string | null;
     suspended_at?: string | null;
     stripe_customer_id?: string | null;
+    acquisition_source?: string | null;
   } | null;
   let email: string | null = null;
   try {
@@ -120,21 +121,22 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
   }
 
   const displayName =
-    profile?.full_name?.trim() || workspaceId.slice(0, 8) + "…";
+    profile?.full_name?.trim() || email || "Unknown customer";
 
   return (
     <section>
       <p style={{ marginBottom: 8 }}>
         <Link href="/admin/customers">← Back to customers</Link>
       </p>
-      <h2 style={{ marginTop: 0 }}>Customer: {displayName}</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
-        <code>{workspaceId}</code>
-      </p>
+      <h2 style={{ marginTop: 0 }}>{displayName}</h2>
+      {email && profile?.full_name?.trim() && (
+        <p className="muted" style={{ marginTop: 0 }}>{email}</p>
+      )}
       <AdminCustomerDetailClient
         workspaceId={workspaceId}
         email={email}
         fullName={profile?.full_name ?? null}
+        acquisitionSource={profile?.acquisition_source ?? null}
         subjectId={subject?.id ?? null}
         subscription={sub ? {
           id: sub.id,
@@ -154,7 +156,6 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
         generations={generations}
         assets={assets}
         failures={failures}
-        suspendedAt={profile?.suspended_at ?? null}
         posts={posts}
         subjectsForVault={subjectsList}
       />

@@ -70,17 +70,17 @@ export async function GET(request: Request) {
   }[];
 
   const subscriberIds = [...new Set(rows.map((r) => r.subscriber_id))];
-  const profileMap = new Map<string, { full_name?: string | null; stripe_customer_id?: string | null }>();
+  const profileMap = new Map<string, { full_name?: string | null; stripe_customer_id?: string | null; acquisition_source?: string | null }>();
   const emailMap = new Map<string, string | null>();
 
   if (subscriberIds.length > 0) {
     const { data: profiles } = await admin
       .from("profiles")
-      .select("id, full_name, stripe_customer_id")
+      .select("id, full_name, stripe_customer_id, acquisition_source")
       .in("id", subscriberIds);
     for (const p of profiles ?? []) {
-      const row = p as { id: string; full_name?: string | null; stripe_customer_id?: string | null };
-      profileMap.set(row.id, { full_name: row.full_name, stripe_customer_id: row.stripe_customer_id });
+      const row = p as { id: string; full_name?: string | null; stripe_customer_id?: string | null; acquisition_source?: string | null };
+      profileMap.set(row.id, { full_name: row.full_name, stripe_customer_id: row.stripe_customer_id, acquisition_source: row.acquisition_source });
     }
     try {
       // Paginate through auth users so we get email for every subscriber (not just first 500).
@@ -199,6 +199,7 @@ export async function GET(request: Request) {
       plan: planLabel,
       stripePriceId: r.stripe_price_id,
       stripeCustomerId: (profile as { stripe_customer_id?: string | null } | undefined)?.stripe_customer_id ?? null,
+      acquisitionSource: (profile as { acquisition_source?: string | null } | undefined)?.acquisition_source ?? null,
       stripeSubscriptionId: r.stripe_subscription_id,
       status: statusLabel,
       rawStatus: normalizedStatus,
