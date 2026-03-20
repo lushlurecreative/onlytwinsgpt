@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export async function POST() {
   const supabase = await createClient();
@@ -12,7 +13,9 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { error } = await supabase
+  // Use admin client so RLS cannot silently block the update.
+  const admin = getSupabaseAdmin();
+  const { error } = await admin
     .from("profiles")
     .update({ onboarding_pending: false, updated_at: new Date().toISOString() })
     .eq("id", user.id);
