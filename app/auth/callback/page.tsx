@@ -21,7 +21,25 @@ export default function AuthCallback() {
         const sessionRes = await fetch("/api/admin/session", { cache: "no-store" });
         const sessionJson = (await sessionRes.json().catch(() => ({}))) as { isAdmin?: boolean };
         const isAdmin = !!sessionJson.isAdmin;
-        router.replace(isAdmin ? "/admin" : next);
+
+        if (isAdmin) {
+          router.replace("/admin");
+          return;
+        }
+
+        // Check if the user has completed their profile.
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("profile_complete")
+          .eq("id", data.session.user.id)
+          .maybeSingle();
+
+        if (!profile?.profile_complete) {
+          router.replace(`/onboarding/profile?next=${encodeURIComponent(next)}`);
+          return;
+        }
+
+        router.replace(next);
       } else {
         router.replace("/login?error=oauth");
       }

@@ -174,6 +174,9 @@ const MIGRATIONS = [
    select 'Beach', 'A realistic beach scene with natural daylight, ocean water movement, and authentic skin texture.', '', '{}'
    where not exists (select 1 from public.presets where name ilike 'Beach');`,
 
+  // Personal profile fields for creator onboarding
+  `alter table public.profiles add column if not exists full_name text null, add column if not exists date_of_birth date null, add column if not exists phone text null, add column if not exists profile_complete boolean not null default false;`,
+
   // Remove consumer role — all users are creators
   `update public.profiles set role = 'creator' where role = 'consumer';`,
   `do $$ begin if exists (select 1 from pg_constraint where conname = 'profiles_role_check') then alter table public.profiles drop constraint profiles_role_check; end if; alter table public.profiles add constraint profiles_role_check check (role in ('creator', 'admin')); alter table public.profiles alter column role set default 'creator'; exception when duplicate_object then null; end $$;`,
