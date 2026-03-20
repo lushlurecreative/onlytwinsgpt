@@ -7,7 +7,7 @@ import { galleryItems } from "@/lib/gallery-data";
 
 type Props = { uploadedPhotos: string[] };
 
-const sceneItems = galleryItems.filter((i) => i.type === "image").slice(0, 20);
+const sceneItems = galleryItems.filter((i) => i.type === "image").slice(0, 5);
 
 type SwappedImage = {
   url: string;
