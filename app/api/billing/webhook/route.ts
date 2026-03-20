@@ -390,6 +390,16 @@ export async function POST(request: Request) {
           ? "canceled"
           : mapStripeStatus(subscription.status);
 
+      // Ensure subscriber profile has role=creator regardless of how it was created.
+      // This guards against OAuth users whose profile was created with the default
+      // role='consumer' before the checkout.session.completed handler ran.
+      if (subscriberId && event.type !== "customer.subscription.deleted") {
+        await supabaseAdmin.from("profiles").upsert(
+          { id: subscriberId, role: "creator" },
+          { onConflict: "id" }
+        );
+      }
+
       const subscriptionsTable = supabaseAdmin.from("subscriptions");
       const { error } = await subscriptionsTable.upsert(
         {

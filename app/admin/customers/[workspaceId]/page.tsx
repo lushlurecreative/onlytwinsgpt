@@ -34,22 +34,22 @@ export default async function AdminCustomerDetailPage({ params }: PageProps) {
     genReqsRes,
     postsRes,
   ] = await Promise.all([
-    supabase
+    admin
       .from("subscriptions")
       .select("id, status, stripe_price_id, stripe_subscription_id, current_period_end, created_at, canceled_at, admin_notes")
       .eq("creator_id", serviceCreatorId)
       .eq("subscriber_id", workspaceId)
       .is("archived_at", null)
       .maybeSingle(),
-    supabase.from("profiles").select("id, full_name, suspended_at, stripe_customer_id").eq("id", workspaceId).maybeSingle(),
-    supabase.from("subjects").select("id, user_id, label, consent_status, consent_signed_at, identity_verified_at, created_at, updated_at").eq("user_id", workspaceId),
-    supabase
+    admin.from("profiles").select("id, full_name, suspended_at, stripe_customer_id").eq("id", workspaceId).maybeSingle(),
+    admin.from("subjects").select("id, user_id, label, consent_status, consent_signed_at, identity_verified_at, created_at, updated_at").eq("user_id", workspaceId),
+    admin
       .from("generation_requests")
       .select("id, scene_preset, status, created_at, output_paths")
       .eq("user_id", workspaceId)
       .order("created_at", { ascending: false })
       .limit(100),
-    supabase.from("posts").select("id, caption, is_published, visibility, created_at").eq("creator_id", workspaceId).order("created_at", { ascending: false }).limit(50),
+    admin.from("posts").select("id, caption, is_published, visibility, created_at").eq("creator_id", workspaceId).order("created_at", { ascending: false }).limit(50),
   ]);
 
   const sub = subRes.data as {
