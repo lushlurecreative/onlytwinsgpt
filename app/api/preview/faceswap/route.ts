@@ -6,13 +6,12 @@ export const maxDuration = 60;
 /**
  * Face swap preview API for homepage.
  * Accepts user photos and scenario image, returns face-swapped preview.
- * Uses Fal.ai's face-swap model with retry logic for reliability.
+ * Uses Fal.ai's async face-swap API with polling to avoid timeout issues.
  */
-async function callFalaiWithRetry(
+async function callFalaiAsync(
   userPhotoUrl: string,
   scenarioImageUrl: string,
-  falApiKey: string | undefined,
-  maxRetries = 2
+  falApiKey: string | undefined
 ): Promise<{ swappedImageUrl: string; fallback: boolean }> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -21,82 +20,105 @@ async function callFalaiWithRetry(
     headers["Authorization"] = `Key ${falApiKey}`;
   }
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 second timeout
+  try {
+    // Step 1: Submit async request
+    const submitResponse = await fetch(
+      "https://api.fal.ai/queue/fal-ai/face-swap",
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          swap_image_url: userPhotoUrl,
+          base_image_url: scenarioImageUrl,
+        }),
+      }
+    );
 
-      const falResponse = await fetch(
-        "https://fal.run/fal-ai/face-swap",
+    if (!submitResponse.ok) {
+      const errorText = await submitResponse.text();
+      console.error(
+        `Fal.ai submit error: ${submitResponse.status}`,
+        errorText
+      );
+      return {
+        swappedImageUrl: scenarioImageUrl,
+        fallback: true,
+      };
+    }
+
+    const submitData = await submitResponse.json();
+    const requestId = submitData.request_id;
+
+    if (!requestId) {
+      console.error("No request_id in Fal.ai response:", submitData);
+      return {
+        swappedImageUrl: scenarioImageUrl,
+        fallback: true,
+      };
+    }
+
+    // Step 2: Poll for result (max 50 seconds to stay under 60s timeout)
+    const maxAttempts = 25;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2s between polls
+
+      const statusResponse = await fetch(
+        `https://api.fal.ai/queue/status/${requestId}`,
         {
-          method: "POST",
+          method: "GET",
           headers,
-          body: JSON.stringify({
-            swap_image_url: userPhotoUrl,
-            base_image_url: scenarioImageUrl,
-          }),
-          signal: controller.signal,
         }
       );
 
-      clearTimeout(timeoutId);
-
-      if (!falResponse.ok) {
-        const errorText = await falResponse.text();
+      if (!statusResponse.ok) {
         console.error(
-          `Fal.ai error (attempt ${attempt + 1}):`,
-          falResponse.status,
-          errorText
-        );
-
-        // Retry on 504, don't retry on other errors
-        if (falResponse.status !== 504 || attempt === maxRetries) {
-          return {
-            swappedImageUrl: scenarioImageUrl,
-            fallback: true,
-          };
-        }
-        // Wait before retry
-        await new Promise((resolve) =>
-          setTimeout(resolve, 1000 * (attempt + 1))
+          `Fal.ai status check error: ${statusResponse.status}`,
+          await statusResponse.text()
         );
         continue;
       }
 
-      const result = await falResponse.json();
-      const swappedUrl =
-        result?.output?.image?.url ||
-        result?.image?.url ||
-        scenarioImageUrl;
+      const statusData = await statusResponse.json();
 
-      return {
-        swappedImageUrl: swappedUrl,
-        fallback: swappedUrl === scenarioImageUrl,
-      };
-    } catch (error) {
-      console.error(
-        `Face swap attempt ${attempt + 1} error:`,
-        error instanceof Error ? error.message : String(error)
-      );
+      if (statusData.status === "completed") {
+        const swappedUrl =
+          statusData.result?.image?.url || scenarioImageUrl;
+        return {
+          swappedImageUrl: swappedUrl,
+          fallback: swappedUrl === scenarioImageUrl,
+        };
+      }
 
-      if (attempt === maxRetries) {
+      if (statusData.status === "failed") {
+        console.error(
+          "Fal.ai processing failed:",
+          statusData.error
+        );
         return {
           swappedImageUrl: scenarioImageUrl,
           fallback: true,
         };
       }
 
-      // Wait before retry
-      await new Promise((resolve) =>
-        setTimeout(resolve, 1000 * (attempt + 1))
-      );
+      // Still processing, continue polling
     }
-  }
 
-  return {
-    swappedImageUrl: scenarioImageUrl,
-    fallback: true,
-  };
+    // Polling timed out
+    console.error("Fal.ai polling timed out after 50 seconds");
+    return {
+      swappedImageUrl: scenarioImageUrl,
+      fallback: true,
+    };
+  } catch (error) {
+    console.error(
+      "Face swap error:",
+      error instanceof Error ? error.message : String(error)
+    );
+    return {
+      swappedImageUrl: scenarioImageUrl,
+      fallback: true,
+    };
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -111,7 +133,7 @@ export async function POST(req: NextRequest) {
     }
 
     const falApiKey = process.env.FAL_API_KEY;
-    const result = await callFalaiWithRetry(
+    const result = await callFalaiAsync(
       userPhotoUrl,
       scenarioImageUrl,
       falApiKey
