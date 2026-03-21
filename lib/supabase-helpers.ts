@@ -3,7 +3,7 @@
  * Handles uploading user-provided images to uploads bucket.
  */
 
-import { createClient } from "@/lib/supabase-browser";
+import { supabase } from "@/lib/supabase";
 
 /**
  * Upload a blob (from file input) to Supabase uploads bucket.
@@ -36,8 +36,6 @@ export async function uploadImageToSupabase(
   let lastError = "";
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const supabase = createClient();
-
       // Generate unique path to avoid collisions
       const timestamp = Date.now();
       const randomSuffix = Math.random().toString(36).substring(7);

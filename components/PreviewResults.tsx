@@ -55,7 +55,7 @@ export default function PreviewResults({ results, uploadedPhotos }: Props) {
                 {isFallback ? (
                   <>
                     <img
-                      src={result.targetUrl}
+                      src={result.targetUrl || ""}
                       alt={`Scenario ${i + 1}`}
                       style={{
                         width: "100%",
@@ -108,7 +108,7 @@ export default function PreviewResults({ results, uploadedPhotos }: Props) {
                 ) : (
                   /* Success: Show swapped image */
                   <img
-                    src={result.swappedUrl}
+                    src={result.swappedUrl || ""}
                     alt={`Your AI in scenario ${i + 1}`}
                     style={{
                       width: "100%",
