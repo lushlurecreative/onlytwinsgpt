@@ -1,22 +1,27 @@
-# Production face-swap worker for RunPod Load Balancer
-# Optimized for stability and debugging
+# GPU-optimized face-swap worker for RunPod
+# Based on PyTorch official image with CUDA 12.1 runtime
+# Reuses proven Phase 1 face-swap logic
 
-FROM python:3.10-slim
+FROM pytorch/pytorch:2.2.0-cuda12.1-runtime-ubuntu22.04
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
+    DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
-# System dependencies
+# System dependencies (same as Phase 1, reused)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    python3-dev \
+    git \
     libssl-dev \
     libffi-dev \
     libopenblas-dev \
     liblapack-dev \
     gfortran \
+    libhdf5-dev \
+    pkg-config \
     libjpeg-dev \
     zlib1g-dev \
     curl \
@@ -25,23 +30,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Upgrade pip
 RUN pip install --upgrade pip setuptools wheel
 
-# Install requirements
+# Install GPU-optimized requirements (onnxruntime-gpu instead of CPU)
 COPY requirements-gpu.txt .
-RUN pip install --no-cache-dir -r requirements-gpu.txt || pip install --no-cache-dir \
-    flask==3.0.0 \
-    requests==2.31.0 \
-    supabase==2.4.0 \
-    python-dotenv==1.0.0 \
-    insightface==0.7.3 \
-    onnxruntime-gpu==1.24.3 \
-    opencv-python-headless==4.8.1.78 \
-    numpy==1.24.3
+RUN pip install --no-cache-dir -r requirements-gpu.txt
 
-# Copy worker code
-COPY app.py face_swap.py storage.py ./
+# Copy ONLY face-swap code (app, face_swap, storage - proven Phase 1 logic)
+COPY app.py face_swap.py storage.py .
 
-# Expose ports
-EXPOSE 8000 8001
+# Health check endpoint
+# Note: start-period=120s accounts for InsightFace model download on first run (~30-60s)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8001/ping', timeout=2)" || exit 1
 
-# Start worker
-CMD ["python3", "app.py"]
+# Start HTTP server (RunPod Load Balancer expects this)
+CMD ["python", "app.py"]
