@@ -18,7 +18,7 @@ export async function checkRunPodHealth(
 
   try {
     const response = await fetch(
-      `https://${endpointId}.api.runpod.ai/ping`,
+      `https://${endpointId}.api.runpod.io/ping`,
       {
         method: "GET",
         timeout: 5000,
@@ -70,7 +70,7 @@ export async function pollRunPodJob(
   while (elapsedMs < maxWaitMs) {
     try {
       const response = await fetch(
-        `https://${endpointId}.api.runpod.ai/status/${jobId}`,
+        `https://${endpointId}.api.runpod.io/status/${jobId}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },

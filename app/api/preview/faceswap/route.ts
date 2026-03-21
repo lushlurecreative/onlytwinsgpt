@@ -35,7 +35,7 @@ async function callRunPodFaceSwap(
     console.log(`[${jobIdPrefix}] Submitting face-swap job to RunPod`);
 
     const submitResponse = await fetch(
-      `https://${endpointId}.api.runpod.ai/run`,
+      `https://${endpointId}.api.runpod.io/run`,
       {
         method: "POST",
         headers: {
