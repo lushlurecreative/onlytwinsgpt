@@ -1,0 +1,47 @@
+# Production face-swap worker for RunPod Load Balancer
+# Optimized for stability and debugging
+
+FROM python:3.10-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    gfortran \
+    libjpeg-dev \
+    zlib1g-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN pip install --upgrade pip setuptools wheel
+
+# Install requirements
+COPY requirements-gpu.txt .
+RUN pip install --no-cache-dir -r requirements-gpu.txt || pip install --no-cache-dir \
+    flask==3.0.0 \
+    requests==2.31.0 \
+    supabase==2.4.0 \
+    python-dotenv==1.0.0 \
+    insightface==0.7.3 \
+    onnxruntime-gpu==1.24.3 \
+    opencv-python-headless==4.8.1.78 \
+    numpy==1.24.3
+
+# Copy worker code
+COPY app.py face_swap.py storage.py ./
+
+# Expose ports
+EXPOSE 8000 8001
+
+# Start worker
+CMD ["python3", "app.py"]
