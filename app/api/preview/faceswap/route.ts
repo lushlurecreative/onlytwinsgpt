@@ -24,9 +24,15 @@ async function callRunPodFaceSwap(
   jobIdPrefix: string
 ): Promise<SwapResult | null> {
   const endpointId = process.env.RUNPOD_ENDPOINT_ID;
+  const apiKey = process.env.RUNPOD_API_KEY;
 
   if (!endpointId) {
     console.error("RunPod endpoint not configured");
+    return null;
+  }
+
+  if (!apiKey) {
+    console.error("RunPod API key not configured");
     return null;
   }
 
@@ -38,6 +44,7 @@ async function callRunPodFaceSwap(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         input: {
