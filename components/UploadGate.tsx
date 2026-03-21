@@ -3,6 +3,7 @@
 import { useRef, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { galleryItems } from "@/lib/gallery-data";
+import { uploadImageToSupabase, blobUrlToBlob } from "@/lib/supabase-helpers";
 
 type Props = {
   onComplete: (photos: string[]) => void;
@@ -50,11 +51,41 @@ export default function UploadGate({ onComplete }: Props) {
   const filled = slots.filter(Boolean).length;
   const ready = filled === 3;
 
-  const handleSubmit = () => {
-    if (ready) onComplete(slots as string[]);
+  const handleSubmit = async () => {
+    if (!ready) return;
+
+    // Upload blob URLs to Supabase, get public URLs
+    const publicUrls: (string | null)[] = [];
+    for (let i = 0; i < slots.length; i++) {
+      const blobUrl = slots[i];
+      if (!blobUrl) {
+        publicUrls.push(null);
+        continue;
+      }
+
+      // Convert blob URL to Blob, then upload
+      const blob = await blobUrlToBlob(blobUrl);
+      if (!blob) {
+        publicUrls.push(null);
+        continue;
+      }
+
+      const publicUrl = await uploadImageToSupabase(blob, `user_photo_${i}.jpg`);
+      publicUrls.push(publicUrl);
+    }
+
+    // Check if all uploads succeeded
+    if (publicUrls.some((url) => !url)) {
+      console.error("One or more image uploads failed");
+      // Could show error UI here
+      return;
+    }
+
+    onComplete(publicUrls as string[]);
   };
 
   const handleSample = (src: string) => {
+    // Samples are already public URLs from gallery
     onComplete([src, src, src]);
   };
 

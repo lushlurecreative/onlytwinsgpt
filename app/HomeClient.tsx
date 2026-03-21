@@ -6,8 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import UploadGate from "@/components/UploadGate";
 import ChipHero from "@/components/ChipHero";
 import IPhoneMockup from "@/components/IPhoneMockup";
-import ScenarioGrid from "@/components/ScenarioGrid";
+import PreviewResults from "@/components/PreviewResults";
 import PremiumButton from "@/components/PremiumButton";
+import { PREVIEW_TARGETS } from "@/lib/gallery-data";
 
 const STAGES = [
   "Analysing your photos…",
@@ -18,6 +19,14 @@ const STAGES = [
 ];
 const STAGE_MS = 600;
 
+interface SwapResult {
+  targetIdx: number;
+  targetUrl: string;
+  swappedUrl: string | null;
+  success: boolean;
+  error?: string;
+}
+
 export default function HomeClient() {
   const params = useSearchParams();
   const router = useRouter();
@@ -26,6 +35,9 @@ export default function HomeClient() {
   const [progress, setProgress] = useState(0);
   const [stageIdx, setStageIdx] = useState(0);
   const [uploadedPhotos, setUploadedPhotos] = useState<string[] | null>(null);
+  const [previewResults, setPreviewResults] = useState<SwapResult[] | null>(
+    null
+  );
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -41,31 +53,75 @@ export default function HomeClient() {
     };
   }, [uploadedPhotos]);
 
-  function startProcessing(photos: string[]) {
+  async function startProcessing(photos: string[]) {
     setPendingPhotos(photos);
     setProcessing(true);
     setProgress(0);
     setStageIdx(0);
+    setPreviewResults(null);
 
-    const totalMs = STAGES.length * STAGE_MS;
-    const tickMs = 40;
-    let elapsed = 0;
+    try {
+      // Get target image URLs from PREVIEW_TARGETS
+      const targetImageUrls = PREVIEW_TARGETS.map((item) => item.src);
 
-    intervalRef.current = setInterval(() => {
-      elapsed += tickMs;
-      const pct = Math.min((elapsed / totalMs) * 100, 99);
-      setProgress(pct);
-      setStageIdx(Math.min(Math.floor(elapsed / STAGE_MS), STAGES.length - 1));
+      console.log(
+        "[homepage] Calling face-swap API with",
+        photos.length,
+        "user photos and",
+        targetImageUrls.length,
+        "targets"
+      );
 
-      if (elapsed >= totalMs) {
-        clearInterval(intervalRef.current!);
+      // Call face-swap API
+      const apiResponse = await fetch("/api/preview/faceswap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userPhotoUrls: photos,
+          targetImageUrls: targetImageUrls,
+        }),
+      });
+
+      if (!apiResponse.ok) {
+        console.error("[homepage] API error:", apiResponse.status);
         setProgress(100);
-        setTimeout(() => {
-          setProcessing(false);
-          setUploadedPhotos(photos);
-        }, 300);
+        setProcessing(false);
+        setUploadedPhotos(photos);
+        return;
       }
-    }, tickMs);
+
+      const apiResult = await apiResponse.json();
+      console.log("[homepage] Face-swap results:", apiResult);
+
+      // Show progress animation while waiting for results
+      const totalMs = STAGES.length * STAGE_MS;
+      const tickMs = 40;
+      let elapsed = 0;
+
+      intervalRef.current = setInterval(() => {
+        elapsed += tickMs;
+        const pct = Math.min((elapsed / totalMs) * 100, 99);
+        setProgress(pct);
+        setStageIdx(
+          Math.min(Math.floor(elapsed / STAGE_MS), STAGES.length - 1)
+        );
+
+        if (elapsed >= totalMs) {
+          clearInterval(intervalRef.current!);
+          setProgress(100);
+          setTimeout(() => {
+            setProcessing(false);
+            setUploadedPhotos(photos);
+            setPreviewResults(apiResult.results || []);
+          }, 300);
+        }
+      }, tickMs);
+    } catch (error) {
+      console.error("[homepage] Processing error:", error);
+      setProgress(100);
+      setProcessing(false);
+      setUploadedPhotos(photos);
+    }
   }
 
   return (
@@ -146,9 +202,18 @@ export default function HomeClient() {
       {/* Results */}
       {uploadedPhotos && !processing && (
         <>
-          <ChipHero uploadedPhotos={uploadedPhotos} />
-          <IPhoneMockup uploadedPhotos={uploadedPhotos} />
-          <ScenarioGrid uploadedPhotos={uploadedPhotos} />
+          {previewResults && previewResults.length > 0 ? (
+            <PreviewResults
+              results={previewResults}
+              uploadedPhotos={uploadedPhotos}
+            />
+          ) : (
+            <div style={{ textAlign: "center", padding: "40px 24px" }}>
+              <p style={{ color: "var(--text-muted)" }}>
+                Preview generation failed. Please try again.
+              </p>
+            </div>
+          )}
 
           {/* How It Works */}
           <section className="hiw-section">

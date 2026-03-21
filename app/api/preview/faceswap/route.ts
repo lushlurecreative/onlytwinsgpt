@@ -1,26 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300; // 5 minutes for 3 swaps
 
 /**
  * Face swap preview API for homepage.
- * Calls RunPod ashleykza/runpod-worker-inswapper endpoint (Load balancer type).
- * Uses async job submission + polling for results.
+ * Calls RunPod GPU worker (Phase 2) for 3 parallel face swaps.
+ * Uses async job submission + polling pattern.
  */
-async function callRunPodFaceSwapAsync(
+
+interface SwapResult {
+  targetIdx: number;
+  targetUrl: string;
+  swappedUrl: string | null;
+  success: boolean;
+  error?: string;
+}
+
+async function callRunPodFaceSwap(
   userPhotoUrl: string,
-  scenarioImageUrl: string
-): Promise<{ swappedImageUrl: string; fallback: boolean }> {
+  scenarioImageUrl: string,
+  jobIdPrefix: string
+): Promise<SwapResult | null> {
   const endpointId = process.env.RUNPOD_ENDPOINT_ID;
 
   if (!endpointId) {
-    console.warn("RunPod endpoint not configured");
-    return { swappedImageUrl: scenarioImageUrl, fallback: true };
+    console.error("RunPod endpoint not configured");
+    return null;
   }
 
   try {
-    // Step 1: Submit async job
+    // Submit job to RunPod (async pattern)
+    console.log(`[${jobIdPrefix}] Submitting face-swap job to RunPod`);
+
     const submitResponse = await fetch(
       `https://${endpointId}.api.runpod.ai/run`,
       {
@@ -30,34 +42,37 @@ async function callRunPodFaceSwapAsync(
         },
         body: JSON.stringify({
           input: {
-            target_image: scenarioImageUrl,
-            swap_image: userPhotoUrl,
+            type: "faceswap",
+            user_photo_url: userPhotoUrl,
+            scenario_image_url: scenarioImageUrl,
           },
         }),
       }
     );
 
     if (!submitResponse.ok) {
-      console.error(`RunPod submit error: ${submitResponse.status}`);
-      return { swappedImageUrl: scenarioImageUrl, fallback: true };
+      console.error(
+        `[${jobIdPrefix}] RunPod submit failed: ${submitResponse.status}`
+      );
+      return null;
     }
 
     const submitResult = await submitResponse.json();
     const jobId = submitResult.id;
 
     if (!jobId) {
-      console.error("No job ID returned from RunPod");
-      return { swappedImageUrl: scenarioImageUrl, fallback: true };
+      console.error(`[${jobIdPrefix}] No job ID returned from RunPod`);
+      return null;
     }
 
-    console.log("Face swap job submitted:", jobId);
+    console.log(`[${jobIdPrefix}] Job submitted: ${jobId}`);
 
-    // Step 2: Poll for results (up to 60 seconds)
-    const maxAttempts = 30;
+    // Poll for results (up to 120 seconds per job)
+    const maxAttempts = 60;
     let attempts = 0;
 
     while (attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2s between polls
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Poll every 2s
 
       const statusResponse = await fetch(
         `https://${endpointId}.api.runpod.ai/status/${jobId}`,
@@ -69,61 +84,123 @@ async function callRunPodFaceSwapAsync(
         }
       );
 
-      if (statusResponse.ok) {
-        const statusResult = await statusResponse.json();
+      if (!statusResponse.ok) {
+        attempts++;
+        continue;
+      }
 
-        if (statusResult.status === "COMPLETED") {
-          const swappedUrl = statusResult.output?.image_url || statusResult.output?.output;
-          if (swappedUrl) {
-            console.log("Face swap successful:", swappedUrl.substring(0, 50));
-            return {
-              swappedImageUrl: swappedUrl,
-              fallback: false,
-            };
-          }
-        }
+      const statusResult = await statusResponse.json();
+      const status = statusResult.status;
 
-        if (statusResult.status === "FAILED") {
-          console.error("RunPod job failed:", statusResult.error);
-          return { swappedImageUrl: scenarioImageUrl, fallback: true };
+      if (status === "COMPLETED") {
+        const swappedUrl =
+          statusResult.output?.swapped_image_url || statusResult.output;
+        if (swappedUrl && typeof swappedUrl === "string") {
+          console.log(`[${jobIdPrefix}] Job completed: ${swappedUrl}`);
+          return {
+            targetIdx: -1, // Set by caller
+            targetUrl: scenarioImageUrl,
+            swappedUrl: swappedUrl,
+            success: true,
+          };
         }
+      }
+
+      if (status === "FAILED") {
+        console.error(
+          `[${jobIdPrefix}] Job failed: ${statusResult.error || "unknown error"}`
+        );
+        return null;
       }
 
       attempts++;
     }
 
-    console.error("Face swap timed out after 60 seconds");
-    return { swappedImageUrl: scenarioImageUrl, fallback: true };
+    console.error(`[${jobIdPrefix}] Job timed out after 120s`);
+    return null;
   } catch (error) {
     console.error(
-      "RunPod face swap error:",
+      `[${jobIdPrefix}] Face swap error:`,
       error instanceof Error ? error.message : String(error)
     );
-    return {
-      swappedImageUrl: scenarioImageUrl,
-      fallback: true,
-    };
+    return null;
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { userPhotoUrl, scenarioImageUrl } = await req.json();
+    const { userPhotoUrls, targetImageUrls } = await req.json();
 
-    if (!userPhotoUrl || !scenarioImageUrl) {
+    console.log(
+      `[preview_faceswap] Request received: ${userPhotoUrls?.length || 0} user photos, ${targetImageUrls?.length || 0} target images`
+    );
+
+    if (
+      !userPhotoUrls ||
+      !Array.isArray(userPhotoUrls) ||
+      !targetImageUrls ||
+      !Array.isArray(targetImageUrls)
+    ) {
       return NextResponse.json(
-        { error: "Missing userPhotoUrl or scenarioImageUrl" },
+        { error: "Missing or invalid userPhotoUrls or targetImageUrls" },
         { status: 400 }
       );
     }
 
-    const result = await callRunPodFaceSwapAsync(userPhotoUrl, scenarioImageUrl);
+    if (userPhotoUrls.length === 0 || targetImageUrls.length === 0) {
+      return NextResponse.json(
+        {
+          error: "At least 1 user photo and 1 target image required",
+        },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json(result);
+    // Use first user photo for all swaps
+    const userPhotoUrl = userPhotoUrls[0];
+
+    // Swap user face into each target image (in parallel)
+    const swapPromises = targetImageUrls.map((targetUrl, idx) =>
+      callRunPodFaceSwap(
+        userPhotoUrl,
+        targetUrl,
+        `swap_${idx}`
+      ).then((result) => {
+        if (result) {
+          return {
+            ...result,
+            targetIdx: idx,
+          };
+        }
+        // Fallback to target image if swap failed
+        return {
+          targetIdx: idx,
+          targetUrl: targetUrl,
+          swappedUrl: null, // Null = use fallback in UI
+          success: false,
+          error: "Face swap failed",
+        };
+      })
+    );
+
+    const results = await Promise.all(swapPromises);
+
+    const successCount = results.filter((r) => r.success).length;
+    console.log(
+      `[preview_faceswap] Complete: ${successCount}/${results.length} successful`
+    );
+
+    return NextResponse.json({
+      results: results as SwapResult[],
+      successCount: successCount,
+    });
   } catch (error) {
-    console.error("Face swap preview error:", error);
+    console.error(
+      "[preview_faceswap] Error:",
+      error instanceof Error ? error.message : String(error)
+    );
     return NextResponse.json(
-      { error: "Face swap processing failed" },
+      { error: "Face swap preview failed" },
       { status: 500 }
     );
   }

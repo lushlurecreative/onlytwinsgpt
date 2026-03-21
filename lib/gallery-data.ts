@@ -1767,3 +1767,11 @@ export const galleryItems: GalleryItem[] = [
 export const homeGalleryPreviewItems: GalleryItem[] = [
   ...galleryItems.filter((item) => !item.nsfw).slice(0, 8),
 ];
+
+
+// Fixed target templates for homepage preview face-swap (3 diverse scenarios)
+export const PREVIEW_TARGETS = [
+  galleryItems.find((item) => item.src.includes('cars/photo_2025-09-27')) || galleryItems[0],
+  galleryItems.find((item) => item.src.includes('cosplay/photo_2025-08-20_16-53-34')) || galleryItems[5],
+  galleryItems.find((item) => item.src.includes('exercise/photo_2025-01-29')) || galleryItems[10],
+].filter(Boolean);
