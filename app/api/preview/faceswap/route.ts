@@ -31,34 +31,45 @@ async function callRunPodFaceSwap(
   }
 
   try {
-    // Submit face-swap job to RunPod
-    console.log(`[${jobIdPrefix}] Submitting face-swap job to RunPod`);
+    const url = `https://${endpointId}.api.runpod.ai/run`;
+    console.log(`[${jobIdPrefix}] Submitting to: ${url}`);
 
-    const submitResponse = await fetch(
-      `https://${endpointId}.api.runpod.ai/run`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+    const submitResponse = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        input: {
+          type: "faceswap",
+          user_photo_url: userPhotoUrl,
+          scenario_image_url: scenarioImageUrl,
         },
-        body: JSON.stringify({
-          input: {
-            type: "faceswap",
-            user_photo_url: userPhotoUrl,
-            scenario_image_url: scenarioImageUrl,
-          },
-        }),
-      }
+      }),
+    });
+
+    console.log(
+      `[${jobIdPrefix}] Response status: ${submitResponse.status}, content-length: ${submitResponse.headers.get("content-length") || "unknown"}`
     );
 
     if (!submitResponse.ok) {
+      const responseText = await submitResponse.text();
       console.error(
-        `[${jobIdPrefix}] RunPod submit failed: ${submitResponse.status}`
+        `[${jobIdPrefix}] RunPod error status=${submitResponse.status}, body=${responseText.substring(0, 500)}`
       );
       return null;
     }
 
-    const result = await submitResponse.json();
+    let result;
+    try {
+      result = await submitResponse.json();
+    } catch (parseError) {
+      const bodyText = await submitResponse.text();
+      console.error(
+        `[${jobIdPrefix}] JSON parse failed, status=${submitResponse.status}, body=${bodyText.substring(0, 500)}`
+      );
+      return null;
+    }
 
     // Handle synchronous response (worker returns completed result immediately)
     if (result.status === "COMPLETED") {
@@ -116,24 +127,27 @@ async function callRunPodFaceSwap(
     }
 
     console.error(
-      `[${jobIdPrefix}] Invalid response format: neither completed nor async job`
+      `[${jobIdPrefix}] Invalid response format: neither completed nor async job, got: ${JSON.stringify(result).substring(0, 200)}`
     );
     return null;
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const isTimeout = errorMsg.includes("timeout") || errorMsg.includes("TIMEOUT");
     console.error(
-      `[${jobIdPrefix}] Face swap error:`,
-      error instanceof Error ? error.message : String(error)
+      `[${jobIdPrefix}] Fetch error (timeout=${isTimeout}): ${errorMsg}`
     );
     return null;
   }
 }
 
 export async function POST(req: NextRequest) {
+  const requestId = Math.random().toString(36).substring(2, 9);
+
   try {
     const { userPhotoUrls, targetImageUrls } = await req.json();
 
     console.log(
-      `[preview_faceswap] Request received: ${userPhotoUrls?.length || 0} user photos, ${targetImageUrls?.length || 0} target images`
+      `[preview_faceswap:${requestId}] Request received: ${userPhotoUrls?.length || 0} photos, ${targetImageUrls?.length || 0} targets`
     );
 
     if (
@@ -165,7 +179,7 @@ export async function POST(req: NextRequest) {
       callRunPodFaceSwap(
         userPhotoUrl,
         targetUrl,
-        `swap_${idx}`
+        `preview_faceswap:${requestId}:swap_${idx}`
       ).then((result) => {
         if (result) {
           return {
@@ -188,7 +202,7 @@ export async function POST(req: NextRequest) {
 
     const successCount = results.filter((r) => r.success).length;
     console.log(
-      `[preview_faceswap] Complete: ${successCount}/${results.length} successful`
+      `[preview_faceswap:${requestId}] Complete: ${successCount}/${results.length} successful`
     );
 
     return NextResponse.json({
@@ -197,7 +211,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error(
-      "[preview_faceswap] Error:",
+      `[preview_faceswap:${requestId}] Error:`,
       error instanceof Error ? error.message : String(error)
     );
     return NextResponse.json(
