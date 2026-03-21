@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Standalone face-swap validation test.
+Standalone face-swap validation test (FIXED VERSION).
 Does NOT require Supabase, Flask, or the full app.
 Tests the core face-swap logic only.
 
@@ -17,12 +17,38 @@ import cv2
 import numpy as np
 
 try:
-    import insightface
+    from insightface.app import FaceAnalysis
+    from insightface.utils import face_align
+    import onnxruntime as ort
     INSIGHTFACE_OK = True
 except ImportError as e:
     INSIGHTFACE_OK = False
-    print(f"ERROR: insightface not installed: {e}")
+    print(f"ERROR: insightface dependencies not installed: {e}")
     sys.exit(1)
+
+
+def get_inswapper_session():
+    """Get ONNX Runtime session for inswapper model."""
+    try:
+        model_path = os.path.expanduser("~/.insightface/models/inswapper_128.onnx")
+
+        # If model doesn't exist, trigger download
+        if not os.path.exists(model_path):
+            print("Downloading inswapper model...")
+            import insightface.model_zoo
+            try:
+                insightface.model_zoo.get_model("inswapper_128.onnx", download=True)
+            except:
+                pass
+
+        # Create ONNX Runtime session
+        sess_opts = ort.SessionOptions()
+        sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
+        session = ort.InferenceSession(model_path, sess_options=sess_opts, providers=['CPUExecutionProvider'])
+        return session
+    except Exception as e:
+        print(f"ERROR: Could not create inswapper session: {e}")
+        return None
 
 
 def swap_faces_standalone(user_photo_path: str, scenario_image_path: str, output_path: str) -> bool:
@@ -45,27 +71,16 @@ def swap_faces_standalone(user_photo_path: str, scenario_image_path: str, output
         return False
     print(f"  ✓ Loaded {scenario_img.shape}")
 
-    print("[3/6] Initializing InsightFace model (inswapper_128.onnx)...")
+    print("[3/6] Initializing FaceAnalysis (buffalo_l)...")
     try:
-        model = insightface.model_zoo.get_model("inswapper_128.onnx")
-        print("  ✓ Model loaded")
-    except Exception as e:
-        print(f"ERROR: Could not load inswapper model: {e}")
-        return False
-
-    print("[4/6] Initializing FaceAnalysis (buffalo_l)...")
-    try:
-        app = insightface.app.FaceAnalysis(
-            name="buffalo_l",
-            providers=["CPUExecutionProvider"]  # CPU only for validation
-        )
-        app.prepare(ctx_id=-1, det_size=(640, 640))  # ctx_id=-1 for CPU
+        app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+        app.prepare(ctx_id=-1, det_size=(640, 640))
         print("  ✓ FaceAnalysis initialized")
     except Exception as e:
         print(f"ERROR: Could not initialize FaceAnalysis: {e}")
         return False
 
-    print("[5/6] Detecting faces...")
+    print("[4/6] Detecting faces...")
     try:
         user_faces = app.get(user_img)
         scenario_faces = app.get(scenario_img)
@@ -83,6 +98,13 @@ def swap_faces_standalone(user_photo_path: str, scenario_image_path: str, output
         print(f"ERROR: Face detection failed: {e}")
         return False
 
+    print("[5/6] Loading inswapper model...")
+    inswapper_session = get_inswapper_session()
+    if inswapper_session is None:
+        print("ERROR: Could not load inswapper model")
+        return False
+    print("  ✓ Inswapper model loaded")
+
     print("[6/6] Swapping faces...")
     try:
         user_face = user_faces[0]
@@ -90,7 +112,55 @@ def swap_faces_standalone(user_photo_path: str, scenario_image_path: str, output
 
         for i, scenario_face in enumerate(scenario_faces):
             print(f"  • Swapping face {i+1}/{len(scenario_faces)}...")
-            swapped = model.get(swapped, scenario_face, user_face, paste_back=True)
+
+            # Step 1: Align scenario face
+            aimg = face_align.norm_crop(scenario_img, scenario_face.kps)
+
+            # Step 2: Prepare input for ONNX model
+            blob = cv2.dnn.blobFromImage(aimg, 1.0 / 255, (128, 128), swapRB=False)
+
+            # Step 3: Run ONNX inference
+            input_name = inswapper_session.get_inputs()[0].name
+            output_name = inswapper_session.get_outputs()[0].name
+
+            input_dict = {
+                'target': blob,
+                'source': user_face.embedding.reshape(1, 512)
+            }
+
+            output = inswapper_session.run([output_name], input_dict)
+            swapped_face = output[0][0]
+
+            # Step 4: Paste swapped face back into original image
+            swapped_face_uint8 = np.clip(swapped_face * 255, 0, 255).astype(np.uint8)
+            swapped_face_resized = cv2.resize(
+                swapped_face_uint8.transpose(1, 2, 0),
+                (aimg.shape[1], aimg.shape[0])
+            )
+
+            mat = face_align.estimate_norm(scenario_face.kps)
+            if mat is not None:
+                mat_inv = cv2.invertAffineTransform(mat)
+
+                pasted = cv2.warpAffine(
+                    swapped_face_resized,
+                    mat_inv,
+                    (swapped.shape[1], swapped.shape[0]),
+                    borderMode=cv2.BORDER_REFLECT
+                )
+
+                # Alpha blend
+                mask = np.zeros((swapped_face_resized.shape[0], swapped_face_resized.shape[1]), dtype=np.float32)
+                mask = cv2.circle(mask, (mask.shape[1]//2, mask.shape[0]//2), mask.shape[0]//2, 1.0, -1)
+                mask = cv2.GaussianBlur(mask, (21, 21), 0)
+
+                mask_warped = cv2.warpAffine(mask, mat_inv, (swapped.shape[1], swapped.shape[0]), borderMode=cv2.BORDER_CONSTANT)
+
+                for c in range(3):
+                    swapped[:, :, c] = (
+                        swapped[:, :, c] * (1 - mask_warped) +
+                        pasted[:, :, c] * mask_warped
+                    )
 
         # Save result
         success = cv2.imwrite(output_path, swapped)
@@ -101,8 +171,11 @@ def swap_faces_standalone(user_photo_path: str, scenario_image_path: str, output
         file_size_mb = os.path.getsize(output_path) / (1024 * 1024)
         print(f"  ✓ Swap successful: {output_path} ({file_size_mb:.2f} MB)")
         return True
+
     except Exception as e:
         print(f"ERROR: Face swap failed: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -126,7 +199,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     print("=" * 60)
-    print("Face-Swap Standalone Test")
+    print("Face-Swap Standalone Test (Fixed)")
     print("=" * 60)
     print()
 
