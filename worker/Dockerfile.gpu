@@ -1,0 +1,45 @@
+# GPU-optimized face-swap worker for RunPod
+# Based on PyTorch official image with CUDA 12.1 runtime
+# Reuses proven Phase 1 face-swap logic
+
+FROM pytorch/pytorch:2.2.0-cuda12.1-runtime-ubuntu22.04
+
+ENV PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# System dependencies (same as Phase 1, reused)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    python3-dev \
+    git \
+    libssl-dev \
+    libffi-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    gfortran \
+    libhdf5-dev \
+    pkg-config \
+    libjpeg-dev \
+    zlib1g-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN pip install --upgrade pip setuptools wheel
+
+# Install GPU-optimized requirements (onnxruntime-gpu instead of CPU)
+COPY requirements-gpu.txt .
+RUN pip install --no-cache-dir -r requirements-gpu.txt
+
+# Copy ONLY face-swap code (app, face_swap, storage - proven Phase 1 logic)
+COPY app.py face_swap.py storage.py .
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8001/ping', timeout=2)" || exit 1
+
+# Start HTTP server (RunPod Load Balancer expects this)
+CMD ["python", "app.py"]

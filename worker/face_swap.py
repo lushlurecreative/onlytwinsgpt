@@ -44,8 +44,8 @@ def _get_inswapper_session():
         sess_opts = ort.SessionOptions()
         sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
 
-        # Try to use the model with CPU provider (GPU added in Phase 2)
-        providers = ['CPUExecutionProvider']
+        # Use GPU provider with CPU fallback (Phase 2: GPU support)
+        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
         session = ort.InferenceSession(model_path, sess_options=sess_opts, providers=providers)
         return session
     except Exception as e:
@@ -77,12 +77,17 @@ def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | N
             print("Error: Could not read input images")
             return None
 
-        # Initialize FaceAnalysis for detection (this works correctly)
+        # Initialize FaceAnalysis for detection with GPU support (Phase 2)
+        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
         app = FaceAnalysis(
             name="buffalo_l",
-            providers=["CPUExecutionProvider"]  # Use CPU for detection (fast)
+            providers=providers
         )
-        app.prepare(ctx_id=-1, det_size=(640, 640))  # ctx_id=-1 for CPU
+        # Try GPU first (ctx_id=0), fall back to CPU (ctx_id=-1) if unavailable
+        try:
+            app.prepare(ctx_id=0, det_size=(640, 640))
+        except Exception:
+            app.prepare(ctx_id=-1, det_size=(640, 640))
 
         # Detect faces
         user_faces = app.get(user_img)
