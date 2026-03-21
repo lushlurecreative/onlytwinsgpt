@@ -100,3 +100,4 @@ The app submits each job to RunPod Serverless via API; no terminal or long-lived
 - **model_artifacts bucket:** Use the setup API/script above, or create manually in Supabase Dashboard (Storage → New bucket, name: `model_artifacts`, private).
 - **WORKER_SECRET:** Must match the app (Vercel). Generate with e.g. `openssl rand -hex 32`.
 - **FLUX.1-dev:** Gated on Hugging Face. Accept the license and set `HF_TOKEN` so the worker can download the model.
+# Build triggered
