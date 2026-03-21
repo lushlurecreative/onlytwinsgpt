@@ -38,7 +38,8 @@ RUN pip install --no-cache-dir -r requirements-gpu.txt
 COPY app.py face_swap.py storage.py .
 
 # Health check endpoint
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+# Note: start-period=120s accounts for InsightFace model download on first run (~30-60s)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8001/ping', timeout=2)" || exit 1
 
 # Start HTTP server (RunPod Load Balancer expects this)
