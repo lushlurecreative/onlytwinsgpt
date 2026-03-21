@@ -1,0 +1,51 @@
+# Minimal face-swap worker - CPU-only validation path
+# Goal: Single face swap end-to-end with minimal dependencies
+
+FROM ubuntu:22.04
+
+ENV PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# All system dependencies needed for insightface + opencv + onnxruntime (CPU)
+# Install upfront to avoid any missing library surprises during pip install
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev \
+    build-essential \
+    git \
+    libssl-dev \
+    libffi-dev \
+    libopenblas-dev \
+    liblapack-dev \
+    gfortran \
+    libhdf5-dev \
+    pkg-config \
+    libjpeg-dev \
+    zlib1g-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Make python3.11 the default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+
+# Upgrade pip to latest
+RUN python -m pip install --upgrade pip setuptools wheel
+
+# Copy minimal requirements (face-swap only, no FLUX/watermark/training)
+COPY requirements-faceswap.txt .
+RUN pip install --no-cache-dir -r requirements-faceswap.txt
+
+# Copy ONLY face-swap code (app, face_swap, storage)
+COPY app.py face_swap.py storage.py .
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8001/ping', timeout=2)" || exit 1
+
+# Start HTTP server
+CMD ["python", "app.py"]

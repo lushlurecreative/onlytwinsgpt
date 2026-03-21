@@ -1,0 +1,18 @@
+# Minimal face-swap worker - CPU validation path
+# Pinned versions for reproducibility
+
+# HTTP server
+flask==3.0.0
+requests==2.31.0
+
+# Storage
+supabase==2.4.0
+python-dotenv==1.0.0
+
+# Face swap core
+insightface==0.7.3
+onnxruntime==1.16.3
+
+# Image processing
+opencv-python-headless==4.8.1.78
+numpy==1.24.3
