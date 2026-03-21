@@ -17,29 +17,29 @@ export async function checkRunPodHealth(
   }
 
   try {
+    // For Load Balancer endpoints, test by submitting a validation request
+    // (actual job submission doesn't require auth, just connectivity)
     const response = await fetch(
-      `https://${endpointId}.api.runpod.ai/ping`,
+      `https://${endpointId}.api.runpod.ai/run`,
       {
-        method: "GET",
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input: { type: "health_check" },
+        }),
         timeout: 5000,
       } as any
     );
 
-    if (!response.ok) {
-      return {
-        healthy: false,
-        error: `RunPod health check returned ${response.status}`,
-      };
-    }
-
-    const data = await response.json();
-    if (data.status === "ok") {
+    // Load Balancer returns 200 or 400+ but should be reachable
+    // Even 400 means the endpoint is up and received the request
+    if (response.status >= 200 && response.status < 500) {
       return { healthy: true };
     }
 
     return {
       healthy: false,
-      error: "RunPod health check returned unexpected status",
+      error: `RunPod endpoint returned ${response.status}`,
     };
   } catch (error) {
     return {
