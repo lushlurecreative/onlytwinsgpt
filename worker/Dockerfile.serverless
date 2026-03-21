@@ -1,27 +1,27 @@
 # RunPod Load Balancer: HTTP server via app.py
-# Build: docker build -f Dockerfile.serverless -t onlytwins-worker ./worker
-# Deploy to RunPod Load Balancer endpoint; workers handle /ping and / endpoints.
+# Uses runpod/base which has Python, pip, and GPU support pre-configured
 
-FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+FROM runpod/base:0.4.2-cuda12.1.1
 
-ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 python3.11-venv python3-dev python3-pip \
-    git \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# Install system dependencies for insightface and face-swap
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python requirements
 COPY requirements.txt requirements-full.txt ./
-RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cu121 \
-    && pip install --no-cache-dir -r requirements-full.txt
+RUN pip install --no-cache-dir -r requirements-full.txt
 
-RUN pip install --no-cache-dir realesrgan 2>/dev/null || true
-
+# Copy application files
 COPY storage.py train_lora.py generate_flux.py main.py watermark.py face_swap.py app.py ./
 
-# Load Balancer: HTTP server for face-swap and other jobs
+# Health check on separate port (8001)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python3 -c "import requests; requests.get('http://localhost:8001/ping', timeout=5)"
+
+# Load Balancer: HTTP server for face-swap
 CMD ["python3", "app.py"]
