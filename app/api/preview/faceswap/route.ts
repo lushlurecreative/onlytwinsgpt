@@ -6,8 +6,8 @@ export const maxDuration = 300; // 5 minutes for 3 swaps
 
 /**
  * Face swap preview API for homepage.
- * Calls RunPod GPU worker (Phase 2) for 3 parallel face swaps.
- * Uses async job submission + polling pattern.
+ * Calls RunPod GPU worker for 3 parallel face swaps.
+ * Handles both synchronous (immediate result) and async (polling) patterns.
  */
 
 interface SwapResult {
@@ -31,7 +31,7 @@ async function callRunPodFaceSwap(
   }
 
   try {
-    // Submit job to RunPod (async pattern)
+    // Submit face-swap job to RunPod
     console.log(`[${jobIdPrefix}] Submitting face-swap job to RunPod`);
 
     const submitResponse = await fetch(
@@ -58,24 +58,13 @@ async function callRunPodFaceSwap(
       return null;
     }
 
-    const submitResult = await submitResponse.json();
-    const jobId = submitResult.id;
+    const result = await submitResponse.json();
 
-    if (!jobId) {
-      console.error(`[${jobIdPrefix}] No job ID returned from RunPod`);
-      return null;
-    }
-
-    console.log(`[${jobIdPrefix}] Job submitted: ${jobId}`);
-
-    // Poll for results with exponential backoff (2s, 4s, 8s, 16s max)
-    const pollResult = await pollRunPodJob(endpointId, jobId, 120000);
-
-    if (pollResult.status === "COMPLETED") {
-      const swappedUrl =
-        pollResult.output?.swapped_image_url || pollResult.output;
+    // Handle synchronous response (worker returns completed result immediately)
+    if (result.status === "COMPLETED") {
+      const swappedUrl = result.output?.swapped_image_url || result.output;
       if (swappedUrl && typeof swappedUrl === "string") {
-        console.log(`[${jobIdPrefix}] Job completed: ${swappedUrl}`);
+        console.log(`[${jobIdPrefix}] Face swap completed: ${swappedUrl}`);
         return {
           targetIdx: -1, // Set by caller
           targetUrl: scenarioImageUrl,
@@ -85,18 +74,50 @@ async function callRunPodFaceSwap(
       }
     }
 
-    if (pollResult.status === "FAILED") {
+    // Handle failed response
+    if (result.status === "FAILED") {
       console.error(
-        `[${jobIdPrefix}] Job failed: ${pollResult.error || "unknown error"}`
+        `[${jobIdPrefix}] Face swap failed: ${result.error || "unknown error"}`
       );
       return null;
     }
 
-    if (pollResult.status === "TIMEOUT") {
-      console.error(`[${jobIdPrefix}] Job timed out: ${pollResult.error}`);
-      return null;
+    // Handle async response with job ID (for future async worker implementations)
+    const jobId = result.id;
+    if (jobId) {
+      console.log(`[${jobIdPrefix}] Job submitted: ${jobId}`);
+      const pollResult = await pollRunPodJob(endpointId, jobId, 120000);
+
+      if (pollResult.status === "COMPLETED") {
+        const swappedUrl =
+          pollResult.output?.swapped_image_url || pollResult.output;
+        if (swappedUrl && typeof swappedUrl === "string") {
+          console.log(`[${jobIdPrefix}] Job completed: ${swappedUrl}`);
+          return {
+            targetIdx: -1,
+            targetUrl: scenarioImageUrl,
+            swappedUrl: swappedUrl,
+            success: true,
+          };
+        }
+      }
+
+      if (pollResult.status === "FAILED") {
+        console.error(
+          `[${jobIdPrefix}] Job failed: ${pollResult.error || "unknown error"}`
+        );
+        return null;
+      }
+
+      if (pollResult.status === "TIMEOUT") {
+        console.error(`[${jobIdPrefix}] Job timed out: ${pollResult.error}`);
+        return null;
+      }
     }
 
+    console.error(
+      `[${jobIdPrefix}] Invalid response format: neither completed nor async job`
+    );
     return null;
   } catch (error) {
     console.error(
