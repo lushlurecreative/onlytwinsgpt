@@ -10,13 +10,14 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# System dependencies (same as Phase 1, reused)
+# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.11 \
     python3.11-dev \
     python3-pip \
     build-essential \
     git \
+    curl \
     libssl-dev \
     libffi-dev \
     libopenblas-dev \
@@ -26,7 +27,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     libjpeg-dev \
     zlib1g-dev \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Make python3.11 the default
@@ -42,10 +42,13 @@ RUN pip install --no-cache-dir -r requirements-gpu.txt
 # Copy ONLY face-swap code (app, face_swap, storage - proven Phase 1 logic)
 COPY app.py face_swap.py storage.py .
 
-# Health check endpoint
+# Expose ports for RunPod Load Balancer
+EXPOSE 8000 8001
+
+# Health check endpoint (curl-based, more reliable than import requests)
 # Note: start-period=120s accounts for InsightFace model download on first run (~30-60s)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8001/ping', timeout=2)" || exit 1
+    CMD curl -f http://localhost:8001/ping || exit 1
 
 # Start HTTP server (RunPod Load Balancer expects this)
 CMD ["python", "app.py"]
