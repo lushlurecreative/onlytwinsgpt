@@ -30,7 +30,6 @@ export default function PreviewResults({ results, uploadedPhotos }: Props) {
       {/* Preview cards: before/after */}
       <div className="sg-grid">
         {results.map((result, i) => {
-          const displayUrl = result.swappedUrl || result.targetUrl;
           const isFallback = !result.swappedUrl;
 
           return (
@@ -48,50 +47,82 @@ export default function PreviewResults({ results, uploadedPhotos }: Props) {
                   height: "100%",
                   overflow: "hidden",
                   borderRadius: 8,
-                  background: isFallback ? "rgba(0,0,0,0.05)" : "transparent",
+                  display: "flex",
+                  background: "#000",
                 }}
               >
-                <img
-                  src={displayUrl}
-                  alt={`Preview ${i + 1}`}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block",
-                    opacity: isFallback ? 0.5 : 1,
-                  }}
-                />
-                {isFallback && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "rgba(0,0,0,0.4)",
-                      backdropFilter: "blur(4px)",
-                    }}
-                  >
-                    <span
+                {/* Fallback: Show target image with error overlay */}
+                {isFallback ? (
+                  <>
+                    <img
+                      src={result.targetUrl}
+                      alt={`Scenario ${i + 1}`}
                       style={{
-                        color: "#fff",
-                        fontSize: 13,
-                        fontWeight: 600,
-                        textAlign: "center",
-                        padding: "0 16px",
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                        opacity: 0.4,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "rgba(0,0,0,0.5)",
+                        backdropFilter: "blur(4px)",
                       }}
                     >
-                      {result.error || "Face swap unavailable"}
-                    </span>
-                  </div>
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "16px",
+                        }}
+                      >
+                        <p
+                          style={{
+                            color: "#fff",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            margin: "0 0 8px 0",
+                          }}
+                        >
+                          Face swap unavailable
+                        </p>
+                        <p
+                          style={{
+                            color: "rgba(255,255,255,0.7)",
+                            fontSize: 12,
+                            margin: 0,
+                          }}
+                        >
+                          {result.error ||
+                            "Worker was busy. See scenario above."}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  /* Success: Show swapped image */
+                  <img
+                    src={result.swappedUrl}
+                    alt={`Your AI in scenario ${i + 1}`}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
                 )}
               </div>
 
               <div className="sg-foot">
                 <span className="sg-foot-label">
-                  {isFallback ? "Preview" : "Your AI"}
+                  {isFallback ? "Scenario" : "Your AI"}
                 </span>
               </div>
             </motion.div>

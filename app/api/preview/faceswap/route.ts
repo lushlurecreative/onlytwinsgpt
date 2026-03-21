@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { pollRunPodJob } from "@/lib/runpod-helpers";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for 3 swaps
@@ -67,56 +68,35 @@ async function callRunPodFaceSwap(
 
     console.log(`[${jobIdPrefix}] Job submitted: ${jobId}`);
 
-    // Poll for results (up to 120 seconds per job)
-    const maxAttempts = 60;
-    let attempts = 0;
+    // Poll for results with exponential backoff (2s, 4s, 8s, 16s max)
+    const pollResult = await pollRunPodJob(endpointId, jobId, 120000);
 
-    while (attempts < maxAttempts) {
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Poll every 2s
-
-      const statusResponse = await fetch(
-        `https://${endpointId}.api.runpod.ai/status/${jobId}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!statusResponse.ok) {
-        attempts++;
-        continue;
+    if (pollResult.status === "COMPLETED") {
+      const swappedUrl =
+        pollResult.output?.swapped_image_url || pollResult.output;
+      if (swappedUrl && typeof swappedUrl === "string") {
+        console.log(`[${jobIdPrefix}] Job completed: ${swappedUrl}`);
+        return {
+          targetIdx: -1, // Set by caller
+          targetUrl: scenarioImageUrl,
+          swappedUrl: swappedUrl,
+          success: true,
+        };
       }
-
-      const statusResult = await statusResponse.json();
-      const status = statusResult.status;
-
-      if (status === "COMPLETED") {
-        const swappedUrl =
-          statusResult.output?.swapped_image_url || statusResult.output;
-        if (swappedUrl && typeof swappedUrl === "string") {
-          console.log(`[${jobIdPrefix}] Job completed: ${swappedUrl}`);
-          return {
-            targetIdx: -1, // Set by caller
-            targetUrl: scenarioImageUrl,
-            swappedUrl: swappedUrl,
-            success: true,
-          };
-        }
-      }
-
-      if (status === "FAILED") {
-        console.error(
-          `[${jobIdPrefix}] Job failed: ${statusResult.error || "unknown error"}`
-        );
-        return null;
-      }
-
-      attempts++;
     }
 
-    console.error(`[${jobIdPrefix}] Job timed out after 120s`);
+    if (pollResult.status === "FAILED") {
+      console.error(
+        `[${jobIdPrefix}] Job failed: ${pollResult.error || "unknown error"}`
+      );
+      return null;
+    }
+
+    if (pollResult.status === "TIMEOUT") {
+      console.error(`[${jobIdPrefix}] Job timed out: ${pollResult.error}`);
+      return null;
+    }
+
     return null;
   } catch (error) {
     console.error(

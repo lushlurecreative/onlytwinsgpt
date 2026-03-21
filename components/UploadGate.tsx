@@ -14,6 +14,8 @@ const sampleItems = galleryItems.filter((i) => !i.nsfw && i.type === "image").sl
 export default function UploadGate({ onComplete }: Props) {
   const [slots, setSlots] = useState<(string | null)[]>([null, null, null]);
   const [dragging, setDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = useCallback((fileList: FileList | null) => {
@@ -54,34 +56,51 @@ export default function UploadGate({ onComplete }: Props) {
   const handleSubmit = async () => {
     if (!ready) return;
 
-    // Upload blob URLs to Supabase, get public URLs
-    const publicUrls: (string | null)[] = [];
-    for (let i = 0; i < slots.length; i++) {
-      const blobUrl = slots[i];
-      if (!blobUrl) {
-        publicUrls.push(null);
-        continue;
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      // Upload blob URLs to Supabase, get public URLs
+      const publicUrls: string[] = [];
+
+      for (let i = 0; i < slots.length; i++) {
+        const blobUrl = slots[i];
+        if (!blobUrl) {
+          continue;
+        }
+
+        // Convert blob URL to Blob, then upload
+        const blob = await blobUrlToBlob(blobUrl);
+        if (!blob) {
+          setUploadError(`Failed to process photo ${i + 1}`);
+          setUploading(false);
+          return;
+        }
+
+        // Upload with retry logic
+        const result = await uploadImageToSupabase(
+          blob,
+          `user_photo_${i}.jpg`
+        );
+
+        if (!result.url) {
+          setUploadError(result.error || `Failed to upload photo ${i + 1}`);
+          setUploading(false);
+          return;
+        }
+
+        publicUrls.push(result.url);
       }
 
-      // Convert blob URL to Blob, then upload
-      const blob = await blobUrlToBlob(blobUrl);
-      if (!blob) {
-        publicUrls.push(null);
-        continue;
-      }
-
-      const publicUrl = await uploadImageToSupabase(blob, `user_photo_${i}.jpg`);
-      publicUrls.push(publicUrl);
+      // All uploads succeeded
+      setUploading(false);
+      onComplete(publicUrls);
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : "Upload failed"
+      );
+      setUploading(false);
     }
-
-    // Check if all uploads succeeded
-    if (publicUrls.some((url) => !url)) {
-      console.error("One or more image uploads failed");
-      // Could show error UI here
-      return;
-    }
-
-    onComplete(publicUrls as string[]);
   };
 
   const handleSample = (src: string) => {
@@ -172,10 +191,46 @@ export default function UploadGate({ onComplete }: Props) {
         <button
           className={`ug-cta ${ready ? "ug-cta-ready" : ""}`}
           onClick={handleSubmit}
-          disabled={!ready}
+          disabled={!ready || uploading}
         >
-          {ready ? "Reveal my AI scenarios →" : `Add ${3 - filled} more photo${3 - filled === 1 ? "" : "s"}`}
+          {uploading
+            ? "Uploading..."
+            : ready
+              ? "Reveal my AI scenarios →"
+              : `Add ${3 - filled} more photo${3 - filled === 1 ? "" : "s"}`}
         </button>
+
+        {/* Error message */}
+        {uploadError && (
+          <div
+            style={{
+              marginTop: 16,
+              padding: "12px 16px",
+              borderRadius: 8,
+              background: "rgba(239, 68, 68, 0.1)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              color: "#dc2626",
+              fontSize: "0.9rem",
+              textAlign: "center",
+            }}
+          >
+            {uploadError}
+            <button
+              onClick={() => setUploadError(null)}
+              style={{
+                marginLeft: 8,
+                background: "none",
+                border: "none",
+                color: "#dc2626",
+                cursor: "pointer",
+                textDecoration: "underline",
+                fontSize: "0.9rem",
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* Social proof */}
         <p className="ug-proof">Join 2,400+ creators already using OnlyTwins</p>
