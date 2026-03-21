@@ -148,7 +148,8 @@ export function validateSupabaseConfig(): {
     errors.push("SUPABASE_URL does not look like a valid Supabase URL");
   }
 
-  const supabaseKey = process.env.SUPABASE_ANON_KEY;
+  const supabaseKey =
+    process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!supabaseKey) {
     errors.push("SUPABASE_ANON_KEY not configured");
   } else if (supabaseKey.length < 20) {
