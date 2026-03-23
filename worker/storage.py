@@ -31,6 +31,8 @@ def download_from_url(url: str, dest_path: str, timeout: int = 30) -> bool:
         print(f"[download] GET {clean_url[:120]}", flush=True)
         r = requests.get(clean_url, timeout=timeout)
         print(f"[download] status={r.status_code}, content-type={r.headers.get('content-type','?')}, length={len(r.content)}", flush=True)
+        if r.status_code != 200:
+            print(f"[download] error body: {r.text[:500]}", flush=True)
         r.raise_for_status()
         with open(dest_path, "wb") as f:
             f.write(r.content)
@@ -41,9 +43,12 @@ def download_from_url(url: str, dest_path: str, timeout: int = 30) -> bool:
 
 
 def get_supabase() -> Optional["Client"]:
+    import sys
     url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("SUPABASE_URL", "")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
     if not url or not key or not create_client:
+        print(f"[storage] get_supabase FAILED: url={'SET' if url else 'MISSING'} key={'SET' if key else 'MISSING'} create_client={'OK' if create_client else 'MISSING'}", flush=True)
+        sys.stdout.flush()
         return None
     return create_client(url, key)
 
@@ -107,19 +112,35 @@ def upload_to_model_artifacts(local_path: str, storage_path: str) -> bool:
 
 def upload_to_uploads(local_path: str, storage_path: str, content_type: str = "image/jpeg") -> str | None:
     """Upload file to uploads bucket (e.g. generated image). Returns public URL or None."""
+    import sys
+    print(f"[storage] upload_to_uploads: path={storage_path} local={local_path} size={os.path.getsize(local_path) if os.path.exists(local_path) else 'MISSING'}", flush=True)
+    sys.stdout.flush()
     sb = get_supabase()
     if not sb:
+        print("[storage] upload_to_uploads: FAILED get_supabase returned None", flush=True)
+        sys.stdout.flush()
         return None
     try:
         with open(local_path, "rb") as f:
             data = f.read()
-        sb.storage.from_("uploads").upload(storage_path, data, file_options={"content-type": content_type})
+        print(f"[storage] upload_to_uploads: uploading {len(data)} bytes to uploads/{storage_path}", flush=True)
+        sys.stdout.flush()
+        resp = sb.storage.from_("uploads").upload(storage_path, data, file_options={"content-type": content_type})
+        print(f"[storage] upload_to_uploads: upload response={resp}", flush=True)
+        sys.stdout.flush()
         # Construct public URL
         supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("SUPABASE_URL", "")
         if not supabase_url:
+            print("[storage] upload_to_uploads: FAILED supabase_url empty after upload", flush=True)
+            sys.stdout.flush()
             return None
         public_url = f"{supabase_url}/storage/v1/object/public/uploads/{storage_path}"
+        print(f"[storage] upload_to_uploads: OK url={public_url}", flush=True)
+        sys.stdout.flush()
         return public_url
     except Exception as e:
-        print(f"Upload uploads error {storage_path}: {e}")
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[storage] upload_to_uploads: EXCEPTION {e}\n{tb}", flush=True)
+        sys.stdout.flush()
         return None
