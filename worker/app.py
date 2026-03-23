@@ -29,6 +29,7 @@ def ping():
 
 
 @app.route("/", methods=["POST"])
+@app.route("/run", methods=["POST"])
 def handler():
     """Main request handler for RunPod Load Balancer."""
     start = time.time()
