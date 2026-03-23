@@ -89,12 +89,6 @@ def handler():
 if __name__ == "__main__":
     import sys
     print(f"[worker] Starting. Python={sys.version}, PORT={PORT}, PORT_HEALTH={PORT_HEALTH}", flush=True)
-    try:
-        import httpx, supabase, gotrue
-        print(f"[worker] deps: httpx={httpx.__version__} supabase={supabase.__version__} gotrue={gotrue.__version__}", flush=True)
-    except Exception as e:
-        print(f"[worker] deps check failed: {e}", flush=True)
-
     # Run health check server on PORT_HEALTH in background thread
     health_thread = threading.Thread(
         target=lambda: health_app.run(host="0.0.0.0", port=PORT_HEALTH, debug=False, use_reloader=False),
@@ -105,6 +99,13 @@ if __name__ == "__main__":
     # Preload models at startup (before accepting requests)
     from face_swap import warmup
     warmup()
+
+    # Log dependency versions (placed late so RunPod log capture sees it)
+    try:
+        import httpx, supabase, gotrue
+        print(f"[worker] deps: httpx={httpx.__version__} supabase={supabase.__version__} gotrue={gotrue.__version__}", flush=True)
+    except Exception as e:
+        print(f"[worker] deps check failed: {e}", flush=True)
 
     # Run main API server on PORT
     print(f"[worker] Listening on 0.0.0.0:{PORT}", flush=True)
