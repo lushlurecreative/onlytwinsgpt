@@ -51,11 +51,20 @@ async function callRunPodFaceSwap(
 
   try {
     const url = `https://${endpointId}.api.runpod.ai/run`;
-    console.log(`[${jobIdPrefix}] Submitting to: ${url}`);
+    const startMs = Date.now();
+    console.log(
+      `[${jobIdPrefix}] Submitting to: ${url} (timeout=${timeoutMs}ms)`
+    );
 
     // Create AbortController with timeout to prevent hanging
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const timeoutId = setTimeout(() => {
+      const elapsedMs = Date.now() - startMs;
+      console.error(
+        `[${jobIdPrefix}] AbortController timeout fired after ${elapsedMs}ms`
+      );
+      controller.abort();
+    }, timeoutMs);
 
     const submitResponse = await fetch(url, {
       method: "POST",
@@ -74,9 +83,10 @@ async function callRunPodFaceSwap(
     });
 
     clearTimeout(timeoutId);
+    const fetchDurationMs = Date.now() - startMs;
 
     console.log(
-      `[${jobIdPrefix}] Response status: ${submitResponse.status}, content-length: ${submitResponse.headers.get("content-length") || "unknown"}`
+      `[${jobIdPrefix}] Response received after ${fetchDurationMs}ms: status=${submitResponse.status}, content-length=${submitResponse.headers.get("content-length") || "unknown"}`
     );
 
     if (!submitResponse.ok) {
@@ -95,7 +105,12 @@ async function callRunPodFaceSwap(
 
     let result;
     try {
+      const parseStartMs = Date.now();
       result = await submitResponse.json();
+      const parseDurationMs = Date.now() - parseStartMs;
+      console.log(
+        `[${jobIdPrefix}] JSON parsed after ${parseDurationMs}ms, status=${result.status}`
+      );
     } catch (parseError) {
       const bodyText = await submitResponse.text();
       console.error(
@@ -114,7 +129,10 @@ async function callRunPodFaceSwap(
     if (result.status === "COMPLETED") {
       const swappedUrl = result.output?.swapped_image_url || result.output;
       if (swappedUrl && typeof swappedUrl === "string") {
-        console.log(`[${jobIdPrefix}] Face swap completed: ${swappedUrl}`);
+        const totalMs = Date.now() - startMs;
+        console.log(
+          `[${jobIdPrefix}] Face swap completed in ${totalMs}ms: ${swappedUrl}`
+        );
         return {
           targetIdx: -1, // Set by caller
           targetUrl: scenarioImageUrl,
