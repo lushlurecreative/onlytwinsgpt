@@ -19,19 +19,24 @@ except ImportError:
 
 
 def download_from_url(url: str, dest_path: str, timeout: int = 30) -> bool:
-    """Download one file from HTTP(S) URL to local path. Used for lead_sample reference images."""
+    """Download one file from HTTP(S) URL to local path."""
     if not url or not url.strip().startswith("http"):
+        print(f"[download] Invalid URL: {url}", flush=True)
         return False
     if not requests:
+        print("[download] requests module not available", flush=True)
         return False
     try:
-        r = requests.get(url.strip(), timeout=timeout)
+        clean_url = url.strip()
+        print(f"[download] GET {clean_url[:120]}", flush=True)
+        r = requests.get(clean_url, timeout=timeout)
+        print(f"[download] status={r.status_code}, content-type={r.headers.get('content-type','?')}, length={len(r.content)}", flush=True)
         r.raise_for_status()
         with open(dest_path, "wb") as f:
             f.write(r.content)
         return True
     except Exception as e:
-        print(f"Download URL error {url[:80]}: {e}")
+        print(f"[download] FAILED {url[:120]}: {e}", flush=True)
         return False
 
 
