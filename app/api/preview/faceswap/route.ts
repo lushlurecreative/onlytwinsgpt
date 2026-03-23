@@ -258,12 +258,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Convert relative URLs to absolute so the external worker can fetch them
+    const origin =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+    const toAbsolute = (url: string) =>
+      url.startsWith("/") ? `${origin}${url}` : url;
+
+    const absoluteUserUrls = userPhotoUrls.map(toAbsolute);
+    const absoluteTargetUrls = targetImageUrls.map(toAbsolute);
+
+    console.log(
+      `[preview_faceswap:${requestId}] URLs resolved with origin=${origin}`
+    );
+
     // Use first user photo for all swaps
-    const userPhotoUrl = userPhotoUrls[0];
+    const userPhotoUrl = absoluteUserUrls[0];
 
     // TEMPORARY: Run only 1 swap to diagnose timeout vs broken worker
     // TODO: Restore parallel 3-swap flow once worker is confirmed working
-    const diagnosticTarget = targetImageUrls[0];
+    const diagnosticTarget = absoluteTargetUrls[0];
     console.log(
       `[preview_faceswap:${requestId}] DIAGNOSTIC MODE: 1 swap only (of ${targetImageUrls.length} targets)`
     );
