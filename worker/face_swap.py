@@ -138,6 +138,7 @@ def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | N
         print("Error: insightface not available")
         return None
 
+    import time as _time
     try:
         # Use preloaded models (fall back to lazy init if warmup didn't run)
         global _face_app, _inswapper_session
@@ -146,129 +147,125 @@ def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | N
             warmup()
 
         if _face_app is None or _inswapper_session is None:
-            print("[face_swap] Error: models failed to load", flush=True)
+            print("[face_swap] FAIL: models failed to load", flush=True)
             return None
 
-        # Read images
+        # Step 1: Decode images
+        t0 = _time.time()
         user_img = cv2.imread(user_photo_path)
         scenario_img = cv2.imread(scenario_image_path)
 
-        if user_img is None or scenario_img is None:
-            print("[face_swap] Error: Could not read input images", flush=True)
+        if user_img is None:
+            print(f"[face_swap] FAIL step=decode: user image is None (path={user_photo_path}, exists={os.path.exists(user_photo_path)}, size={os.path.getsize(user_photo_path) if os.path.exists(user_photo_path) else 'N/A'})", flush=True)
             return None
+        if scenario_img is None:
+            print(f"[face_swap] FAIL step=decode: scenario image is None (path={scenario_image_path}, exists={os.path.exists(scenario_image_path)}, size={os.path.getsize(scenario_image_path) if os.path.exists(scenario_image_path) else 'N/A'})", flush=True)
+            return None
+        print(f"[face_swap] OK step=decode: user={user_img.shape} scenario={scenario_img.shape} ({round(_time.time()-t0,2)}s)", flush=True)
 
-        # Detect faces using preloaded FaceAnalysis
+        # Step 2: Detect faces
+        t1 = _time.time()
         user_faces = _face_app.get(user_img)
+        t_user_detect = round(_time.time()-t1, 2)
+
+        t2 = _time.time()
         scenario_faces = _face_app.get(scenario_img)
+        t_scenario_detect = round(_time.time()-t2, 2)
 
         if not user_faces:
-            print("[face_swap] Error: No face detected in user photo", flush=True)
+            print(f"[face_swap] FAIL step=detect_user: no face found ({t_user_detect}s)", flush=True)
             return None
         if not scenario_faces:
-            print("[face_swap] Error: No face detected in scenario image", flush=True)
+            print(f"[face_swap] FAIL step=detect_scenario: no face found ({t_scenario_detect}s)", flush=True)
             return None
+        print(f"[face_swap] OK step=detect: user_faces={len(user_faces)} ({t_user_detect}s) scenario_faces={len(scenario_faces)} ({t_scenario_detect}s)", flush=True)
 
         inswapper_session = _inswapper_session
-
-        # Prepare for swap: get user face embedding
         user_face = user_faces[0]
+        print(f"[face_swap] user_face embedding shape={user_face.embedding.shape}, kps shape={user_face.kps.shape}", flush=True)
 
-        # Swap each face in scenario with user face
+        # Log model input/output names for diagnosis
+        model_inputs = [(inp.name, inp.shape, inp.type) for inp in inswapper_session.get_inputs()]
+        model_outputs = [(out.name, out.shape, out.type) for out in inswapper_session.get_outputs()]
+        print(f"[face_swap] model inputs={model_inputs}", flush=True)
+        print(f"[face_swap] model outputs={model_outputs}", flush=True)
+
         swapped = scenario_img.copy()
 
-        for scenario_face in scenario_faces:
+        for face_idx, scenario_face in enumerate(scenario_faces):
             try:
-                # Step 1: Align scenario face (crop and normalize for model input)
-                # Use face_align to crop the face region
+                # Step 3: Align
+                t3 = _time.time()
                 aimg = face_align.norm_crop(scenario_img, scenario_face.kps)
+                print(f"[face_swap] OK step=align face={face_idx}: shape={aimg.shape} ({round(_time.time()-t3,3)}s)", flush=True)
 
-                # Step 2: Prepare input for ONNX model
-                # Convert to float32 in range [0, 1] (or [-1, 1] depending on model training)
+                # Step 4: Prepare blob
                 blob = cv2.dnn.blobFromImage(
-                    aimg,
-                    1.0 / 255,  # Scale to [0, 1]
-                    (128, 128),  # Model input size
-                    swapRB=False
+                    aimg, 1.0 / 255, (128, 128), swapRB=False
                 )
+                print(f"[face_swap] OK step=blob face={face_idx}: shape={blob.shape} dtype={blob.dtype}", flush=True)
 
-                # Step 3: Run ONNX inference
-                # Inputs: target (aligned face), source (user embedding)
+                # Step 5: ONNX inference
+                t5 = _time.time()
+                input_dict = {
+                    'target': blob,
+                    'source': user_face.embedding.reshape(1, 512)
+                }
                 input_name = inswapper_session.get_inputs()[0].name
                 output_name = inswapper_session.get_outputs()[0].name
+                print(f"[face_swap] step=inference face={face_idx}: input_names={list(input_dict.keys())} target_shape={blob.shape} source_shape={user_face.embedding.reshape(1,512).shape}", flush=True)
 
-                # Prepare inputs
-                # The inswapper model expects:
-                # - target: aligned face (1, 3, 128, 128) - the face being swapped into
-                # - source: user face embedding - already extracted from user_face.embedding
-
-                # Create proper input dict based on model signature
-                input_dict = {
-                    'target': blob,  # Aligned target face
-                    'source': user_face.embedding.reshape(1, 512)  # User face embedding
-                }
-
-                # Run inference
                 output = inswapper_session.run([output_name], input_dict)
-                swapped_face = output[0][0]  # Get result
+                swapped_face = output[0][0]
+                t5_elapsed = round(_time.time()-t5, 2)
+                print(f"[face_swap] OK step=inference face={face_idx}: output_shape={swapped_face.shape} dtype={swapped_face.dtype} min={swapped_face.min():.3f} max={swapped_face.max():.3f} ({t5_elapsed}s)", flush=True)
 
-                # Step 4: Paste swapped face back into original image
-                # Convert swapped_face back to uint8 in BGR format
+                # Step 6: Post-process and paste back
+                t6 = _time.time()
                 swapped_face_uint8 = np.clip(swapped_face * 255, 0, 255).astype(np.uint8)
-
-                # Resize back to original aligned size
                 swapped_face_resized = cv2.resize(
-                    swapped_face_uint8.transpose(1, 2, 0),  # CHW -> HWC
+                    swapped_face_uint8.transpose(1, 2, 0),
                     (aimg.shape[1], aimg.shape[0])
                 )
 
-                # Get transformation matrix for this face
-                # Create the affine transformation matrix (estimate from landmarks)
                 mat = face_align.estimate_norm(scenario_face.kps)
+                if mat is None:
+                    print(f"[face_swap] FAIL step=paste face={face_idx}: estimate_norm returned None", flush=True)
+                    continue
 
-                # Inverse transformation to paste back
-                if mat is not None:
-                    # Get inverse matrix
-                    mat_inv = cv2.invertAffineTransform(mat)
-
-                    # Warp swapped face back to original image space
-                    pasted = cv2.warpAffine(
-                        swapped_face_resized,
-                        mat_inv,
-                        (swapped.shape[1], swapped.shape[0]),
-                        borderMode=cv2.BORDER_REFLECT
+                mat_inv = cv2.invertAffineTransform(mat)
+                pasted = cv2.warpAffine(
+                    swapped_face_resized, mat_inv,
+                    (swapped.shape[1], swapped.shape[0]),
+                    borderMode=cv2.BORDER_REFLECT
+                )
+                mask = np.zeros((swapped_face_resized.shape[0], swapped_face_resized.shape[1]), dtype=np.float32)
+                mask = cv2.circle(mask, (mask.shape[1]//2, mask.shape[0]//2), mask.shape[0]//2, 1.0, -1)
+                mask = cv2.GaussianBlur(mask, (21, 21), 0)
+                mask_warped = cv2.warpAffine(
+                    mask, mat_inv,
+                    (swapped.shape[1], swapped.shape[0]),
+                    borderMode=cv2.BORDER_CONSTANT
+                )
+                for c in range(3):
+                    swapped[:, :, c] = (
+                        swapped[:, :, c] * (1 - mask_warped) +
+                        pasted[:, :, c] * mask_warped
                     )
-
-                    # Alpha blend to avoid harsh edges
-                    # Create a mask for smooth blending
-                    mask = np.zeros((swapped_face_resized.shape[0], swapped_face_resized.shape[1]), dtype=np.float32)
-                    mask = cv2.circle(mask, (mask.shape[1]//2, mask.shape[0]//2), mask.shape[0]//2, 1.0, -1)
-                    mask = cv2.GaussianBlur(mask, (21, 21), 0)
-
-                    mask_warped = cv2.warpAffine(
-                        mask,
-                        mat_inv,
-                        (swapped.shape[1], swapped.shape[0]),
-                        borderMode=cv2.BORDER_CONSTANT
-                    )
-
-                    # Blend
-                    for c in range(3):
-                        swapped[:, :, c] = (
-                            swapped[:, :, c] * (1 - mask_warped) +
-                            pasted[:, :, c] * mask_warped
-                        )
+                t6_elapsed = round(_time.time()-t6, 3)
+                print(f"[face_swap] OK step=paste face={face_idx}: ({t6_elapsed}s)", flush=True)
 
             except Exception as e:
-                print(f"Error swapping individual face: {e}")
+                print(f"[face_swap] FAIL step=swap face={face_idx}: {e}", flush=True)
                 import traceback
                 traceback.print_exc()
-                # Continue with next face if one fails
                 continue
 
+        print(f"[face_swap] OK step=swap_complete: output_shape={swapped.shape}", flush=True)
         return swapped
 
     except Exception as e:
-        print(f"Face swap error: {e}")
+        print(f"[face_swap] FAIL step=outer: {e}", flush=True)
         import traceback
         traceback.print_exc()
         return None
@@ -278,6 +275,7 @@ def do_face_swap(user_photo_url: str, scenario_image_url: str) -> str | None:
     """
     Download images, swap faces, upload result, return public URL.
     """
+    import time as _time
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
             # Download images
@@ -285,33 +283,50 @@ def do_face_swap(user_photo_url: str, scenario_image_url: str) -> str | None:
             scenario_path = os.path.join(tmpdir, "scenario.jpg")
 
             if not download_from_url(user_photo_url, user_photo_path):
-                print("Error: Could not download user photo")
+                print("[do_face_swap] FAIL step=download_user", flush=True)
                 return None
+            user_size = os.path.getsize(user_photo_path)
+            print(f"[do_face_swap] OK step=download_user: {user_size} bytes", flush=True)
+
             if not download_from_url(scenario_image_url, scenario_path):
-                print("Error: Could not download scenario image")
+                print("[do_face_swap] FAIL step=download_scenario", flush=True)
                 return None
+            scenario_size = os.path.getsize(scenario_path)
+            print(f"[do_face_swap] OK step=download_scenario: {scenario_size} bytes", flush=True)
 
             # Swap faces
+            t_swap = _time.time()
             swapped_array = swap_faces(user_photo_path, scenario_path)
+            swap_elapsed = round(_time.time() - t_swap, 2)
             if swapped_array is None:
+                print(f"[do_face_swap] FAIL step=swap_faces: returned None after {swap_elapsed}s", flush=True)
                 return None
+            print(f"[do_face_swap] OK step=swap_faces: shape={swapped_array.shape} ({swap_elapsed}s)", flush=True)
 
             # Save swapped image
             swapped_path = os.path.join(tmpdir, "swapped.jpg")
             success = cv2.imwrite(swapped_path, swapped_array)
             if not success:
-                print("Error: Could not save swapped image")
+                print("[do_face_swap] FAIL step=save: cv2.imwrite returned False", flush=True)
                 return None
+            saved_size = os.path.getsize(swapped_path)
+            print(f"[do_face_swap] OK step=save: {saved_size} bytes", flush=True)
 
-            # Upload to Supabase (temp bucket, accessible via public URL)
-            result_url = upload_to_uploads(
-                swapped_path,
-                f"preview-faceswaps/{str(uuid.uuid4())}.jpg"
-            )
+            # Upload to Supabase
+            storage_path = f"preview-faceswaps/{str(uuid.uuid4())}.jpg"
+            t_upload = _time.time()
+            result_url = upload_to_uploads(swapped_path, storage_path)
+            upload_elapsed = round(_time.time() - t_upload, 2)
+            if not result_url:
+                print(f"[do_face_swap] FAIL step=upload: returned None ({upload_elapsed}s)", flush=True)
+                return None
+            print(f"[do_face_swap] OK step=upload: {result_url} ({upload_elapsed}s)", flush=True)
 
             return result_url
         except Exception as e:
-            print(f"do_face_swap error: {e}")
+            print(f"[do_face_swap] FAIL step=outer: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
             return None
 
 
