@@ -261,41 +261,31 @@ export async function POST(req: NextRequest) {
     // Use first user photo for all swaps
     const userPhotoUrl = userPhotoUrls[0];
 
-    // Swap user face into each target image (in parallel, with hard timeout)
-    const swapPromises = targetImageUrls.map((targetUrl, idx) =>
-      callRunPodFaceSwap(
-        userPhotoUrl,
-        targetUrl,
-        `preview_faceswap:${requestId}:swap_${idx}`,
-        30000 // 30s timeout per swap
-      ).then((result) => ({
-        ...result,
-        targetIdx: idx,
-      }))
+    // TEMPORARY: Run only 1 swap to diagnose timeout vs broken worker
+    // TODO: Restore parallel 3-swap flow once worker is confirmed working
+    const diagnosticTarget = targetImageUrls[0];
+    console.log(
+      `[preview_faceswap:${requestId}] DIAGNOSTIC MODE: 1 swap only (of ${targetImageUrls.length} targets)`
     );
 
-    // Wait for all swaps with a hard timeout - return partial results if timeout
-    const timeoutPromise = new Promise<SwapResult[]>((resolve) => {
-      setTimeout(() => {
-        console.warn(
-          `[preview_faceswap:${requestId}] Overall timeout reached, returning partial results`
-        );
-        resolve(
-          targetImageUrls.map((url, idx) => ({
-            targetIdx: idx,
-            targetUrl: url,
-            swappedUrl: null,
-            success: false,
-            error: "Request timeout",
-          }))
-        );
-      }, 120000); // 2 minute hard limit for entire request
-    });
+    const singleResult = await callRunPodFaceSwap(
+      userPhotoUrl,
+      diagnosticTarget,
+      `preview_faceswap:${requestId}:swap_0`,
+      90000 // 90s timeout for diagnostic — gives worker time to cold-start
+    );
 
-    const results = await Promise.race([
-      Promise.all(swapPromises),
-      timeoutPromise,
-    ]);
+    const results: SwapResult[] = [
+      { ...singleResult, targetIdx: 0 },
+      // Fill remaining slots as skipped so UI still renders 3 cards
+      ...targetImageUrls.slice(1).map((url, idx) => ({
+        targetIdx: idx + 1,
+        targetUrl: url,
+        swappedUrl: null as string | null,
+        success: false,
+        error: "Skipped (diagnostic mode)",
+      })),
+    ];
 
     const successCount = results.filter((r) => r.success).length;
     console.log(
