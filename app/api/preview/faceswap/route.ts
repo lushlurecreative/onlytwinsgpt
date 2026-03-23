@@ -21,24 +21,41 @@ interface SwapResult {
 async function callRunPodFaceSwap(
   userPhotoUrl: string,
   scenarioImageUrl: string,
-  jobIdPrefix: string
-): Promise<SwapResult | null> {
+  jobIdPrefix: string,
+  timeoutMs: number = 30000
+): Promise<SwapResult> {
   const endpointId = process.env.RUNPOD_ENDPOINT_ID;
   const apiKey = process.env.RUNPOD_API_KEY;
 
   if (!endpointId) {
     console.error("RunPod endpoint not configured");
-    return null;
+    return {
+      targetIdx: -1,
+      targetUrl: scenarioImageUrl,
+      swappedUrl: null,
+      success: false,
+      error: "RunPod endpoint not configured",
+    };
   }
 
   if (!apiKey) {
     console.error("RunPod API key not configured");
-    return null;
+    return {
+      targetIdx: -1,
+      targetUrl: scenarioImageUrl,
+      swappedUrl: null,
+      success: false,
+      error: "RunPod API key not configured",
+    };
   }
 
   try {
     const url = `https://${endpointId}.api.runpod.ai/run`;
     console.log(`[${jobIdPrefix}] Submitting to: ${url}`);
+
+    // Create AbortController with timeout to prevent hanging
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const submitResponse = await fetch(url, {
       method: "POST",
@@ -53,7 +70,10 @@ async function callRunPodFaceSwap(
           scenario_image_url: scenarioImageUrl,
         },
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     console.log(
       `[${jobIdPrefix}] Response status: ${submitResponse.status}, content-length: ${submitResponse.headers.get("content-length") || "unknown"}`
@@ -64,7 +84,13 @@ async function callRunPodFaceSwap(
       console.error(
         `[${jobIdPrefix}] RunPod error status=${submitResponse.status}, body=${responseText.substring(0, 500)}`
       );
-      return null;
+      return {
+        targetIdx: -1,
+        targetUrl: scenarioImageUrl,
+        swappedUrl: null,
+        success: false,
+        error: `RunPod error: ${submitResponse.status}`,
+      };
     }
 
     let result;
@@ -75,7 +101,13 @@ async function callRunPodFaceSwap(
       console.error(
         `[${jobIdPrefix}] JSON parse failed, status=${submitResponse.status}, body=${bodyText.substring(0, 500)}`
       );
-      return null;
+      return {
+        targetIdx: -1,
+        targetUrl: scenarioImageUrl,
+        swappedUrl: null,
+        success: false,
+        error: "JSON parse failed",
+      };
     }
 
     // Handle synchronous response (worker returns completed result immediately)
@@ -97,7 +129,13 @@ async function callRunPodFaceSwap(
       console.error(
         `[${jobIdPrefix}] Face swap failed: ${result.error || "unknown error"}`
       );
-      return null;
+      return {
+        targetIdx: -1,
+        targetUrl: scenarioImageUrl,
+        swappedUrl: null,
+        success: false,
+        error: result.error || "Face swap failed",
+      };
     }
 
     // Handle async response with job ID (for future async worker implementations)
@@ -124,26 +162,50 @@ async function callRunPodFaceSwap(
         console.error(
           `[${jobIdPrefix}] Job failed: ${pollResult.error || "unknown error"}`
         );
-        return null;
+        return {
+          targetIdx: -1,
+          targetUrl: scenarioImageUrl,
+          swappedUrl: null,
+          success: false,
+          error: pollResult.error || "Job failed",
+        };
       }
 
       if (pollResult.status === "TIMEOUT") {
         console.error(`[${jobIdPrefix}] Job timed out: ${pollResult.error}`);
-        return null;
+        return {
+          targetIdx: -1,
+          targetUrl: scenarioImageUrl,
+          swappedUrl: null,
+          success: false,
+          error: "Job timeout",
+        };
       }
     }
 
     console.error(
       `[${jobIdPrefix}] Invalid response format: neither completed nor async job, got: ${JSON.stringify(result).substring(0, 200)}`
     );
-    return null;
+    return {
+      targetIdx: -1,
+      targetUrl: scenarioImageUrl,
+      swappedUrl: null,
+      success: false,
+      error: "Invalid response format",
+    };
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    const isTimeout = errorMsg.includes("timeout") || errorMsg.includes("TIMEOUT");
+    const isTimeout = errorMsg.includes("timeout") || errorMsg.includes("TIMEOUT") || errorMsg.includes("abort");
     console.error(
       `[${jobIdPrefix}] Fetch error (timeout=${isTimeout}): ${errorMsg}`
     );
-    return null;
+    return {
+      targetIdx: -1,
+      targetUrl: scenarioImageUrl,
+      swappedUrl: null,
+      success: false,
+      error: isTimeout ? "Request timeout" : `Error: ${errorMsg}`,
+    };
   }
 }
 
@@ -181,31 +243,41 @@ export async function POST(req: NextRequest) {
     // Use first user photo for all swaps
     const userPhotoUrl = userPhotoUrls[0];
 
-    // Swap user face into each target image (in parallel)
+    // Swap user face into each target image (in parallel, with hard timeout)
     const swapPromises = targetImageUrls.map((targetUrl, idx) =>
       callRunPodFaceSwap(
         userPhotoUrl,
         targetUrl,
-        `preview_faceswap:${requestId}:swap_${idx}`
-      ).then((result) => {
-        if (result) {
-          return {
-            ...result,
-            targetIdx: idx,
-          };
-        }
-        // Fallback to target image if swap failed
-        return {
-          targetIdx: idx,
-          targetUrl: targetUrl,
-          swappedUrl: null, // Null = use fallback in UI
-          success: false,
-          error: "Face swap failed",
-        };
-      })
+        `preview_faceswap:${requestId}:swap_${idx}`,
+        30000 // 30s timeout per swap
+      ).then((result) => ({
+        ...result,
+        targetIdx: idx,
+      }))
     );
 
-    const results = await Promise.all(swapPromises);
+    // Wait for all swaps with a hard timeout - return partial results if timeout
+    const timeoutPromise = new Promise<SwapResult[]>((resolve) => {
+      setTimeout(() => {
+        console.warn(
+          `[preview_faceswap:${requestId}] Overall timeout reached, returning partial results`
+        );
+        resolve(
+          targetImageUrls.map((url, idx) => ({
+            targetIdx: idx,
+            targetUrl: url,
+            swappedUrl: null,
+            success: false,
+            error: "Request timeout",
+          }))
+        );
+      }, 120000); // 2 minute hard limit for entire request
+    });
+
+    const results = await Promise.race([
+      Promise.all(swapPromises),
+      timeoutPromise,
+    ]);
 
     const successCount = results.filter((r) => r.success).length;
     console.log(
