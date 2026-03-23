@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { pollRunPodJob } from "@/lib/runpod-helpers";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
 export const maxDuration = 300; // 5 minutes for 3 swaps
@@ -9,6 +10,40 @@ export const maxDuration = 300; // 5 minutes for 3 swaps
  * Calls RunPod GPU worker for 3 parallel face swaps.
  * Handles both synchronous (immediate result) and async (polling) patterns.
  */
+
+/**
+ * Convert Supabase public URLs to signed URLs.
+ * The uploads bucket is private, so /object/public/ URLs return 400.
+ * We extract the storage path and generate a short-lived signed URL instead.
+ */
+async function toSignedUrlIfSupabase(url: string): Promise<string> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) return url;
+
+  const publicPrefix = `${supabaseUrl}/storage/v1/object/public/uploads/`;
+  if (!url.startsWith(publicPrefix)) return url;
+
+  const storagePath = url.slice(publicPrefix.length);
+  console.log(`[signed_url] Converting public URL to signed URL for path: ${storagePath}`);
+
+  try {
+    const admin = getSupabaseAdmin();
+    const { data, error } = await admin.storage
+      .from("uploads")
+      .createSignedUrl(storagePath, 600); // 10 minutes expiry
+
+    if (error || !data?.signedUrl) {
+      console.error(`[signed_url] Failed to create signed URL: ${error?.message || "no data"}`);
+      return url; // Fall back to original URL
+    }
+
+    console.log(`[signed_url] Signed URL created successfully`);
+    return data.signedUrl;
+  } catch (e) {
+    console.error(`[signed_url] Exception: ${e instanceof Error ? e.message : String(e)}`);
+    return url;
+  }
+}
 
 interface SwapResult {
   targetIdx: number;
@@ -272,8 +307,13 @@ export async function POST(req: NextRequest) {
       `[preview_faceswap:${requestId}] URLs resolved with origin=${origin}`
     );
 
+    // Convert Supabase private-bucket URLs to signed URLs so the worker can download them
+    const signedUserUrls = await Promise.all(
+      absoluteUserUrls.map(toSignedUrlIfSupabase)
+    );
+
     // Use first user photo for all swaps
-    const userPhotoUrl = absoluteUserUrls[0];
+    const userPhotoUrl = signedUserUrls[0];
 
     // TEMPORARY: Run only 1 swap to diagnose timeout vs broken worker
     // TODO: Restore parallel 3-swap flow once worker is confirmed working
