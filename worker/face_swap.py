@@ -17,9 +17,50 @@ try:
     from insightface.utils import face_align
     import onnxruntime as ort
     INSIGHTFACE_AVAILABLE = True
+    print(f"[face_swap] onnxruntime version={ort.__version__}", flush=True)
+    print(f"[face_swap] Available providers: {ort.get_available_providers()}", flush=True)
 except ImportError as e:
     INSIGHTFACE_AVAILABLE = False
-    print(f"Warning: insightface dependencies not fully available: {e}")
+    print(f"Warning: insightface dependencies not fully available: {e}", flush=True)
+
+# Module-level caches — loaded once at startup via warmup()
+_face_app = None
+_inswapper_session = None
+
+
+def warmup():
+    """Preload models at startup so first request is fast."""
+    global _face_app, _inswapper_session
+
+    if not INSIGHTFACE_AVAILABLE:
+        print("[face_swap] Cannot warmup: insightface not available", flush=True)
+        return
+
+    import time
+    start = time.time()
+
+    # 1. Preload FaceAnalysis (downloads buffalo_l on first run)
+    print("[face_swap] Warming up FaceAnalysis (buffalo_l)...", flush=True)
+    providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+    _face_app = FaceAnalysis(name="buffalo_l", providers=providers)
+    try:
+        _face_app.prepare(ctx_id=0, det_size=(640, 640))
+        print("[face_swap] FaceAnalysis using GPU (ctx_id=0)", flush=True)
+    except Exception:
+        _face_app.prepare(ctx_id=-1, det_size=(640, 640))
+        print("[face_swap] FaceAnalysis using CPU (ctx_id=-1)", flush=True)
+
+    # 2. Preload inswapper ONNX model
+    print("[face_swap] Warming up inswapper model...", flush=True)
+    _inswapper_session = _get_inswapper_session()
+    if _inswapper_session:
+        active = _inswapper_session.get_providers()
+        print(f"[face_swap] Inswapper active providers: {active}", flush=True)
+    else:
+        print("[face_swap] WARNING: inswapper session failed to load", flush=True)
+
+    elapsed = round(time.time() - start, 1)
+    print(f"[face_swap] Warmup complete in {elapsed}s", flush=True)
 
 
 def _get_inswapper_session():
@@ -28,28 +69,24 @@ def _get_inswapper_session():
     Handles model download on first use.
     """
     try:
-        # Ensure model is downloaded
         model_path = os.path.expanduser("~/.insightface/models/inswapper_128.onnx")
 
-        # If model doesn't exist, trigger download via FaceAnalysis initialization
         if not os.path.exists(model_path):
-            print("Downloading inswapper model...")
+            print("[face_swap] Downloading inswapper model...", flush=True)
             import insightface.model_zoo
             try:
                 insightface.model_zoo.get_model("inswapper_128.onnx", download=True)
             except:
-                pass  # Fallback: model may download during first swap attempt
+                pass
 
-        # Create ONNX Runtime session
         sess_opts = ort.SessionOptions()
         sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
 
-        # Use GPU provider with CPU fallback (Phase 2: GPU support)
         providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
         session = ort.InferenceSession(model_path, sess_options=sess_opts, providers=providers)
         return session
     except Exception as e:
-        print(f"Error creating inswapper session: {e}")
+        print(f"[face_swap] Error creating inswapper session: {e}", flush=True)
         return None
 
 
@@ -69,42 +106,36 @@ def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | N
         return None
 
     try:
+        # Use preloaded models (fall back to lazy init if warmup didn't run)
+        global _face_app, _inswapper_session
+        if _face_app is None or _inswapper_session is None:
+            print("[face_swap] Models not preloaded, loading now...", flush=True)
+            warmup()
+
+        if _face_app is None or _inswapper_session is None:
+            print("[face_swap] Error: models failed to load", flush=True)
+            return None
+
         # Read images
         user_img = cv2.imread(user_photo_path)
         scenario_img = cv2.imread(scenario_image_path)
 
         if user_img is None or scenario_img is None:
-            print("Error: Could not read input images")
+            print("[face_swap] Error: Could not read input images", flush=True)
             return None
 
-        # Initialize FaceAnalysis for detection with GPU support (Phase 2)
-        providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-        app = FaceAnalysis(
-            name="buffalo_l",
-            providers=providers
-        )
-        # Try GPU first (ctx_id=0), fall back to CPU (ctx_id=-1) if unavailable
-        try:
-            app.prepare(ctx_id=0, det_size=(640, 640))
-        except Exception:
-            app.prepare(ctx_id=-1, det_size=(640, 640))
-
-        # Detect faces
-        user_faces = app.get(user_img)
-        scenario_faces = app.get(scenario_img)
+        # Detect faces using preloaded FaceAnalysis
+        user_faces = _face_app.get(user_img)
+        scenario_faces = _face_app.get(scenario_img)
 
         if not user_faces:
-            print("Error: No face detected in user photo")
+            print("[face_swap] Error: No face detected in user photo", flush=True)
             return None
         if not scenario_faces:
-            print("Error: No face detected in scenario image")
+            print("[face_swap] Error: No face detected in scenario image", flush=True)
             return None
 
-        # Get inswapper ONNX session
-        inswapper_session = _get_inswapper_session()
-        if inswapper_session is None:
-            print("Error: Could not load inswapper model")
-            return None
+        inswapper_session = _inswapper_session
 
         # Prepare for swap: get user face embedding
         user_face = user_faces[0]

@@ -97,6 +97,10 @@ if __name__ == "__main__":
     )
     health_thread.start()
 
+    # Preload models at startup (before accepting requests)
+    from face_swap import warmup
+    warmup()
+
     # Run main API server on PORT
     print(f"[worker] Listening on 0.0.0.0:{PORT}", flush=True)
     app.run(host="0.0.0.0", port=PORT, debug=False)
