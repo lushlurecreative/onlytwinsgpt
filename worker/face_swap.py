@@ -79,11 +79,44 @@ def _get_inswapper_session():
             except:
                 pass
 
+        # Log available providers before session creation
+        available = ort.get_available_providers()
+        print(f"[face_swap] inswapper: available providers = {available}", flush=True)
+
         sess_opts = ort.SessionOptions()
-        sess_opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
 
         providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-        session = ort.InferenceSession(model_path, sess_options=sess_opts, providers=providers)
+
+        # Try CUDA first; log the exact error if it fails
+        try:
+            session = ort.InferenceSession(
+                model_path, sess_options=sess_opts, providers=providers
+            )
+            active = session.get_providers()
+            print(f"[face_swap] inswapper: active providers = {active}", flush=True)
+            if 'CUDAExecutionProvider' in active:
+                return session
+            print("[face_swap] inswapper: CUDA requested but not active, trying explicit CUDA-only...", flush=True)
+        except Exception as e:
+            print(f"[face_swap] inswapper: dual-provider init failed: {e}", flush=True)
+
+        # Try CUDA-only to surface the exact error
+        try:
+            session = ort.InferenceSession(
+                model_path, sess_options=sess_opts,
+                providers=['CUDAExecutionProvider']
+            )
+            print(f"[face_swap] inswapper: CUDA-only succeeded: {session.get_providers()}", flush=True)
+            return session
+        except Exception as cuda_err:
+            print(f"[face_swap] inswapper: CUDA-only FAILED: {cuda_err}", flush=True)
+
+        # Fall back to CPU
+        print("[face_swap] inswapper: falling back to CPU", flush=True)
+        session = ort.InferenceSession(
+            model_path, sess_options=sess_opts,
+            providers=['CPUExecutionProvider']
+        )
         return session
     except Exception as e:
         print(f"[face_swap] Error creating inswapper session: {e}", flush=True)
