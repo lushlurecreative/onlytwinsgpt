@@ -8,6 +8,7 @@ requests==2.31.0
 
 # Storage
 supabase==2.4.0
+httpx<0.28
 python-dotenv==1.0.0
 
 # Face swap core
