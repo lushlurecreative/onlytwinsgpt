@@ -160,20 +160,68 @@ async function callRunPodFaceSwap(
       };
     }
 
-    // Handle synchronous response (worker returns completed result immediately)
+    // Handle synchronous response (worker returns base64 image data)
     if (result.status === "COMPLETED") {
-      const swappedUrl = result.output?.swapped_image_url || result.output;
-      if (swappedUrl && typeof swappedUrl === "string") {
+      const imageBase64 = result.output?.image_base64;
+      if (imageBase64 && typeof imageBase64 === "string") {
         const totalMs = Date.now() - startMs;
         console.log(
-          `[${jobIdPrefix}] Face swap completed in ${totalMs}ms: ${swappedUrl}`
+          `[${jobIdPrefix}] Face swap completed in ${totalMs}ms, uploading ${imageBase64.length} chars base64`
         );
-        return {
-          targetIdx: -1, // Set by caller
-          targetUrl: scenarioImageUrl,
-          swappedUrl: swappedUrl,
-          success: true,
-        };
+
+        // Upload to Supabase via admin client (worker can't auth to Supabase)
+        try {
+          const admin = getSupabaseAdmin();
+          const buffer = Buffer.from(imageBase64, "base64");
+          const storagePath = `preview-faceswaps/${crypto.randomUUID()}.jpg`;
+
+          const { error: uploadError } = await admin.storage
+            .from("uploads")
+            .upload(storagePath, buffer, {
+              contentType: "image/jpeg",
+              upsert: true,
+            });
+
+          if (uploadError) {
+            console.error(`[${jobIdPrefix}] Supabase upload failed: ${uploadError.message}`);
+            return {
+              targetIdx: -1,
+              targetUrl: scenarioImageUrl,
+              swappedUrl: null,
+              success: false,
+              error: `Upload failed: ${uploadError.message}`,
+            };
+          }
+
+          // Generate signed URL for the result (bucket is private)
+          const { data: signedData, error: signError } = await admin.storage
+            .from("uploads")
+            .createSignedUrl(storagePath, 3600); // 1 hour expiry
+
+          const swappedUrl = signedData?.signedUrl ||
+            `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/uploads/${storagePath}`;
+
+          if (signError) {
+            console.warn(`[${jobIdPrefix}] Signed URL failed, using public URL: ${signError.message}`);
+          }
+
+          console.log(`[${jobIdPrefix}] Upload + signed URL complete: ${swappedUrl.substring(0, 80)}...`);
+          return {
+            targetIdx: -1,
+            targetUrl: scenarioImageUrl,
+            swappedUrl: swappedUrl,
+            success: true,
+          };
+        } catch (uploadErr) {
+          console.error(`[${jobIdPrefix}] Upload exception: ${uploadErr instanceof Error ? uploadErr.message : String(uploadErr)}`);
+          return {
+            targetIdx: -1,
+            targetUrl: scenarioImageUrl,
+            swappedUrl: null,
+            success: false,
+            error: "Upload failed",
+          };
+        }
       }
     }
 

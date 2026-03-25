@@ -5,11 +5,11 @@ Downloads user photo and scenario image, swaps faces, uploads result.
 """
 
 import os
-import uuid
+import base64
 import tempfile
 import cv2
 import numpy as np
-from storage import download_from_url, upload_to_uploads
+from storage import download_from_url
 
 try:
     import insightface
@@ -188,7 +188,8 @@ def _log(msg: str):
 
 def do_face_swap(user_photo_url: str, scenario_image_url: str) -> str | None:
     """
-    Download images, swap faces, upload result, return public URL.
+    Download images, swap faces, return base64-encoded JPEG.
+    Upload is handled by the Next.js API route (which has working Supabase auth).
     """
     import time as _time
     _log(f"[do_face_swap] ENTER user_url={user_photo_url[:80]} scenario_url={scenario_image_url[:80]}")
@@ -219,26 +220,14 @@ def do_face_swap(user_photo_url: str, scenario_image_url: str) -> str | None:
                 return None
             _log(f"[do_face_swap] OK step=swap_faces: shape={swapped_array.shape} ({swap_elapsed}s)")
 
-            # Save swapped image
-            swapped_path = os.path.join(tmpdir, "swapped.jpg")
-            success = cv2.imwrite(swapped_path, swapped_array)
+            # Encode as JPEG and return base64
+            success, buf = cv2.imencode('.jpg', swapped_array, [cv2.IMWRITE_JPEG_QUALITY, 90])
             if not success:
-                _log("[do_face_swap] RETURN_NONE reason=imwrite_failed")
+                _log("[do_face_swap] RETURN_NONE reason=imencode_failed")
                 return None
-            saved_size = os.path.getsize(swapped_path)
-            _log(f"[do_face_swap] OK step=save: {saved_size} bytes")
-
-            # Upload to Supabase
-            storage_path = f"preview-faceswaps/{str(uuid.uuid4())}.jpg"
-            t_upload = _time.time()
-            result_url = upload_to_uploads(swapped_path, storage_path)
-            upload_elapsed = round(_time.time() - t_upload, 2)
-            if not result_url:
-                _log(f"[do_face_swap] RETURN_NONE reason=upload_returned_none elapsed={upload_elapsed}s")
-                return None
-            _log(f"[do_face_swap] OK step=upload: {result_url} ({upload_elapsed}s)")
-
-            return result_url
+            b64 = base64.b64encode(buf.tobytes()).decode('ascii')
+            _log(f"[do_face_swap] OK step=encode: {len(b64)} chars base64 ({len(buf)} bytes jpeg)")
+            return b64
         except Exception as e:
             import traceback
             tb = traceback.format_exc()

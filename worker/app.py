@@ -53,20 +53,20 @@ def handler():
                 }), 400
 
             print(f"[worker] Starting face swap...", flush=True)
-            result_url = do_face_swap(user_photo_url, scenario_image_url)
+            result_b64 = do_face_swap(user_photo_url, scenario_image_url)
             elapsed = round(time.time() - start, 2)
 
-            if not result_url:
+            if not result_b64:
                 print(f"[worker] FAILED: do_face_swap returned None after {elapsed}s", flush=True)
                 return jsonify({
                     "status": "FAILED",
                     "error": "Face swap processing failed"
                 }), 500
 
-            print(f"[worker] COMPLETED in {elapsed}s: {result_url}", flush=True)
+            print(f"[worker] COMPLETED in {elapsed}s: {len(result_b64)} chars base64", flush=True)
             return jsonify({
                 "status": "COMPLETED",
-                "output": {"swapped_image_url": result_url}
+                "output": {"image_base64": result_b64}
             }), 200
 
         print(f"[worker] FAILED: unknown job type '{job_type}'", flush=True)
