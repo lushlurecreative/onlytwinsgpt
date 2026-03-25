@@ -61,12 +61,12 @@ RUN wget -q -O /root/.insightface/models/inswapper_128.onnx \
 # Copy worker code
 COPY app.py face_swap.py storage.py .
 
-# Expose ports for RunPod Load Balancer
-EXPOSE 8000 8001
+# Single port for both health and API
+EXPOSE 8000
 
-# Health check — models are baked in, short start-period
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8001/ping || exit 1
+# Health check on same port as API
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/ping || exit 1
 
 # Start HTTP server
 CMD ["python", "app.py"]

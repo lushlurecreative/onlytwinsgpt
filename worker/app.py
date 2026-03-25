@@ -1,30 +1,25 @@
 #!/usr/bin/env python3
 """
 RunPod Load Balancer HTTP server for face-swap and other jobs.
-Runs health check on PORT_HEALTH, main API on PORT.
+Single Flask app on PORT (default 8000) handles both health checks and API requests.
 """
 
 import os
 import sys
 import time
-import threading
 import traceback
 from flask import Flask, request, jsonify
 from face_swap import do_face_swap
 
 PORT = int(os.environ.get("PORT", 8000))
-PORT_HEALTH = int(os.environ.get("PORT_HEALTH", 8001))
 
-# Main API app
-app = Flask("api")
-
-# Health check app
-health_app = Flask("health")
+app = Flask("worker")
 
 
-@health_app.route("/ping", methods=["GET"])
+@app.route("/ping", methods=["GET"])
+@app.route("/health", methods=["GET"])
 def ping():
-    """Health check endpoint."""
+    """Health check endpoint — same port as API."""
     return jsonify({"status": "ok"}), 200
 
 
@@ -87,26 +82,19 @@ def handler():
 
 
 if __name__ == "__main__":
-    import sys
-    print(f"[worker] Starting. Python={sys.version}, PORT={PORT}, PORT_HEALTH={PORT_HEALTH}", flush=True)
-    # Run health check server on PORT_HEALTH in background thread
-    health_thread = threading.Thread(
-        target=lambda: health_app.run(host="0.0.0.0", port=PORT_HEALTH, debug=False, use_reloader=False),
-        daemon=True
-    )
-    health_thread.start()
+    print(f"[worker] Starting. Python={sys.version}, PORT={PORT}", flush=True)
 
     # Preload models at startup (before accepting requests)
     from face_swap import warmup
     warmup()
 
-    # Log dependency versions (placed late so RunPod log capture sees it)
+    # Log dependency versions
     try:
         import requests as _req
         print(f"[worker] deps: requests={_req.__version__} (direct REST upload, no supabase SDK)", flush=True)
     except Exception as e:
         print(f"[worker] deps check failed: {e}", flush=True)
 
-    # Run main API server on PORT
+    # Single server handles both health checks and API
     print(f"[worker] Listening on 0.0.0.0:{PORT}", flush=True)
     app.run(host="0.0.0.0", port=PORT, debug=False)
