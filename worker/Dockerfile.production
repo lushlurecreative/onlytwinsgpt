@@ -43,12 +43,25 @@ RUN python -m pip install --no-cache-dir -r requirements-gpu.txt
 # Copy ONLY face-swap code (app, face_swap, storage - proven Phase 1 logic)
 COPY app.py face_swap.py storage.py .
 
+# Pre-download InsightFace models into the image so startup is instant
+# buffalo_l: face detection + recognition (~330MB)
+# inswapper_128: face swap ONNX model (~540MB)
+RUN python -c "\
+from insightface.app import FaceAnalysis; \
+app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider']); \
+app.prepare(ctx_id=-1, det_size=(640, 640)); \
+print('buffalo_l downloaded OK') \
+"
+RUN mkdir -p /root/.insightface/models && \
+    curl -L -o /root/.insightface/models/inswapper_128.onnx \
+    "https://huggingface.co/ezioruan/inswapper_128.onnx/resolve/main/inswapper_128.onnx" && \
+    ls -lh /root/.insightface/models/inswapper_128.onnx
+
 # Expose ports for RunPod Load Balancer
 EXPOSE 8000 8001
 
-# Health check endpoint (curl-based, more reliable than import requests)
-# Note: start-period=120s accounts for InsightFace model download on first run (~30-60s)
-HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+# Health check — models are baked in, so short start-period is fine
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8001/ping || exit 1
 
 # Start HTTP server (RunPod Load Balancer expects this)
