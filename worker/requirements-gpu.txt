@@ -11,7 +11,7 @@ python-dotenv==1.0.0
 
 # Face swap core
 insightface==0.7.3
-onnxruntime-gpu==1.23.2
+onnxruntime-gpu==1.17.1
 
 # Image processing
 opencv-python-headless==4.8.1.78
