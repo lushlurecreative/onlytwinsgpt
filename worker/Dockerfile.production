@@ -46,6 +46,10 @@ RUN python -m pip install --no-cache-dir -r requirements-gpu.txt
 RUN python -m pip install --no-cache-dir onnxruntime-gpu==1.17.1 \
     --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
 
+# Install PyTorch for GFPGAN (CUDA 12.1)
+RUN python -m pip install --no-cache-dir \
+    torch==2.1.2 torchvision==0.16.2 --index-url https://download.pytorch.org/whl/cu121
+
 # Pre-download buffalo_l model (~330MB) via direct URL
 RUN mkdir -p /root/.insightface/models/buffalo_l && \
     wget -q -O /tmp/buffalo_l.zip https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip && \
@@ -57,6 +61,12 @@ RUN mkdir -p /root/.insightface/models/buffalo_l && \
 RUN wget -q -O /root/.insightface/models/inswapper_128.onnx \
     "https://huggingface.co/ezioruan/inswapper_128.onnx/resolve/main/inswapper_128.onnx" && \
     ls -lh /root/.insightface/models/inswapper_128.onnx
+
+# Pre-download GFPGAN v1.4 model (~350MB) for face restoration
+RUN mkdir -p /root/.insightface/models && \
+    wget -q -O /root/.insightface/models/GFPGANv1.4.pth \
+    "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth" && \
+    ls -lh /root/.insightface/models/GFPGANv1.4.pth
 
 # Copy worker code
 COPY app.py face_swap.py storage.py .
