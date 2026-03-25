@@ -20,7 +20,7 @@ export async function checkRunPodHealth(
     // For Load Balancer endpoints, test by submitting a validation request
     // (actual job submission doesn't require auth, just connectivity)
     const response = await fetch(
-      `https://${endpointId}.api.runpod.ai/run`,
+      `https://api.runpod.ai/v2/${endpointId}/runsync`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -70,7 +70,7 @@ export async function pollRunPodJob(
   while (elapsedMs < maxWaitMs) {
     try {
       const response = await fetch(
-        `https://${endpointId}.api.runpod.ai/status/${jobId}`,
+        `https://api.runpod.ai/v2/${endpointId}/status/${jobId}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },

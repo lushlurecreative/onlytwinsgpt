@@ -85,7 +85,7 @@ async function callRunPodFaceSwap(
   }
 
   try {
-    const url = `https://${endpointId}.api.runpod.ai/run`;
+    const url = `https://api.runpod.ai/v2/${endpointId}/runsync`;
     const startMs = Date.now();
     console.log(
       `[${jobIdPrefix}] Submitting to: ${url} (timeout=${timeoutMs}ms)`
