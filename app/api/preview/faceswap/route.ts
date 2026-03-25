@@ -363,31 +363,21 @@ export async function POST(req: NextRequest) {
     // Use first user photo for all swaps
     const userPhotoUrl = signedUserUrls[0];
 
-    // TEMPORARY: Run only 1 swap to diagnose timeout vs broken worker
-    // TODO: Restore parallel 3-swap flow once worker is confirmed working
-    const diagnosticTarget = absoluteTargetUrls[0];
+    // Run all swaps in parallel
     console.log(
-      `[preview_faceswap:${requestId}] DIAGNOSTIC MODE: 1 swap only (of ${targetImageUrls.length} targets)`
+      `[preview_faceswap:${requestId}] Running ${absoluteTargetUrls.length} swaps in parallel`
     );
 
-    const singleResult = await callRunPodFaceSwap(
-      userPhotoUrl,
-      diagnosticTarget,
-      `preview_faceswap:${requestId}:swap_0`,
-      90000 // 90s timeout for diagnostic — gives worker time to cold-start
+    const swapPromises = absoluteTargetUrls.map((targetUrl, idx) =>
+      callRunPodFaceSwap(
+        userPhotoUrl,
+        targetUrl,
+        `preview_faceswap:${requestId}:swap_${idx}`,
+        120000 // 2 min timeout per swap
+      ).then((result) => ({ ...result, targetIdx: idx }))
     );
 
-    const results: SwapResult[] = [
-      { ...singleResult, targetIdx: 0 },
-      // Fill remaining slots as skipped so UI still renders 3 cards
-      ...targetImageUrls.slice(1).map((url, idx) => ({
-        targetIdx: idx + 1,
-        targetUrl: url,
-        swappedUrl: null as string | null,
-        success: false,
-        error: "Skipped (diagnostic mode)",
-      })),
-    ];
+    const results: SwapResult[] = await Promise.all(swapPromises);
 
     const successCount = results.filter((r) => r.success).length;
     console.log(
