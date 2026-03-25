@@ -142,6 +142,7 @@ def upload_to_uploads(local_path: str, storage_path: str, content_type: str = "i
             headers={
                 "Authorization": f"Bearer {service_key}",
                 "Content-Type": content_type,
+                "x-upsert": "true",
             },
             data=data,
             timeout=30,

@@ -1,6 +1,5 @@
 # Minimal face-swap worker - GPU path
-# Pinned versions for reproducibility
-# GPU inference only - no training, no FLUX
+# onnxruntime-gpu installed separately in Dockerfile (needs CUDA 12 index)
 
 # HTTP server
 flask==3.0.0
@@ -11,7 +10,6 @@ python-dotenv==1.0.0
 
 # Face swap core
 insightface==0.7.3
-onnxruntime-gpu==1.17.1
 
 # Image processing
 opencv-python-headless==4.8.1.78

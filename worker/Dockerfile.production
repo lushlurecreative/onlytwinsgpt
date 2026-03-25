@@ -1,7 +1,5 @@
 # GPU-optimized face-swap worker for RunPod
-# Based on PyTorch official image with CUDA 12.1 runtime
-# Reuses proven Phase 1 face-swap logic
-
+# CUDA 12.1 + cuDNN 8 base image
 FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
 
 ENV PYTHONUNBUFFERED=1 \
@@ -10,7 +8,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# System dependencies (use Python 3.10 — the Ubuntu 22.04 default)
+# System dependencies — includes wget/unzip for model downloads, libgl1/libglib for opencv
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-dev \
@@ -18,6 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
     curl \
+    wget \
+    unzip \
     libssl-dev \
     libffi-dev \
     libopenblas-dev \
@@ -27,6 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     libjpeg-dev \
     zlib1g-dev \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/* \
     && ln -sf /usr/bin/python3 /usr/bin/python
 
@@ -36,33 +38,35 @@ RUN python -m pip install --upgrade pip setuptools wheel
 # Pre-install Cython (required to build insightface from source)
 RUN python -m pip install --no-cache-dir cython numpy==1.24.3
 
-# Install GPU-optimized requirements
+# Install requirements (everything except onnxruntime-gpu)
 COPY requirements-gpu.txt .
 RUN python -m pip install --no-cache-dir -r requirements-gpu.txt
 
-# Copy ONLY face-swap code (app, face_swap, storage - proven Phase 1 logic)
-COPY app.py face_swap.py storage.py .
+# Install onnxruntime-gpu from CUDA 12 index (PyPI default is CUDA 11.8)
+RUN python -m pip install --no-cache-dir onnxruntime-gpu==1.17.1 \
+    --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
 
-# Pre-download InsightFace models into the image so startup is instant
-# buffalo_l: face detection + recognition (~330MB)
-# inswapper_128: face swap ONNX model (~540MB)
-RUN python -c "\
-from insightface.app import FaceAnalysis; \
-app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider']); \
-app.prepare(ctx_id=-1, det_size=(640, 640)); \
-print('buffalo_l downloaded OK') \
-"
-RUN mkdir -p /root/.insightface/models && \
-    curl -L -o /root/.insightface/models/inswapper_128.onnx \
+# Pre-download buffalo_l model (~330MB) via direct URL
+RUN mkdir -p /root/.insightface/models/buffalo_l && \
+    wget -q -O /tmp/buffalo_l.zip https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip && \
+    unzip -o /tmp/buffalo_l.zip -d /root/.insightface/models/buffalo_l && \
+    rm /tmp/buffalo_l.zip && \
+    ls -la /root/.insightface/models/buffalo_l/
+
+# Pre-download inswapper_128 model (~554MB)
+RUN wget -q -O /root/.insightface/models/inswapper_128.onnx \
     "https://huggingface.co/ezioruan/inswapper_128.onnx/resolve/main/inswapper_128.onnx" && \
     ls -lh /root/.insightface/models/inswapper_128.onnx
+
+# Copy worker code
+COPY app.py face_swap.py storage.py .
 
 # Expose ports for RunPod Load Balancer
 EXPOSE 8000 8001
 
-# Health check — models are baked in, so short start-period is fine
+# Health check — models are baked in, short start-period
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8001/ping || exit 1
 
-# Start HTTP server (RunPod Load Balancer expects this)
+# Start HTTP server
 CMD ["python", "app.py"]
