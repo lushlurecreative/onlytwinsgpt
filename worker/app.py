@@ -102,8 +102,8 @@ if __name__ == "__main__":
 
     # Log dependency versions (placed late so RunPod log capture sees it)
     try:
-        import httpx, supabase, gotrue
-        print(f"[worker] deps: httpx={httpx.__version__} supabase={supabase.__version__} gotrue={gotrue.__version__}", flush=True)
+        import requests as _req
+        print(f"[worker] deps: requests={_req.__version__} (direct REST upload, no supabase SDK)", flush=True)
     except Exception as e:
         print(f"[worker] deps check failed: {e}", flush=True)
 

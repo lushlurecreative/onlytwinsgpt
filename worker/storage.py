@@ -111,29 +111,50 @@ def upload_to_model_artifacts(local_path: str, storage_path: str) -> bool:
 
 
 def upload_to_uploads(local_path: str, storage_path: str, content_type: str = "image/jpeg") -> str | None:
-    """Upload file to uploads bucket (e.g. generated image). Returns public URL or None."""
+    """Upload file to uploads bucket using direct REST API (bypasses supabase SDK entirely)."""
     import sys
+    supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("SUPABASE_URL", "")
+    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
     print(f"[storage] upload_to_uploads: path={storage_path} local={local_path} size={os.path.getsize(local_path) if os.path.exists(local_path) else 'MISSING'}", flush=True)
     sys.stdout.flush()
-    sb = get_supabase()
-    if not sb:
-        print("[storage] upload_to_uploads: FAILED get_supabase returned None", flush=True)
+
+    if not supabase_url or not service_key:
+        print(f"[storage] upload_to_uploads: FAILED url={'SET' if supabase_url else 'MISSING'} key={'SET' if service_key else 'MISSING'}", flush=True)
         sys.stdout.flush()
         return None
+
+    if not requests:
+        print("[storage] upload_to_uploads: FAILED requests module not available", flush=True)
+        sys.stdout.flush()
+        return None
+
     try:
         with open(local_path, "rb") as f:
             data = f.read()
-        print(f"[storage] upload_to_uploads: uploading {len(data)} bytes to uploads/{storage_path}", flush=True)
+
+        upload_url = f"{supabase_url}/storage/v1/object/uploads/{storage_path}"
+        print(f"[storage] upload_to_uploads: POST {upload_url} ({len(data)} bytes)", flush=True)
         sys.stdout.flush()
-        resp = sb.storage.from_("uploads").upload(storage_path, data, file_options={"content-type": content_type})
-        print(f"[storage] upload_to_uploads: upload response={resp}", flush=True)
+
+        resp = requests.post(
+            upload_url,
+            headers={
+                "Authorization": f"Bearer {service_key}",
+                "Content-Type": content_type,
+            },
+            data=data,
+            timeout=30,
+        )
+
+        print(f"[storage] upload_to_uploads: response status={resp.status_code} body={resp.text[:300]}", flush=True)
         sys.stdout.flush()
-        # Construct public URL
-        supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("SUPABASE_URL", "")
-        if not supabase_url:
-            print("[storage] upload_to_uploads: FAILED supabase_url empty after upload", flush=True)
+
+        if resp.status_code not in (200, 201):
+            print(f"[storage] upload_to_uploads: FAILED status={resp.status_code}", flush=True)
             sys.stdout.flush()
             return None
+
         public_url = f"{supabase_url}/storage/v1/object/public/uploads/{storage_path}"
         print(f"[storage] upload_to_uploads: OK url={public_url}", flush=True)
         sys.stdout.flush()

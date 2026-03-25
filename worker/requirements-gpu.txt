@@ -6,9 +6,7 @@
 flask==3.0.0
 requests==2.31.0
 
-# Storage (supabase 2.4.0 requires httpx>=0.24,<0.26)
-supabase==2.4.0
-httpx==0.25.2
+# Storage (upload uses direct REST via requests — no supabase SDK needed)
 python-dotenv==1.0.0
 
 # Face swap core
