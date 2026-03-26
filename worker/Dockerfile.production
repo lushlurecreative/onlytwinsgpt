@@ -8,7 +8,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# System dependencies
+# System dependencies (including unzip for model packs)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-dev \
@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
     wget \
+    unzip \
     libssl-dev \
     libffi-dev \
     libopenblas-dev \
@@ -41,20 +42,41 @@ COPY requirements-gpu.txt .
 RUN python -m pip install --no-cache-dir -r requirements-gpu.txt
 
 # Replace CPU onnxruntime with GPU version (CUDA 12)
-# facefusionlib pulls in onnxruntime (CPU) — must remove it first to avoid conflicts
 RUN python -m pip uninstall -y onnxruntime && \
     python -m pip install --no-cache-dir onnxruntime-gpu==1.17.1 \
     --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
 
+# Download FaceFusion / InsightFace ONNX models
+# These are NOT bundled with the pip package — must be pre-downloaded
+RUN MODELS_DIR="/usr/local/lib/python3.10/dist-packages/.assets/models" && \
+    mkdir -p "$MODELS_DIR" && \
+    echo "Downloading InsightFace buffalo_l model pack..." && \
+    wget -q -O /tmp/buffalo_l.zip "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip" && \
+    unzip -o /tmp/buffalo_l.zip -d /tmp/buffalo_l && \
+    cp /tmp/buffalo_l/buffalo_l/*.onnx "$MODELS_DIR/" && \
+    rm -rf /tmp/buffalo_l /tmp/buffalo_l.zip && \
+    echo "Downloading inswapper_128 face swap model..." && \
+    wget -q -O "$MODELS_DIR/inswapper_128.onnx" "https://huggingface.co/ezioruan/inswapper_128.onnx/resolve/main/inswapper_128.onnx" && \
+    echo "Downloading GFPGAN face enhancer..." && \
+    wget -q -O "$MODELS_DIR/GFPGANv1.4.onnx" "https://github.com/facefusion/facefusion-assets/releases/download/models/GFPGANv1.4.onnx" || true && \
+    echo "Models downloaded:" && \
+    ls -la "$MODELS_DIR/"
+
 # Copy worker code
 COPY app.py face_swap.py storage.py .
 
-# Verify imports work
+# Verify imports and models
 RUN python -c "\
+import os; \
+models_dir = '/usr/local/lib/python3.10/dist-packages/.assets/models'; \
+files = os.listdir(models_dir); \
+print(f'Models in {models_dir}: {files}'); \
+assert 'gender_age.onnx' in files, 'gender_age.onnx missing!'; \
+assert 'inswapper_128.onnx' in files, 'inswapper_128.onnx missing!'; \
 from facefusionlib import swapper; \
 import runpod; \
-print('All imports OK'); \
-" || echo 'Import check done'
+print('All imports and models OK'); \
+"
 
-# RunPod Serverless — no EXPOSE needed, runpod SDK handles communication
+# RunPod Serverless — no EXPOSE needed
 CMD ["python", "app.py"]
