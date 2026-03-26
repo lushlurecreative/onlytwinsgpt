@@ -85,7 +85,8 @@ async function callRunPodFaceSwap(
   }
 
   try {
-    const url = `https://${endpointId}.api.runpod.ai/run`;
+    // RunPod Serverless v2 API (NOT Load Balancer subdomain format)
+    const url = `https://api.runpod.ai/v2/${endpointId}/runsync`;
     const startMs = Date.now();
     console.log(
       `[${jobIdPrefix}] Submitting to: ${url} (timeout=${timeoutMs}ms)`
@@ -160,9 +161,10 @@ async function callRunPodFaceSwap(
       };
     }
 
-    // Handle synchronous response (worker returns base64 image data)
-    if (result.status === "COMPLETED") {
-      const imageBase64 = result.output?.image_base64;
+    // Handle synchronous response from RunPod Serverless
+    // runsync returns: { id, status: "COMPLETED", output: { image_base64: "..." } }
+    if (result.status === "COMPLETED" && result.output) {
+      const imageBase64 = result.output?.image_base64 || result.output?.result?.image_base64;
       if (imageBase64 && typeof imageBase64 === "string") {
         const totalMs = Date.now() - startMs;
         console.log(
@@ -239,48 +241,47 @@ async function callRunPodFaceSwap(
       };
     }
 
-    // Handle async response with job ID (for future async worker implementations)
+    // Handle async response — runsync can return IN_QUEUE/IN_PROGRESS if worker is cold-starting
     const jobId = result.id;
-    if (jobId) {
-      console.log(`[${jobIdPrefix}] Job submitted: ${jobId}`);
+    if (jobId && (result.status === "IN_QUEUE" || result.status === "IN_PROGRESS")) {
+      console.log(`[${jobIdPrefix}] Job queued/in-progress: ${jobId}, polling...`);
       const pollResult = await pollRunPodJob(endpointId, jobId, 120000);
 
       if (pollResult.status === "COMPLETED") {
-        const swappedUrl =
-          pollResult.output?.swapped_image_url || pollResult.output;
-        if (swappedUrl && typeof swappedUrl === "string") {
-          console.log(`[${jobIdPrefix}] Job completed: ${swappedUrl}`);
-          return {
-            targetIdx: -1,
-            targetUrl: scenarioImageUrl,
-            swappedUrl: swappedUrl,
-            success: true,
-          };
+        // Polled result has same output format as direct runsync
+        const pollBase64 = pollResult.output?.image_base64;
+        if (pollBase64 && typeof pollBase64 === "string") {
+          console.log(`[${jobIdPrefix}] Poll completed: ${pollBase64.length} chars base64`);
+          try {
+            const admin = getSupabaseAdmin();
+            const buffer = Buffer.from(pollBase64, "base64");
+            const storagePath = `preview-faceswaps/${crypto.randomUUID()}.jpg`;
+            const { error: uploadError } = await admin.storage
+              .from("uploads")
+              .upload(storagePath, buffer, { contentType: "image/jpeg", upsert: true });
+            if (uploadError) {
+              return { targetIdx: -1, targetUrl: scenarioImageUrl, swappedUrl: null, success: false, error: `Upload failed: ${uploadError.message}` };
+            }
+            const { data: signedData } = await admin.storage
+              .from("uploads")
+              .createSignedUrl(storagePath, 3600);
+            const swappedUrl = signedData?.signedUrl ||
+              `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/uploads/${storagePath}`;
+            return { targetIdx: -1, targetUrl: scenarioImageUrl, swappedUrl, success: true };
+          } catch (uploadErr) {
+            return { targetIdx: -1, targetUrl: scenarioImageUrl, swappedUrl: null, success: false, error: "Upload failed" };
+          }
         }
       }
 
       if (pollResult.status === "FAILED") {
-        console.error(
-          `[${jobIdPrefix}] Job failed: ${pollResult.error || "unknown error"}`
-        );
-        return {
-          targetIdx: -1,
-          targetUrl: scenarioImageUrl,
-          swappedUrl: null,
-          success: false,
-          error: pollResult.error || "Job failed",
-        };
+        console.error(`[${jobIdPrefix}] Job failed: ${pollResult.error || "unknown error"}`);
+        return { targetIdx: -1, targetUrl: scenarioImageUrl, swappedUrl: null, success: false, error: pollResult.error || "Job failed" };
       }
 
       if (pollResult.status === "TIMEOUT") {
         console.error(`[${jobIdPrefix}] Job timed out: ${pollResult.error}`);
-        return {
-          targetIdx: -1,
-          targetUrl: scenarioImageUrl,
-          swappedUrl: null,
-          success: false,
-          error: "Job timeout",
-        };
+        return { targetIdx: -1, targetUrl: scenarioImageUrl, swappedUrl: null, success: false, error: "Job timeout" };
       }
     }
 

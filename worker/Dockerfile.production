@@ -1,4 +1,4 @@
-# GPU-optimized face-swap worker for RunPod
+# GPU face-swap worker for RunPod Serverless
 # CUDA 12.1 + cuDNN 8 base image
 FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
 
@@ -49,18 +49,12 @@ RUN python -m pip uninstall -y onnxruntime && \
 # Copy worker code
 COPY app.py face_swap.py storage.py .
 
-# Pre-download facefusionlib models during build (so first request doesn't timeout)
+# Verify imports work
 RUN python -c "\
 from facefusionlib import swapper; \
-print('facefusionlib imported OK'); \
-" || echo 'facefusionlib import check done'
+import runpod; \
+print('All imports OK'); \
+" || echo 'Import check done'
 
-# Single port for both health and API
-EXPOSE 8000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
-    CMD curl -f http://localhost:8000/ping || exit 1
-
-# Start HTTP server
+# RunPod Serverless — no EXPOSE needed, runpod SDK handles communication
 CMD ["python", "app.py"]

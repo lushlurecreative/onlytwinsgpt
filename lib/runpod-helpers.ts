@@ -17,22 +17,20 @@ export async function checkRunPodHealth(
   }
 
   try {
-    // For Load Balancer endpoints, test by submitting a validation request
-    // (actual job submission doesn't require auth, just connectivity)
+    const apiKey = process.env.RUNPOD_API_KEY;
+    // RunPod Serverless v2 health check
     const response = await fetch(
-      `https://api.runpod.ai/v2/${endpointId}/runsync`,
+      `https://api.runpod.ai/v2/${endpointId}/health`,
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          input: { type: "health_check" },
-        }),
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { "Authorization": `Bearer ${apiKey}` } : {}),
+        },
         timeout: 5000,
       } as any
     );
 
-    // Load Balancer returns 200 or 400+ but should be reachable
-    // Even 400 means the endpoint is up and received the request
     if (response.status >= 200 && response.status < 500) {
       return { healthy: true };
     }
@@ -67,13 +65,18 @@ export async function pollRunPodJob(
   const maxPollIntervalMs = 16000; // Max 16s between polls
   let attempts = 0;
 
+  const apiKey = process.env.RUNPOD_API_KEY;
+
   while (elapsedMs < maxWaitMs) {
     try {
       const response = await fetch(
         `https://api.runpod.ai/v2/${endpointId}/status/${jobId}`,
         {
           method: "GET",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(apiKey ? { "Authorization": `Bearer ${apiKey}` } : {}),
+          },
           timeout: 10000,
         } as any
       );

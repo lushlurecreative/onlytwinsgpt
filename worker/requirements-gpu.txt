@@ -1,8 +1,10 @@
-# Face-swap worker - GPU path
+# Face-swap worker - GPU path (RunPod Serverless)
 # onnxruntime-gpu installed separately in Dockerfile (needs CUDA 12 index)
 
-# HTTP server
-flask==3.0.0
+# RunPod Serverless SDK
+runpod>=1.6.0
+
+# HTTP client (for downloading images)
 requests==2.31.0
 
 # Storage
