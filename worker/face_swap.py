@@ -19,6 +19,11 @@ try:
 except ImportError as e:
     FACEFUSION_AVAILABLE = False
     print(f"[face_swap] FaceFusion not available: {e}", flush=True)
+except Exception as e:
+    FACEFUSION_AVAILABLE = False
+    print(f"[face_swap] FaceFusion import error (non-ImportError): {e}", flush=True)
+    import traceback
+    traceback.print_exc()
 
 
 def _log(msg: str):
@@ -33,39 +38,55 @@ def warmup():
     """Warmup — trigger model download on first import if needed."""
     if not FACEFUSION_AVAILABLE:
         _log("[face_swap] Cannot warmup: facefusionlib not installed")
+        _log("[face_swap] Checking what IS installed...")
+        try:
+            import pkg_resources
+            installed = [str(d) for d in pkg_resources.working_set]
+            face_pkgs = [p for p in installed if 'face' in p.lower() or 'onnx' in p.lower() or 'swap' in p.lower()]
+            _log(f"[face_swap] Relevant packages: {face_pkgs}")
+        except Exception:
+            pass
         return
 
     import time
     start = time.time()
     _log("[face_swap] Warming up FaceFusion...")
 
+    # Log onnxruntime providers
+    try:
+        import onnxruntime as ort
+        providers = ort.get_available_providers()
+        _log(f"[face_swap] ONNX Runtime providers: {providers}")
+    except Exception as e:
+        _log(f"[face_swap] ONNX Runtime check failed: {e}")
+
     # Run a tiny test swap to trigger model downloads and GPU init
     try:
-        # Create minimal test images (small solid color with a rough face-like region)
         test_dir = tempfile.mkdtemp()
         test_img = np.zeros((256, 256, 3), dtype=np.uint8)
-        test_img[60:200, 60:200] = 200  # bright square as fake face region
+        test_img[60:200, 60:200] = 200
         test_src = os.path.join(test_dir, "test_src.jpg")
         test_tgt = os.path.join(test_dir, "test_tgt.jpg")
         cv2.imwrite(test_src, test_img)
         cv2.imwrite(test_tgt, test_img)
 
-        # This triggers model downloads on first run
         try:
+            _log("[face_swap] Running warmup swap (CPU, dummy images)...")
             swapper.swap_face(
                 source_paths=[test_src],
                 target_path=test_tgt,
                 provider=DeviceProvider.CPU,
                 detector_score=0.1,
             )
-        except Exception:
-            pass  # Expected to fail on dummy images, but models are now cached
+            _log("[face_swap] Warmup swap completed (models downloaded)")
+        except Exception as e:
+            _log(f"[face_swap] Warmup swap expected error (models should be cached): {e}")
 
-        # Cleanup
         import shutil
         shutil.rmtree(test_dir, ignore_errors=True)
     except Exception as e:
-        _log(f"[face_swap] Warmup model trigger: {e}")
+        import traceback
+        _log(f"[face_swap] Warmup failed: {e}\n{traceback.format_exc()}")
 
     elapsed = round(time.time() - start, 1)
     _log(f"[face_swap] Warmup complete in {elapsed}s")

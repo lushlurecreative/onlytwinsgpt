@@ -40,12 +40,20 @@ RUN python -m pip install --no-cache-dir cython numpy==1.24.3
 COPY requirements-gpu.txt .
 RUN python -m pip install --no-cache-dir -r requirements-gpu.txt
 
-# Install onnxruntime-gpu from CUDA 12 index
-RUN python -m pip install --no-cache-dir onnxruntime-gpu==1.17.1 \
+# Replace CPU onnxruntime with GPU version (CUDA 12)
+# facefusionlib pulls in onnxruntime (CPU) — must remove it first to avoid conflicts
+RUN python -m pip uninstall -y onnxruntime && \
+    python -m pip install --no-cache-dir onnxruntime-gpu==1.17.1 \
     --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
 
 # Copy worker code
 COPY app.py face_swap.py storage.py .
+
+# Pre-download facefusionlib models during build (so first request doesn't timeout)
+RUN python -c "\
+from facefusionlib import swapper; \
+print('facefusionlib imported OK'); \
+" || echo 'facefusionlib import check done'
 
 # Single port for both health and API
 EXPOSE 8000
