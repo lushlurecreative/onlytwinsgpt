@@ -1,22 +1,16 @@
-# Minimal face-swap worker - GPU path
+# Face-swap worker - GPU path
 # onnxruntime-gpu installed separately in Dockerfile (needs CUDA 12 index)
 
 # HTTP server
 flask==3.0.0
 requests==2.31.0
 
-# Storage (upload uses direct REST via requests — no supabase SDK needed)
+# Storage
 python-dotenv==1.0.0
 
-# Face swap core
-insightface==0.7.3
+# Face swap (FaceFusion - industry leading quality)
+facefusionlib>=1.1.3
 
 # Image processing
 opencv-python-headless==4.8.1.78
 numpy==1.24.3
-
-# Face restoration (GFPGAN enhances swapped faces)
-gfpgan>=1.3.8
-basicsr>=1.4.2
-facexlib>=0.3.0
-realesrgan>=0.3.0

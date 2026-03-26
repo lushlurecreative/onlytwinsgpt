@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Face-swap module using InsightFace inswapper + GFPGAN face restoration.
-Downloads user photo and scenario image, swaps faces, enhances quality, returns base64.
+Face-swap module using FaceFusion (industry-leading face swap).
+Downloads user photo and scenario image, swaps faces, returns base64.
 """
 
 import os
@@ -12,208 +12,13 @@ import numpy as np
 from storage import download_from_url
 
 try:
-    import insightface
-    from insightface.app import FaceAnalysis
-    from insightface.model_zoo import get_model as get_insightface_model
-    import onnxruntime as ort
-    INSIGHTFACE_AVAILABLE = True
-    print(f"[face_swap] onnxruntime version={ort.__version__}", flush=True)
-    print(f"[face_swap] Available providers: {ort.get_available_providers()}", flush=True)
+    from facefusionlib import swapper
+    from facefusionlib.swapper import DeviceProvider
+    FACEFUSION_AVAILABLE = True
+    print("[face_swap] FaceFusion library available", flush=True)
 except ImportError as e:
-    INSIGHTFACE_AVAILABLE = False
-    print(f"Warning: insightface dependencies not fully available: {e}", flush=True)
-
-try:
-    from gfpgan import GFPGANer
-    GFPGAN_AVAILABLE = True
-    print("[face_swap] GFPGAN available", flush=True)
-except ImportError as e:
-    GFPGAN_AVAILABLE = False
-    print(f"[face_swap] GFPGAN not available: {e}", flush=True)
-
-# Module-level caches — loaded once at startup via warmup()
-_face_app = None
-_inswapper_session = None
-_gfpgan_enhancer = None
-
-
-def warmup():
-    """Preload models at startup so first request is fast."""
-    global _face_app, _inswapper_session, _gfpgan_enhancer
-
-    if not INSIGHTFACE_AVAILABLE:
-        print("[face_swap] Cannot warmup: insightface not available", flush=True)
-        return
-
-    import time
-    start = time.time()
-
-    # 1. Preload FaceAnalysis
-    print("[face_swap] Warming up FaceAnalysis (buffalo_l)...", flush=True)
-    providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
-    _face_app = FaceAnalysis(name="buffalo_l", root="/root/.insightface", providers=providers)
-    try:
-        _face_app.prepare(ctx_id=0, det_size=(640, 640))
-        print("[face_swap] FaceAnalysis using GPU (ctx_id=0)", flush=True)
-    except Exception:
-        _face_app.prepare(ctx_id=-1, det_size=(640, 640))
-        print("[face_swap] FaceAnalysis using CPU (ctx_id=-1)", flush=True)
-
-    # 2. Preload inswapper model
-    print("[face_swap] Warming up inswapper model...", flush=True)
-    _inswapper_session = _load_inswapper()
-    if _inswapper_session:
-        print(f"[face_swap] Inswapper loaded: {type(_inswapper_session).__name__}", flush=True)
-    else:
-        print("[face_swap] WARNING: inswapper failed to load", flush=True)
-
-    # 3. Preload GFPGAN face enhancer
-    if GFPGAN_AVAILABLE:
-        print("[face_swap] Warming up GFPGAN...", flush=True)
-        try:
-            _gfpgan_enhancer = GFPGANer(
-                model_path="/root/.insightface/models/GFPGANv1.4.pth",
-                upscale=1,  # Don't upscale, just enhance at original resolution
-                arch="clean",
-                channel_multiplier=2,
-                bg_upsampler=None,
-                device="cuda",
-            )
-            print("[face_swap] GFPGAN loaded successfully", flush=True)
-        except Exception as e:
-            import traceback
-            print(f"[face_swap] GFPGAN load failed: {e}\n{traceback.format_exc()}", flush=True)
-            _gfpgan_enhancer = None
-    else:
-        print("[face_swap] Skipping GFPGAN warmup (not installed)", flush=True)
-
-    elapsed = round(time.time() - start, 1)
-    print(f"[face_swap] Warmup complete in {elapsed}s", flush=True)
-
-
-def _load_inswapper():
-    """Load inswapper model from pre-downloaded path."""
-    model_path = "/root/.insightface/models/inswapper_128.onnx"
-    try:
-        if not os.path.exists(model_path):
-            print(f"[face_swap] inswapper model NOT FOUND at {model_path}", flush=True)
-            return None
-
-        file_size = os.path.getsize(model_path)
-        print(f"[face_swap] inswapper model found: {model_path} ({file_size} bytes)", flush=True)
-
-        swapper = get_insightface_model(model_path, download=False)
-        print(f"[face_swap] inswapper loaded via get_model: {type(swapper).__name__}", flush=True)
-        return swapper
-    except Exception as e:
-        import traceback
-        print(f"[face_swap] inswapper load FAILED: {e}\n{traceback.format_exc()}", flush=True)
-        return None
-
-
-def _enhance_face(image: np.ndarray) -> np.ndarray:
-    """Apply GFPGAN face restoration for better quality."""
-    global _gfpgan_enhancer
-    if _gfpgan_enhancer is None:
-        return image
-
-    try:
-        import time as _time
-        t0 = _time.time()
-        _, _, enhanced = _gfpgan_enhancer.enhance(
-            image,
-            has_aligned=False,
-            only_center_face=False,
-            paste_back=True,
-            weight=0.7,  # 0.7 = blend 70% enhanced + 30% original for natural look
-        )
-        elapsed = round(_time.time() - t0, 2)
-        _log(f"[enhance] GFPGAN complete in {elapsed}s, shape={enhanced.shape}")
-        return enhanced
-    except Exception as e:
-        _log(f"[enhance] GFPGAN failed, returning unenhanced: {e}")
-        return image
-
-
-def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | None:
-    """
-    Swap face from user_photo into scenario_image, then enhance with GFPGAN.
-    Returns the enhanced swapped image as numpy array, or None if swap fails.
-    """
-    _log(f"[swap_faces] ENTER user={user_photo_path} scenario={scenario_image_path}")
-
-    if not INSIGHTFACE_AVAILABLE:
-        _log("[swap_faces] RETURN_NONE reason=insightface_not_available")
-        return None
-
-    import time as _time
-    try:
-        global _face_app, _inswapper_session
-        if _face_app is None or _inswapper_session is None:
-            _log("[swap_faces] Models not preloaded, loading now...")
-            warmup()
-
-        if _face_app is None or _inswapper_session is None:
-            _log("[swap_faces] RETURN_NONE reason=models_failed_to_load")
-            return None
-
-        # Step 1: Decode images
-        t0 = _time.time()
-        user_img = cv2.imread(user_photo_path)
-        scenario_img = cv2.imread(scenario_image_path)
-
-        if user_img is None:
-            _log(f"[swap_faces] RETURN_NONE reason=user_img_decode_failed")
-            return None
-        if scenario_img is None:
-            _log(f"[swap_faces] RETURN_NONE reason=scenario_img_decode_failed")
-            return None
-        _log(f"[swap_faces] OK step=decode: user={user_img.shape} scenario={scenario_img.shape} ({round(_time.time()-t0,2)}s)")
-
-        # Step 2: Detect faces
-        t1 = _time.time()
-        user_faces = _face_app.get(user_img)
-        t_user_detect = round(_time.time()-t1, 2)
-
-        t2 = _time.time()
-        scenario_faces = _face_app.get(scenario_img)
-        t_scenario_detect = round(_time.time()-t2, 2)
-
-        if not user_faces:
-            _log(f"[swap_faces] RETURN_NONE reason=no_user_face detect_time={t_user_detect}s")
-            return None
-        if not scenario_faces:
-            _log(f"[swap_faces] RETURN_NONE reason=no_scenario_face detect_time={t_scenario_detect}s")
-            return None
-        _log(f"[swap_faces] OK step=detect: user_faces={len(user_faces)} ({t_user_detect}s) scenario_faces={len(scenario_faces)} ({t_scenario_detect}s)")
-
-        swapper = _inswapper_session
-        user_face = user_faces[0]
-
-        swapped = scenario_img.copy()
-
-        for face_idx, scenario_face in enumerate(scenario_faces):
-            try:
-                t_swap = _time.time()
-                swapped = swapper.get(swapped, scenario_face, user_face, paste_back=True)
-                elapsed = round(_time.time() - t_swap, 2)
-                _log(f"[swap_faces] OK step=swap face={face_idx}: ({elapsed}s)")
-            except Exception as e:
-                import traceback
-                _log(f"[swap_faces] FAIL face={face_idx}: {e}\n{traceback.format_exc()}")
-                continue
-
-        _log(f"[swap_faces] OK step=swap_complete: output={swapped.shape}")
-
-        # Step 3: Enhance with GFPGAN
-        enhanced = _enhance_face(swapped)
-        _log(f"[swap_faces] OK step=complete: output={enhanced.shape}")
-        return enhanced
-
-    except Exception as e:
-        import traceback
-        _log(f"[swap_faces] RETURN_NONE reason=exception error={e}\n{traceback.format_exc()}")
-        return None
+    FACEFUSION_AVAILABLE = False
+    print(f"[face_swap] FaceFusion not available: {e}", flush=True)
 
 
 def _log(msg: str):
@@ -224,9 +29,130 @@ def _log(msg: str):
     sys.stderr.flush()
 
 
+def warmup():
+    """Warmup — trigger model download on first import if needed."""
+    if not FACEFUSION_AVAILABLE:
+        _log("[face_swap] Cannot warmup: facefusionlib not installed")
+        return
+
+    import time
+    start = time.time()
+    _log("[face_swap] Warming up FaceFusion...")
+
+    # Run a tiny test swap to trigger model downloads and GPU init
+    try:
+        # Create minimal test images (small solid color with a rough face-like region)
+        test_dir = tempfile.mkdtemp()
+        test_img = np.zeros((256, 256, 3), dtype=np.uint8)
+        test_img[60:200, 60:200] = 200  # bright square as fake face region
+        test_src = os.path.join(test_dir, "test_src.jpg")
+        test_tgt = os.path.join(test_dir, "test_tgt.jpg")
+        cv2.imwrite(test_src, test_img)
+        cv2.imwrite(test_tgt, test_img)
+
+        # This triggers model downloads on first run
+        try:
+            swapper.swap_face(
+                source_paths=[test_src],
+                target_path=test_tgt,
+                provider=DeviceProvider.CPU,
+                detector_score=0.1,
+            )
+        except Exception:
+            pass  # Expected to fail on dummy images, but models are now cached
+
+        # Cleanup
+        import shutil
+        shutil.rmtree(test_dir, ignore_errors=True)
+    except Exception as e:
+        _log(f"[face_swap] Warmup model trigger: {e}")
+
+    elapsed = round(time.time() - start, 1)
+    _log(f"[face_swap] Warmup complete in {elapsed}s")
+
+
+def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | None:
+    """
+    Swap face from user_photo into scenario_image using FaceFusion.
+    Returns the swapped image as numpy array, or None if swap fails.
+    """
+    _log(f"[swap_faces] ENTER user={user_photo_path} scenario={scenario_image_path}")
+
+    if not FACEFUSION_AVAILABLE:
+        _log("[swap_faces] RETURN_NONE reason=facefusion_not_available")
+        return None
+
+    import time as _time
+    try:
+        t0 = _time.time()
+
+        # Determine provider — prefer GPU
+        try:
+            import onnxruntime as ort
+            providers = ort.get_available_providers()
+            if 'CUDAExecutionProvider' in providers:
+                provider = DeviceProvider.GPU
+                _log("[swap_faces] Using GPU provider")
+            else:
+                provider = DeviceProvider.CPU
+                _log("[swap_faces] Using CPU provider (no CUDA)")
+        except Exception:
+            provider = DeviceProvider.CPU
+            _log("[swap_faces] Using CPU provider (onnxruntime check failed)")
+
+        # Run FaceFusion face swap
+        _log("[swap_faces] Starting FaceFusion swap...")
+        t_swap = _time.time()
+
+        result = swapper.swap_face(
+            source_paths=[user_photo_path],
+            target_path=scenario_image_path,
+            provider=provider,
+            detector_score=0.5,
+            mask_blur=0.5,
+            landmarker_score=0.5,
+        )
+
+        swap_elapsed = round(_time.time() - t_swap, 2)
+        _log(f"[swap_faces] FaceFusion returned: type={type(result).__name__} ({swap_elapsed}s)")
+
+        # Handle result — could be numpy array, file path, or other
+        if result is None:
+            _log("[swap_faces] RETURN_NONE reason=swap_returned_none")
+            return None
+
+        if isinstance(result, np.ndarray):
+            _log(f"[swap_faces] OK result is ndarray shape={result.shape}")
+            return result
+
+        if isinstance(result, str) and os.path.exists(result):
+            _log(f"[swap_faces] OK result is file path: {result}")
+            img = cv2.imread(result)
+            if img is not None:
+                return img
+            _log("[swap_faces] RETURN_NONE reason=could_not_read_result_file")
+            return None
+
+        # Try converting to string path
+        result_str = str(result)
+        if os.path.exists(result_str):
+            img = cv2.imread(result_str)
+            if img is not None:
+                _log(f"[swap_faces] OK result converted to path: {result_str}")
+                return img
+
+        _log(f"[swap_faces] RETURN_NONE reason=unknown_result_type value={result_str[:200]}")
+        return None
+
+    except Exception as e:
+        import traceback
+        _log(f"[swap_faces] RETURN_NONE reason=exception error={e}\n{traceback.format_exc()}")
+        return None
+
+
 def do_face_swap(user_photo_url: str, scenario_image_url: str) -> str | None:
     """
-    Download images, swap faces, enhance, return base64-encoded JPEG.
+    Download images, swap faces with FaceFusion, return base64-encoded JPEG.
     """
     import time as _time
     _log(f"[do_face_swap] ENTER user_url={user_photo_url[:80]} scenario_url={scenario_image_url[:80]}")
