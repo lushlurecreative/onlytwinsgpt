@@ -46,20 +46,22 @@ RUN python -m pip uninstall -y onnxruntime && \
     python -m pip install --no-cache-dir onnxruntime-gpu==1.17.1 \
     --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
 
-# Download FaceFusion / InsightFace ONNX models
-# These are NOT bundled with the pip package — must be pre-downloaded
+# Download FaceFusion ONNX models (from facefusion-assets, NOT InsightFace buffalo_l)
+# facefusionlib expects these at ../.assets/models/ relative to the package
+# Models list derived from facefusionlib 1.1.3 source: face_analyser, face_masker, face_swapper, face_enhancer
 RUN MODELS_DIR="/usr/local/lib/python3.10/dist-packages/.assets/models" && \
+    BASE_URL="https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0" && \
     mkdir -p "$MODELS_DIR" && \
-    echo "Downloading InsightFace buffalo_l model pack..." && \
-    wget -q -O /tmp/buffalo_l.zip "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip" && \
-    unzip -o /tmp/buffalo_l.zip -d /tmp/buffalo_l && \
-    cp /tmp/buffalo_l/buffalo_l/*.onnx "$MODELS_DIR/" && \
-    rm -rf /tmp/buffalo_l /tmp/buffalo_l.zip && \
-    echo "Downloading inswapper_128 face swap model..." && \
-    wget -q -O "$MODELS_DIR/inswapper_128.onnx" "https://huggingface.co/ezioruan/inswapper_128.onnx/resolve/main/inswapper_128.onnx" && \
-    echo "Downloading GFPGAN face enhancer..." && \
-    wget -q -O "$MODELS_DIR/GFPGANv1.4.onnx" "https://github.com/facefusion/facefusion-assets/releases/download/models/GFPGANv1.4.onnx" || true && \
-    echo "Models downloaded:" && \
+    echo "=== Downloading facefusion models ===" && \
+    wget -q -O "$MODELS_DIR/yoloface_8n.onnx"       "$BASE_URL/yoloface_8n.onnx" && \
+    wget -q -O "$MODELS_DIR/arcface_w600k_r50.onnx"  "$BASE_URL/arcface_w600k_r50.onnx" && \
+    wget -q -O "$MODELS_DIR/gender_age.onnx"          "$BASE_URL/gender_age.onnx" && \
+    wget -q -O "$MODELS_DIR/2dfan4.onnx"              "$BASE_URL/2dfan4.onnx" && \
+    wget -q -O "$MODELS_DIR/inswapper_128.onnx"       "$BASE_URL/inswapper_128.onnx" && \
+    wget -q -O "$MODELS_DIR/gfpgan_1.4.onnx"          "$BASE_URL/gfpgan_1.4.onnx" && \
+    wget -q -O "$MODELS_DIR/face_occluder.onnx"       "$BASE_URL/face_occluder.onnx" && \
+    wget -q -O "$MODELS_DIR/face_parser.onnx"          "$BASE_URL/face_parser.onnx" && \
+    echo "=== All models downloaded ===" && \
     ls -la "$MODELS_DIR/"
 
 # Copy worker code
@@ -71,8 +73,9 @@ import os; \
 models_dir = '/usr/local/lib/python3.10/dist-packages/.assets/models'; \
 files = os.listdir(models_dir); \
 print(f'Models in {models_dir}: {files}'); \
-assert 'gender_age.onnx' in files, 'gender_age.onnx missing!'; \
-assert 'inswapper_128.onnx' in files, 'inswapper_128.onnx missing!'; \
+required = ['yoloface_8n.onnx', 'arcface_w600k_r50.onnx', 'gender_age.onnx', '2dfan4.onnx', 'inswapper_128.onnx', 'gfpgan_1.4.onnx', 'face_occluder.onnx', 'face_parser.onnx']; \
+missing = [m for m in required if m not in files]; \
+assert not missing, f'Missing models: {missing}'; \
 from facefusionlib import swapper; \
 import runpod; \
 print('All imports and models OK'); \
