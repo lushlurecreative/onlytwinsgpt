@@ -125,19 +125,24 @@ def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | N
         _log("[swap_faces] Starting FaceFusion swap...")
         t_swap = _time.time()
 
+        # Log input image sizes for diagnostics
+        src_img = cv2.imread(user_photo_path)
+        tgt_img = cv2.imread(scenario_image_path)
+        _log(f"[swap_faces] source_size={src_img.shape if src_img is not None else 'NONE'} target_size={tgt_img.shape if tgt_img is not None else 'NONE'}")
+
         result = swapper.swap_face(
             source_paths=[user_photo_path],
             target_path=scenario_image_path,
             provider=provider,
-            detector_score=0.5,
-            mask_blur=0.5,
+            detector_score=0.65,
+            mask_blur=0.3,
             landmarker_score=0.5,
         )
 
         swap_elapsed = round(_time.time() - t_swap, 2)
         _log(f"[swap_faces] FaceFusion returned: type={type(result).__name__} ({swap_elapsed}s)")
 
-        # Handle result — could be numpy array, file path, or other
+        # Handle result — could be file path (most common) or numpy array
         if result is None:
             _log("[swap_faces] RETURN_NONE reason=swap_returned_none")
             return None
@@ -150,6 +155,15 @@ def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | N
             _log(f"[swap_faces] OK result is file path: {result}")
             img = cv2.imread(result)
             if img is not None:
+                # Check if output differs from input (swap actually happened)
+                if tgt_img is not None and img.shape == tgt_img.shape:
+                    diff = cv2.absdiff(img, tgt_img)
+                    changed_pixels = np.count_nonzero(diff)
+                    total_pixels = diff.size
+                    change_pct = round(100 * changed_pixels / total_pixels, 1)
+                    _log(f"[swap_faces] DIFF_CHECK changed={change_pct}% pixels ({changed_pixels}/{total_pixels})")
+                    if change_pct < 1.0:
+                        _log("[swap_faces] WARNING: output nearly identical to input — swap may not have worked")
                 return img
             _log("[swap_faces] RETURN_NONE reason=could_not_read_result_file")
             return None
