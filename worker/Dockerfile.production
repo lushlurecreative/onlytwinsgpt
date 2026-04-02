@@ -51,15 +51,18 @@ RUN python -m pip uninstall -y onnxruntime && \
 # Models list derived from facefusionlib 1.1.3 source: face_analyser, face_masker, face_swapper, face_enhancer
 ENV MODELS_DIR="/usr/local/lib/python3.10/dist-packages/.assets/models"
 ENV MODELS_URL="https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0"
+# 3 models (gender_age, face_occluder, face_parser) were removed from facefusion-assets GitHub releases.
+# Sourced from HuggingFace mirror instead: huggingface.co/JackCui/facefusion
+ENV MODELS_HF="https://huggingface.co/JackCui/facefusion/resolve/main"
 RUN mkdir -p "$MODELS_DIR"
 RUN curl -fSL -o "$MODELS_DIR/yoloface_8n.onnx"       "$MODELS_URL/yoloface_8n.onnx"
 RUN curl -fSL -o "$MODELS_DIR/arcface_w600k_r50.onnx"  "$MODELS_URL/arcface_w600k_r50.onnx"
-RUN curl -fSL -o "$MODELS_DIR/gender_age.onnx"          "$MODELS_URL/gender_age.onnx"
+RUN curl -fSL -o "$MODELS_DIR/gender_age.onnx"          "$MODELS_HF/gender_age.onnx"
 RUN curl -fSL -o "$MODELS_DIR/2dfan4.onnx"              "$MODELS_URL/2dfan4.onnx"
 RUN curl -fSL -o "$MODELS_DIR/inswapper_128.onnx"       "$MODELS_URL/inswapper_128.onnx"
 RUN curl -fSL -o "$MODELS_DIR/gfpgan_1.4.onnx"          "$MODELS_URL/gfpgan_1.4.onnx"
-RUN curl -fSL -o "$MODELS_DIR/face_occluder.onnx"       "$MODELS_URL/face_occluder.onnx"
-RUN curl -fSL -o "$MODELS_DIR/face_parser.onnx"          "$MODELS_URL/face_parser.onnx"
+RUN curl -fSL -o "$MODELS_DIR/face_occluder.onnx"       "$MODELS_HF/face_occluder.onnx"
+RUN curl -fSL -o "$MODELS_DIR/face_parser.onnx"          "$MODELS_HF/face_parser.onnx"
 RUN echo "=== All models downloaded ===" && ls -la "$MODELS_DIR/"
 
 # Copy worker code
