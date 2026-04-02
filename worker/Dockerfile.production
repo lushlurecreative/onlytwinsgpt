@@ -53,14 +53,14 @@ RUN MODELS_DIR="/usr/local/lib/python3.10/dist-packages/.assets/models" && \
     BASE_URL="https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0" && \
     mkdir -p "$MODELS_DIR" && \
     echo "=== Downloading facefusion models ===" && \
-    wget -q -O "$MODELS_DIR/yoloface_8n.onnx"       "$BASE_URL/yoloface_8n.onnx" && \
-    wget -q -O "$MODELS_DIR/arcface_w600k_r50.onnx"  "$BASE_URL/arcface_w600k_r50.onnx" && \
-    wget -q -O "$MODELS_DIR/gender_age.onnx"          "$BASE_URL/gender_age.onnx" && \
-    wget -q -O "$MODELS_DIR/2dfan4.onnx"              "$BASE_URL/2dfan4.onnx" && \
-    wget -q -O "$MODELS_DIR/inswapper_128.onnx"       "$BASE_URL/inswapper_128.onnx" && \
-    wget -q -O "$MODELS_DIR/gfpgan_1.4.onnx"          "$BASE_URL/gfpgan_1.4.onnx" && \
-    wget -q -O "$MODELS_DIR/face_occluder.onnx"       "$BASE_URL/face_occluder.onnx" && \
-    wget -q -O "$MODELS_DIR/face_parser.onnx"          "$BASE_URL/face_parser.onnx" && \
+    wget -v -O "$MODELS_DIR/yoloface_8n.onnx"       "$BASE_URL/yoloface_8n.onnx" && \
+    wget -v -O "$MODELS_DIR/arcface_w600k_r50.onnx"  "$BASE_URL/arcface_w600k_r50.onnx" && \
+    wget -v -O "$MODELS_DIR/gender_age.onnx"          "$BASE_URL/gender_age.onnx" && \
+    wget -v -O "$MODELS_DIR/2dfan4.onnx"              "$BASE_URL/2dfan4.onnx" && \
+    wget -v -O "$MODELS_DIR/inswapper_128.onnx"       "$BASE_URL/inswapper_128.onnx" && \
+    wget -v -O "$MODELS_DIR/gfpgan_1.4.onnx"          "$BASE_URL/gfpgan_1.4.onnx" && \
+    wget -v -O "$MODELS_DIR/face_occluder.onnx"       "$BASE_URL/face_occluder.onnx" && \
+    wget -v -O "$MODELS_DIR/face_parser.onnx"          "$BASE_URL/face_parser.onnx" && \
     echo "=== All models downloaded ===" && \
     ls -la "$MODELS_DIR/"
 
