@@ -97,8 +97,10 @@ export async function uploadImageToComfyUI(
 /** Build the API-format prompt for one InfiniteYou generation. */
 export function buildInfiniteYouPrompt(
   imageName: string,
-  scenePrompt: string
+  scenePrompt: string,
+  options?: { steps?: number }
 ): Record<string, unknown> {
+  const steps = options?.steps ?? 28;
   return {
     "1": {
       class_type: "UNETLoader",
@@ -182,7 +184,7 @@ export function buildInfiniteYouPrompt(
         latent_image: ["13", 0],
         seed: Math.floor(Math.random() * 2 ** 32),
         control_after_generate: "randomize",
-        steps: 28,
+        steps,
         cfg: 1.0,
         sampler_name: "euler",
         scheduler: "simple",

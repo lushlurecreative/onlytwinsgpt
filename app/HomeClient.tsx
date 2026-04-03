@@ -13,10 +13,8 @@ const STAGES = [
   "Analysing your face…",
   "Extracting identity features…",
   "Building your AI twin…",
-  "Generating scene 1 of 3…",
-  "Generating scene 2 of 3…",
-  "Generating scene 3 of 3…",
-  "Finalising your preview…",
+  "Rendering your scene…",
+  "Almost ready…",
 ];
 
 interface SwapResult {
@@ -61,7 +59,7 @@ export default function HomeClient() {
     setPreviewResults(null);
 
     // Start progress animation immediately (runs alongside the API call)
-    const ESTIMATED_MS = 120_000; // ~100s for 3 generations + buffer
+    const ESTIMATED_MS = 20_000; // ~15s for 1 generation at 12 steps
     const tickMs = 200;
     let elapsed = 0;
     intervalRef.current = setInterval(() => {

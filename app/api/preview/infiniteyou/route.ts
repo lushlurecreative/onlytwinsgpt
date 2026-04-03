@@ -10,33 +10,21 @@ import {
 } from "@/lib/comfyui";
 
 export const runtime = "nodejs";
-export const maxDuration = 300; // 5 min — 3 sequential generations (~100s total)
+export const maxDuration = 60; // single image, 12 steps ≈ 15s
 
 /**
- * InfiniteYou preview: generate 3 identity-preserving AI images from one face photo.
- * Called from the homepage to give visitors a "wow" preview of their AI twin.
+ * InfiniteYou preview: generate 1 identity-preserving AI image from a face photo.
+ * Homepage hook — must be fast (~15s). Uses 12 inference steps for speed.
  *
  * POST { userPhotoUrl: string }
  * Returns { results: SwapResult[], successCount: number }
  */
 
-const PREVIEW_SCENES = [
-  {
-    prompt:
-      "professional portrait photo at a tropical beach, golden hour lighting, " +
-      "ocean in background, natural skin texture, 85mm lens, shallow depth of field, photorealistic",
-  },
-  {
-    prompt:
-      "stylish portrait in a modern city at night, neon lights reflecting, " +
-      "urban fashion, cinematic lighting, professional photography, photorealistic",
-  },
-  {
-    prompt:
-      "fitness portrait at a luxury gym, athletic wear, dramatic lighting, " +
-      "confident expression, professional sports photography, photorealistic",
-  },
-];
+const PREVIEW_PROMPT =
+  "professional portrait photo at a tropical beach, golden hour lighting, " +
+  "ocean in background, natural skin texture, 85mm lens, shallow depth of field, photorealistic";
+
+const PREVIEW_STEPS = 12; // fast preview (vs 28 for full quality)
 
 interface SwapResult {
   targetIdx: number;
@@ -120,76 +108,68 @@ export async function POST(req: NextRequest) {
     const imageName = await uploadImageToComfyUI(serverUrl, imageBuffer);
     console.log(`[infiniteyou:${requestId}] Uploaded to ComfyUI as: ${imageName}`);
 
-    // 4. Generate each scene sequentially
+    // 4. Generate one image (12 steps for speed)
     const admin = getSupabaseAdmin();
-    const results: SwapResult[] = [];
+    const startMs = Date.now();
 
-    for (let i = 0; i < PREVIEW_SCENES.length; i++) {
-      const scene = PREVIEW_SCENES[i];
-      const tag = `[infiniteyou:${requestId}:scene_${i}]`;
-      const startMs = Date.now();
+    try {
+      console.log(`[infiniteyou:${requestId}] Queueing (${PREVIEW_STEPS} steps)...`);
+      const prompt = buildInfiniteYouPrompt(imageName, PREVIEW_PROMPT, {
+        steps: PREVIEW_STEPS,
+      });
+      const promptId = await queuePrompt(serverUrl, prompt);
+      console.log(`[infiniteyou:${requestId}] Queued: ${promptId}`);
 
-      try {
-        console.log(`${tag} Queueing...`);
-        const prompt = buildInfiniteYouPrompt(imageName, scene.prompt);
-        const promptId = await queuePrompt(serverUrl, prompt);
-        console.log(`${tag} Queued: ${promptId}`);
+      const history = await waitForCompletion(serverUrl, promptId, 45_000);
+      const elapsed = ((Date.now() - startMs) / 1000).toFixed(1);
+      console.log(`[infiniteyou:${requestId}] Generated in ${elapsed}s`);
 
-        const history = await waitForCompletion(serverUrl, promptId, 120_000);
-        const elapsed = ((Date.now() - startMs) / 1000).toFixed(1);
-        console.log(`${tag} Generated in ${elapsed}s`);
+      const outputBuffer = await downloadOutput(serverUrl, history);
+      console.log(
+        `[infiniteyou:${requestId}] Downloaded: ${(outputBuffer.length / 1024).toFixed(0)} KB`
+      );
 
-        const outputBuffer = await downloadOutput(serverUrl, history);
-        console.log(`${tag} Downloaded: ${(outputBuffer.length / 1024).toFixed(0)} KB`);
-
-        // Upload result to Supabase
-        const storagePath = `preview-infiniteyou/${crypto.randomUUID()}.png`;
-        const { error: uploadError } = await admin.storage
-          .from("uploads")
-          .upload(storagePath, outputBuffer, {
-            contentType: "image/png",
-            upsert: true,
-          });
-
-        if (uploadError) {
-          throw new Error(`Supabase upload: ${uploadError.message}`);
-        }
-
-        const { data: signedData } = await admin.storage
-          .from("uploads")
-          .createSignedUrl(storagePath, 3600);
-
-        const swappedUrl =
-          signedData?.signedUrl ||
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/uploads/${storagePath}`;
-
-        console.log(`${tag} Complete — ${swappedUrl.slice(0, 60)}...`);
-
-        results.push({
-          targetIdx: i,
-          targetUrl: scene.prompt.slice(0, 60),
-          swappedUrl,
-          success: true,
+      // Upload result to Supabase
+      const storagePath = `preview-infiniteyou/${crypto.randomUUID()}.png`;
+      const { error: uploadError } = await admin.storage
+        .from("uploads")
+        .upload(storagePath, outputBuffer, {
+          contentType: "image/png",
+          upsert: true,
         });
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        console.error(`${tag} Failed: ${msg}`);
-        results.push({
-          targetIdx: i,
-          targetUrl: scene.prompt.slice(0, 60),
-          swappedUrl: null,
-          success: false,
-          error: msg,
-        });
+
+      if (uploadError) {
+        throw new Error(`Supabase upload: ${uploadError.message}`);
       }
+
+      const { data: signedData } = await admin.storage
+        .from("uploads")
+        .createSignedUrl(storagePath, 3600);
+
+      const swappedUrl =
+        signedData?.signedUrl ||
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/uploads/${storagePath}`;
+
+      console.log(
+        `[infiniteyou:${requestId}] Done in ${elapsed}s — ${swappedUrl.slice(0, 60)}...`
+      );
+
+      return NextResponse.json({
+        results: [
+          { targetIdx: 0, targetUrl: "", swappedUrl, success: true },
+        ] as SwapResult[],
+        successCount: 1,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`[infiniteyou:${requestId}] Generation failed: ${msg}`);
+      return NextResponse.json({
+        results: [
+          { targetIdx: 0, targetUrl: "", swappedUrl: null, success: false, error: msg },
+        ] as SwapResult[],
+        successCount: 0,
+      });
     }
-
-    const successCount = results.filter((r) => r.success).length;
-    console.log(
-      `[infiniteyou:${requestId}] Done: ${successCount}/${results.length} successful`
-    );
-
-    return NextResponse.json({ results, successCount });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error(`[infiniteyou:${requestId}] Fatal: ${msg}`);
