@@ -200,9 +200,13 @@ export function buildInfiniteYouPrompt(
       class_type: "VAEDecode",
       inputs: { samples: ["12", 0], vae: ["3", 0] },
     },
+    "16": {
+      class_type: "ImageSharpen",
+      inputs: { image: ["14", 0], sharpen_radius: 2, sigma: 0.5, alpha: 0.6 },
+    },
     "15": {
       class_type: "SaveImage",
-      inputs: { images: ["14", 0], filename_prefix: "onlytwins_preview" },
+      inputs: { images: ["16", 0], filename_prefix: "onlytwins_preview" },
     },
   };
 }
