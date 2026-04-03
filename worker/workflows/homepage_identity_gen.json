@@ -1,0 +1,194 @@
+{
+  "last_node_id": 20,
+  "last_link_id": 25,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "pos": [100, 100],
+      "size": [300, 80],
+      "properties": {},
+      "widgets_values": ["flux1-dev.safetensors", "fp8_e4m3fn_fast"]
+    },
+    {
+      "id": 2,
+      "type": "DualCLIPLoader",
+      "pos": [100, 250],
+      "size": [300, 80],
+      "properties": {},
+      "widgets_values": ["t5xxl_fp8_e4m3fn.safetensors", "clip_l.safetensors", "flux"]
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [100, 400],
+      "size": [300, 60],
+      "properties": {},
+      "widgets_values": ["ae.safetensors"]
+    },
+    {
+      "id": 4,
+      "type": "LoadImage",
+      "pos": [100, 550],
+      "size": [300, 300],
+      "title": "SOURCE IDENTITY PHOTO",
+      "properties": {},
+      "widgets_values": ["source_photo.png", "image"]
+    },
+    {
+      "id": 5,
+      "type": "IDEmbeddingModelLoader",
+      "pos": [500, 550],
+      "size": [350, 120],
+      "properties": {},
+      "widgets_values": ["sim_stage1/image_proj_model.bin", 16, "CUDA", "640"]
+    },
+    {
+      "id": 6,
+      "type": "ExtractIDEmbedding",
+      "pos": [900, 550],
+      "size": [250, 120],
+      "properties": {},
+      "inputs": [
+        {"name": "face_detector", "type": "MODEL", "link": null},
+        {"name": "arcface_model", "type": "MODEL", "link": null},
+        {"name": "image_proj_model", "type": "MODEL", "link": null},
+        {"name": "image", "type": "IMAGE", "link": null}
+      ],
+      "outputs": [
+        {"name": "CONDITIONING", "type": "CONDITIONING", "links": []}
+      ]
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncodeFlux",
+      "pos": [500, 100],
+      "size": [400, 200],
+      "title": "SCENE PROMPT (edit this)",
+      "properties": {},
+      "widgets_values": ["professional portrait photo at a tropical beach, golden hour lighting, ocean in background, natural skin texture, 85mm lens, shallow depth of field, photorealistic", "", 3.5]
+    },
+    {
+      "id": 8,
+      "type": "CLIPTextEncode",
+      "pos": [500, 350],
+      "size": [400, 100],
+      "title": "Negative Prompt",
+      "properties": {},
+      "widgets_values": ["blurry, deformed, ugly, bad anatomy, bad eyes, crossed eyes, disfigured, poorly drawn face, mutation, extra limb, cartoon, anime, drawing, painting"]
+    },
+    {
+      "id": 9,
+      "type": "EmptyImage",
+      "pos": [900, 750],
+      "size": [250, 100],
+      "title": "Empty Control (no pose guidance)",
+      "properties": {},
+      "widgets_values": [864, 1152, 1, 0]
+    },
+    {
+      "id": 10,
+      "type": "InfuseNetLoader",
+      "pos": [900, 900],
+      "size": [350, 60],
+      "properties": {},
+      "widgets_values": ["sim_stage1/infusenet_sim_fp8e4m3fn.safetensors"]
+    },
+    {
+      "id": 11,
+      "type": "InfuseNetApply",
+      "pos": [1300, 300],
+      "size": [300, 250],
+      "properties": {},
+      "widgets_values": [1.0, 0.0, 1.0]
+    },
+    {
+      "id": 12,
+      "type": "KSampler",
+      "pos": [1700, 200],
+      "size": [300, 300],
+      "properties": {},
+      "widgets_values": [0, "randomize", 28, 3.5, "euler", "simple", 1.0]
+    },
+    {
+      "id": 13,
+      "type": "EmptyLatentImage",
+      "pos": [1700, 550],
+      "size": [250, 100],
+      "properties": {},
+      "widgets_values": [1024, 1024, 1]
+    },
+    {
+      "id": 14,
+      "type": "VAEDecode",
+      "pos": [2100, 200],
+      "size": [200, 80],
+      "properties": {}
+    },
+    {
+      "id": 15,
+      "type": "SaveImage",
+      "pos": [2400, 200],
+      "size": [400, 400],
+      "title": "GENERATED OUTPUT",
+      "properties": {},
+      "widgets_values": ["onlytwins_hook"]
+    }
+  ],
+  "links": [
+    [1, 1, 0, 12, 0, "MODEL"],
+    [2, 2, 0, 7, 0, "CLIP"],
+    [3, 2, 0, 8, 0, "CLIP"],
+    [4, 3, 0, 14, 1, "VAE"],
+    [5, 4, 0, 6, 3, "IMAGE"],
+    [6, 5, 0, 6, 0, "MODEL"],
+    [7, 5, 1, 6, 1, "MODEL"],
+    [8, 5, 2, 6, 2, "MODEL"],
+    [9, 7, 0, 11, 0, "CONDITIONING"],
+    [10, 8, 0, 11, 5, "CONDITIONING"],
+    [11, 6, 0, 11, 1, "CONDITIONING"],
+    [12, 10, 0, 11, 2, "CONTROL_NET"],
+    [13, 9, 0, 11, 3, "IMAGE"],
+    [14, 11, 0, 12, 1, "CONDITIONING"],
+    [15, 11, 1, 12, 2, "CONDITIONING"],
+    [16, 13, 0, 12, 3, "LATENT"],
+    [17, 12, 0, 14, 0, "LATENT"],
+    [18, 14, 0, 15, 0, "IMAGE"],
+    [19, 3, 0, 11, 4, "VAE"]
+  ],
+  "groups": [
+    {
+      "title": "1. MODEL LOADING",
+      "bounding": [50, 50, 400, 470],
+      "color": "#3f789e"
+    },
+    {
+      "title": "2. IDENTITY (load your source photo here)",
+      "bounding": [450, 500, 800, 500],
+      "color": "#b58b2a"
+    },
+    {
+      "title": "3. PROMPT (edit scene description here)",
+      "bounding": [450, 50, 450, 430],
+      "color": "#2a9d8f"
+    },
+    {
+      "title": "4. GENERATION",
+      "bounding": [1250, 150, 550, 480],
+      "color": "#e76f51"
+    },
+    {
+      "title": "5. OUTPUT",
+      "bounding": [2050, 150, 800, 500],
+      "color": "#264653"
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.7,
+      "offset": [0, 0]
+    }
+  },
+  "version": 0.4
+}

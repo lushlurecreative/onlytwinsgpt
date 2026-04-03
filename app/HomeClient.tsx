@@ -8,16 +8,16 @@ import ChipHero from "@/components/ChipHero";
 import IPhoneMockup from "@/components/IPhoneMockup";
 import PreviewResults from "@/components/PreviewResults";
 import PremiumButton from "@/components/PremiumButton";
-import { PREVIEW_TARGETS } from "@/lib/gallery-data";
 
 const STAGES = [
-  "Analysing your photos…",
-  "Detecting facial features…",
-  "Mapping identity to scenarios…",
-  "Compositing 20 scenes…",
-  "Almost ready…",
+  "Analysing your face…",
+  "Extracting identity features…",
+  "Building your AI twin…",
+  "Generating scene 1 of 3…",
+  "Generating scene 2 of 3…",
+  "Generating scene 3 of 3…",
+  "Finalising your preview…",
 ];
-const STAGE_MS = 600;
 
 interface SwapResult {
   targetIdx: number;
@@ -60,27 +60,30 @@ export default function HomeClient() {
     setStageIdx(0);
     setPreviewResults(null);
 
+    // Start progress animation immediately (runs alongside the API call)
+    const ESTIMATED_MS = 120_000; // ~100s for 3 generations + buffer
+    const tickMs = 200;
+    let elapsed = 0;
+    intervalRef.current = setInterval(() => {
+      elapsed += tickMs;
+      // Progress caps at 95% until the API returns
+      const pct = Math.min((elapsed / ESTIMATED_MS) * 95, 95);
+      setProgress(pct);
+      const stageProgress = elapsed / ESTIMATED_MS;
+      setStageIdx(Math.min(Math.floor(stageProgress * STAGES.length), STAGES.length - 1));
+    }, tickMs);
+
     try {
-      // Get target image URLs from PREVIEW_TARGETS
-      const targetImageUrls = PREVIEW_TARGETS.map((item) => item.src);
+      console.log("[homepage] Calling InfiniteYou API with", photos.length, "photos");
 
-      console.log(
-        "[homepage] Calling face-swap API with",
-        photos.length,
-        "user photos and",
-        targetImageUrls.length,
-        "targets"
-      );
-
-      // Call face-swap API
-      const apiResponse = await fetch("/api/preview/faceswap", {
+      const apiResponse = await fetch("/api/preview/infiniteyou", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userPhotoUrls: photos,
-          targetImageUrls: targetImageUrls,
-        }),
+        body: JSON.stringify({ userPhotoUrl: photos[0] }),
       });
+
+      // Stop the animation
+      if (intervalRef.current) clearInterval(intervalRef.current);
 
       if (!apiResponse.ok) {
         console.error("[homepage] API error:", apiResponse.status);
@@ -91,33 +94,18 @@ export default function HomeClient() {
       }
 
       const apiResult = await apiResponse.json();
-      console.log("[homepage] Face-swap results:", apiResult);
+      console.log("[homepage] InfiniteYou results:", apiResult);
 
-      // Show progress animation while waiting for results
-      const totalMs = STAGES.length * STAGE_MS;
-      const tickMs = 40;
-      let elapsed = 0;
-
-      intervalRef.current = setInterval(() => {
-        elapsed += tickMs;
-        const pct = Math.min((elapsed / totalMs) * 100, 99);
-        setProgress(pct);
-        setStageIdx(
-          Math.min(Math.floor(elapsed / STAGE_MS), STAGES.length - 1)
-        );
-
-        if (elapsed >= totalMs) {
-          clearInterval(intervalRef.current!);
-          setProgress(100);
-          setTimeout(() => {
-            setProcessing(false);
-            setUploadedPhotos(photos);
-            setPreviewResults(apiResult.results || []);
-          }, 300);
-        }
-      }, tickMs);
+      // Fast-forward to 100% and show results
+      setProgress(100);
+      setTimeout(() => {
+        setProcessing(false);
+        setUploadedPhotos(photos);
+        setPreviewResults(apiResult.results || []);
+      }, 400);
     } catch (error) {
       console.error("[homepage] Processing error:", error);
+      if (intervalRef.current) clearInterval(intervalRef.current);
       setProgress(100);
       setProcessing(false);
       setUploadedPhotos(photos);
