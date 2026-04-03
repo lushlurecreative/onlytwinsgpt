@@ -9,7 +9,8 @@ const USER_AGENT = "OnlyTwins/1.0";
 
 const NEGATIVE_PROMPT =
   "blurry, deformed, ugly, bad anatomy, bad eyes, crossed eyes, disfigured, " +
-  "poorly drawn face, mutation, extra limb, cartoon, anime, drawing, painting";
+  "poorly drawn face, mutation, extra limb, cartoon, anime, drawing, painting, " +
+  "plastic skin, airbrushed, smooth skin, CGI, 3D render, illustration, digital art, unrealistic";
 
 // ---------------------------------------------------------------------------
 // Low-level HTTP helpers

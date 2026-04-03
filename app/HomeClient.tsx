@@ -59,7 +59,7 @@ export default function HomeClient() {
     setPreviewResults(null);
 
     // Start progress animation immediately (runs alongside the API call)
-    const ESTIMATED_MS = 20_000; // ~15s for 1 generation at 12 steps
+    const ESTIMATED_MS = 28_000; // ~24s for 1 generation at 20 steps
     const tickMs = 200;
     let elapsed = 0;
     intervalRef.current = setInterval(() => {

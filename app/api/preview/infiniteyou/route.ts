@@ -21,10 +21,11 @@ export const maxDuration = 60; // single image, 12 steps ≈ 15s
  */
 
 const PREVIEW_PROMPT =
-  "professional portrait photo at a tropical beach, golden hour lighting, " +
-  "ocean in background, natural skin texture, 85mm lens, shallow depth of field, photorealistic";
+  "raw candid photo of a person at a tropical beach, golden hour, natural sunlight, " +
+  "ocean waves in background, real skin texture with pores, 85mm f/1.4 lens, " +
+  "film grain, unretouched, editorial photography";
 
-const PREVIEW_STEPS = 12; // fast preview (vs 28 for full quality)
+const PREVIEW_STEPS = 20; // balance of quality and speed (~24s)
 
 interface SwapResult {
   targetIdx: number;
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest) {
       const promptId = await queuePrompt(serverUrl, prompt);
       console.log(`[infiniteyou:${requestId}] Queued: ${promptId}`);
 
-      const history = await waitForCompletion(serverUrl, promptId, 45_000);
+      const history = await waitForCompletion(serverUrl, promptId, 60_000);
       const elapsed = ((Date.now() - startMs) / 1000).toFixed(1);
       console.log(`[infiniteyou:${requestId}] Generated in ${elapsed}s`);
 
