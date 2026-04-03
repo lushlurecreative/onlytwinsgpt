@@ -66,7 +66,7 @@ RUN curl -fSL -o "$MODELS_DIR/face_parser.onnx"          "$MODELS_HF/face_parser
 RUN echo "=== All models downloaded ===" && ls -la "$MODELS_DIR/"
 
 # Copy worker code
-COPY app.py face_swap.py storage.py .
+COPY app.py face_swap.py face_enhance.py storage.py .
 
 # Verify imports and models
 RUN python -c "\
@@ -78,6 +78,7 @@ required = ['yoloface_8n.onnx', 'arcface_w600k_r50.onnx', 'gender_age.onnx', '2d
 missing = [m for m in required if m not in files]; \
 assert not missing, f'Missing models: {missing}'; \
 from facefusionlib import swapper; \
+from face_enhance import enhance_face_image; \
 import runpod; \
 print('All imports and models OK'); \
 "

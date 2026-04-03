@@ -25,6 +25,17 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 
+try:
+    from face_enhance import enhance_face_image
+    ENHANCE_AVAILABLE = True
+    print("[face_swap] Face enhancement available", flush=True)
+except ImportError:
+    ENHANCE_AVAILABLE = False
+    print("[face_swap] Face enhancement not available (face_enhance module missing)", flush=True)
+except Exception as e:
+    ENHANCE_AVAILABLE = False
+    print(f"[face_swap] Face enhancement import error: {e}", flush=True)
+
 
 def _log(msg: str):
     """Guaranteed log line with forced flush."""
@@ -94,8 +105,9 @@ def warmup():
 
 def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | None:
     """
-    Swap face from user_photo into scenario_image using FaceFusion.
-    Returns the swapped image as numpy array, or None if swap fails.
+    Swap face from user_photo into scenario_image using FaceFusion,
+    then enhance with GFPGAN face restoration + feathered blending.
+    Returns the final image as numpy array, or None if swap fails.
     """
     _log(f"[swap_faces] ENTER user={user_photo_path} scenario={scenario_image_path}")
 
@@ -135,49 +147,64 @@ def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | N
             target_path=scenario_image_path,
             provider=provider,
             detector_score=0.65,
-            mask_blur=0.3,
+            mask_blur=0.5,
             landmarker_score=0.5,
         )
 
         swap_elapsed = round(_time.time() - t_swap, 2)
         _log(f"[swap_faces] FaceFusion returned: type={type(result).__name__} ({swap_elapsed}s)")
 
-        # Handle result — could be file path (most common) or numpy array
+        # ── Parse swap result into ndarray ────────────────────────────
+        swapped_img = None
+
         if result is None:
             _log("[swap_faces] RETURN_NONE reason=swap_returned_none")
             return None
 
         if isinstance(result, np.ndarray):
             _log(f"[swap_faces] OK result is ndarray shape={result.shape}")
-            return result
+            swapped_img = result
 
-        if isinstance(result, str) and os.path.exists(result):
+        elif isinstance(result, str) and os.path.exists(result):
             _log(f"[swap_faces] OK result is file path: {result}")
-            img = cv2.imread(result)
-            if img is not None:
-                # Check if output differs from input (swap actually happened)
-                if tgt_img is not None and img.shape == tgt_img.shape:
-                    diff = cv2.absdiff(img, tgt_img)
-                    changed_pixels = np.count_nonzero(diff)
-                    total_pixels = diff.size
-                    change_pct = round(100 * changed_pixels / total_pixels, 1)
-                    _log(f"[swap_faces] DIFF_CHECK changed={change_pct}% pixels ({changed_pixels}/{total_pixels})")
-                    if change_pct < 1.0:
-                        _log("[swap_faces] WARNING: output nearly identical to input — swap may not have worked")
-                return img
-            _log("[swap_faces] RETURN_NONE reason=could_not_read_result_file")
+            swapped_img = cv2.imread(result)
+
+        else:
+            result_str = str(result)
+            if os.path.exists(result_str):
+                _log(f"[swap_faces] OK result converted to path: {result_str}")
+                swapped_img = cv2.imread(result_str)
+            else:
+                _log(f"[swap_faces] RETURN_NONE reason=unknown_result_type value={result_str[:200]}")
+                return None
+
+        if swapped_img is None:
+            _log("[swap_faces] RETURN_NONE reason=could_not_read_result")
             return None
 
-        # Try converting to string path
-        result_str = str(result)
-        if os.path.exists(result_str):
-            img = cv2.imread(result_str)
-            if img is not None:
-                _log(f"[swap_faces] OK result converted to path: {result_str}")
-                return img
+        # Diff check — verify swap actually changed pixels
+        if tgt_img is not None and swapped_img.shape == tgt_img.shape:
+            diff = cv2.absdiff(swapped_img, tgt_img)
+            changed_pixels = np.count_nonzero(diff)
+            total_pixels = diff.size
+            change_pct = round(100 * changed_pixels / total_pixels, 1)
+            _log(f"[swap_faces] DIFF_CHECK changed={change_pct}% pixels ({changed_pixels}/{total_pixels})")
+            if change_pct < 1.0:
+                _log("[swap_faces] WARNING: output nearly identical to input — swap may not have worked")
 
-        _log(f"[swap_faces] RETURN_NONE reason=unknown_result_type value={result_str[:200]}")
-        return None
+        # ── Stage 3: GFPGAN face restoration + feathered blend ────────
+        if ENHANCE_AVAILABLE:
+            _log("[swap_faces] Running face enhancement (GFPGAN)...")
+            t_enhance = _time.time()
+            swapped_img = enhance_face_image(swapped_img)
+            enhance_elapsed = round(_time.time() - t_enhance, 2)
+            _log(f"[swap_faces] Enhancement done ({enhance_elapsed}s)")
+        else:
+            _log("[swap_faces] Enhancement not available — returning raw swap")
+
+        total_elapsed = round(_time.time() - t0, 2)
+        _log(f"[swap_faces] DONE shape={swapped_img.shape} ({total_elapsed}s total)")
+        return swapped_img
 
     except Exception as e:
         import traceback
