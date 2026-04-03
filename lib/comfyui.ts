@@ -60,12 +60,14 @@ export async function checkComfyUIHealth(
   }
 }
 
-/** Upload a source photo to ComfyUI's /input directory. */
+/** Upload a source photo to ComfyUI's /input directory with a unique name. */
 export async function uploadImageToComfyUI(
   serverUrl: string,
   imageBuffer: Buffer,
-  filename = "source_photo.png"
+  filename?: string
 ): Promise<string> {
+  // Unique filename per upload to prevent concurrent requests overwriting each other
+  filename = filename || `ot_${crypto.randomUUID().slice(0, 8)}.png`;
   const boundary = crypto.randomUUID().replace(/-/g, "");
 
   const head = Buffer.from(
