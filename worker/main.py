@@ -231,27 +231,40 @@ def run_generation_job(job: dict) -> None:
                 update_generation_job(job_id, "failed", None)
                 return
 
-        lora_local = None
-        if lora_model_reference and lora_model_reference.startswith("model_artifacts/"):
-            storage_path = lora_model_reference.replace("model_artifacts/", "", 1)
-            lora_local = os.path.join(tmp, "lora.safetensors")
-            if not download_from_model_artifacts(storage_path, lora_local):
-                lora_local = None
+        out_local = os.path.join(tmp, "out.png")
 
+        # 2-step pipeline: FLUX scene generation + FaceFusion face swap
         try:
-            from generate_flux import generate
-            out_local = os.path.join(tmp, "out.png")
-            generate(
+            from generate_swap import generate_and_swap
+            generate_and_swap(
+                source_face_path=ref_local,
                 prompt=prompt,
-                negative_prompt=negative_prompt,
                 output_path=out_local,
-                lora_path=lora_local,
+                negative_prompt=negative_prompt,
                 upscale=True,
             )
         except ImportError as e:
-            print(f"Generation module missing: {e}")
-            update_generation_job(job_id, "failed", None)
-            return
+            print(f"generate_swap module missing, falling back to generate_flux: {e}")
+            # Fallback: old pipeline (FLUX only, no face swap)
+            try:
+                from generate_flux import generate
+                lora_local = None
+                if lora_model_reference and lora_model_reference.startswith("model_artifacts/"):
+                    storage_path = lora_model_reference.replace("model_artifacts/", "", 1)
+                    lora_local = os.path.join(tmp, "lora.safetensors")
+                    if not download_from_model_artifacts(storage_path, lora_local):
+                        lora_local = None
+                generate(
+                    prompt=prompt,
+                    negative_prompt=negative_prompt,
+                    output_path=out_local,
+                    lora_path=lora_local,
+                    upscale=True,
+                )
+            except ImportError as e2:
+                print(f"Generation module missing: {e2}")
+                update_generation_job(job_id, "failed", None)
+                return
         except Exception as e:
             print(f"Generation failed: {e}")
             update_generation_job(job_id, "failed", None)

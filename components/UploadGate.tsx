@@ -6,13 +6,14 @@ import { galleryItems } from "@/lib/gallery-data";
 import { uploadImageToSupabase, blobUrlToBlob } from "@/lib/supabase-helpers";
 
 type Props = {
-  onComplete: (photos: string[]) => void;
+  onComplete: (photos: string[], gender: string) => void;
 };
 
 const sampleItems = galleryItems.filter((i) => !i.nsfw && i.type === "image").slice(0, 4);
 
 export default function UploadGate({ onComplete }: Props) {
   const [slots, setSlots] = useState<(string | null)[]>([null, null, null]);
+  const [gender, setGender] = useState<"male" | "female">("female");
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -94,7 +95,7 @@ export default function UploadGate({ onComplete }: Props) {
 
       // All uploads succeeded
       setUploading(false);
-      onComplete(publicUrls);
+      onComplete(publicUrls, gender);
     } catch (error) {
       setUploadError(
         error instanceof Error ? error.message : "Upload failed"
@@ -105,7 +106,7 @@ export default function UploadGate({ onComplete }: Props) {
 
   const handleSample = (src: string) => {
     // Samples are already public URLs from gallery
-    onComplete([src, src, src]);
+    onComplete([src, src, src], gender);
   };
 
   return (
@@ -125,6 +126,32 @@ export default function UploadGate({ onComplete }: Props) {
         <p className="ug-sub">
           Drop 3 photos. We&apos;ll show you the exact style of content we generate — free, before you pay anything.
         </p>
+
+        {/* Gender toggle */}
+        <div style={{
+          display: "flex", gap: 8, justifyContent: "center", marginBottom: 16,
+        }}>
+          {(["male", "female"] as const).map((g) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setGender(g)}
+              style={{
+                padding: "8px 24px",
+                borderRadius: 999,
+                border: gender === g ? "2px solid #a855f7" : "1px solid rgba(255,255,255,0.15)",
+                background: gender === g ? "rgba(168,85,247,0.15)" : "rgba(255,255,255,0.04)",
+                color: gender === g ? "#c084fc" : "rgba(255,255,255,0.5)",
+                fontWeight: gender === g ? 600 : 400,
+                fontSize: "0.9rem",
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+            >
+              {g === "male" ? "Male" : "Female"}
+            </button>
+          ))}
+        </div>
 
         {/* Drop zone */}
         <div

@@ -97,6 +97,76 @@ export async function uploadImageToComfyUI(
   return data.name || filename;
 }
 
+/** Build FLUX-only scene prompt (no identity — generic person for face swap pipeline). */
+export function buildFluxScenePrompt(
+  scenePrompt: string,
+  options?: { steps?: number; seed?: number; width?: number; height?: number }
+): Record<string, unknown> {
+  const steps = options?.steps ?? 20;
+  const seed = options?.seed ?? Math.floor(Math.random() * 2 ** 32);
+  const width = options?.width ?? 1024;
+  const height = options?.height ?? 1024;
+  return {
+    "1": {
+      class_type: "UNETLoader",
+      inputs: { unet_name: "flux1-dev.safetensors", weight_dtype: "fp8_e4m3fn_fast" },
+    },
+    "2": {
+      class_type: "DualCLIPLoader",
+      inputs: {
+        clip_name1: "t5xxl_fp8_e4m3fn.safetensors",
+        clip_name2: "clip_l.safetensors",
+        type: "flux",
+      },
+    },
+    "3": {
+      class_type: "VAELoader",
+      inputs: { vae_name: "ae.safetensors" },
+    },
+    "7": {
+      class_type: "CLIPTextEncodeFlux",
+      inputs: {
+        clip: ["2", 0],
+        clip_l: scenePrompt,
+        t5xxl: scenePrompt,
+        guidance: 3.5,
+      },
+    },
+    "8": {
+      class_type: "CLIPTextEncode",
+      inputs: { clip: ["2", 0], text: NEGATIVE_PROMPT },
+    },
+    "12": {
+      class_type: "KSampler",
+      inputs: {
+        model: ["1", 0],
+        positive: ["7", 0],
+        negative: ["8", 0],
+        latent_image: ["13", 0],
+        seed,
+        control_after_generate: "randomize",
+        steps,
+        cfg: 1.0,
+        sampler_name: "euler",
+        scheduler: "simple",
+        denoise: 1.0,
+      },
+    },
+    "13": {
+      class_type: "EmptyLatentImage",
+      inputs: { width, height, batch_size: 1 },
+    },
+    "14": {
+      class_type: "VAEDecode",
+      inputs: { samples: ["12", 0], vae: ["3", 0] },
+    },
+    "15": {
+      class_type: "SaveImage",
+      inputs: { images: ["14", 0], filename_prefix: "flux_scene" },
+    },
+  };
+}
+
 /** Build the API-format prompt for one InfiniteYou generation. */
 export function buildInfiniteYouPrompt(
   imageName: string,

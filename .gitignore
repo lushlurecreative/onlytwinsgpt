@@ -46,3 +46,12 @@ supabase/.temp/
 
 # MCP server config (contains API keys — local only)
 .mcp.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Test output images
+output_*.png
+test_*.jpg
+faceswap_test_*.jpg

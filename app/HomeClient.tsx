@@ -51,7 +51,7 @@ export default function HomeClient() {
     };
   }, [uploadedPhotos]);
 
-  async function startProcessing(photos: string[]) {
+  async function startProcessing(photos: string[], gender: string = "female") {
     setPendingPhotos(photos);
     setProcessing(true);
     setProgress(0);
@@ -59,7 +59,7 @@ export default function HomeClient() {
     setPreviewResults(null);
 
     // Start progress animation immediately (runs alongside the API call)
-    const ESTIMATED_MS = 28_000; // ~24s for 1 generation at 20 steps
+    const ESTIMATED_MS = 45_000; // ~40s for FLUX generation + face swap
     const tickMs = 200;
     let elapsed = 0;
     intervalRef.current = setInterval(() => {
@@ -72,12 +72,12 @@ export default function HomeClient() {
     }, tickMs);
 
     try {
-      console.log("[homepage] Calling InfiniteYou API with", photos.length, "photos");
+      console.log("[homepage] Calling generate-swap API with", photos.length, "photos");
 
-      const apiResponse = await fetch("/api/preview/infiniteyou", {
+      const apiResponse = await fetch("/api/preview/generate-swap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userPhotoUrl: photos[0] }),
+        body: JSON.stringify({ userPhotoUrl: photos[0], gender }),
       });
 
       // Stop the animation
@@ -92,7 +92,7 @@ export default function HomeClient() {
       }
 
       const apiResult = await apiResponse.json();
-      console.log("[homepage] InfiniteYou results:", apiResult);
+      console.log("[homepage] generate-swap results:", apiResult);
 
       // Fast-forward to 100% and show results
       setProgress(100);
