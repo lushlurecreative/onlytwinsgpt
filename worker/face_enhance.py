@@ -25,6 +25,7 @@ MODELS_DIR = os.environ.get(
 GFPGAN_MODEL_PATH = os.path.join(MODELS_DIR, "gfpgan_1.4.onnx")
 YOLO_MODEL_PATH = os.path.join(MODELS_DIR, "yoloface_8n.onnx")
 FACE_PARSER_MODEL_PATH = os.path.join(MODELS_DIR, "face_parser.onnx")
+FAN_MODEL_PATH = os.path.join(MODELS_DIR, "2dfan4.onnx")
 
 # CelebAMask-HQ class IDs for face interior (no ears, hair, neck, background)
 FACE_MASK_CLASSES = frozenset({
@@ -144,6 +145,113 @@ def _get_face_parser_session():
         _face_parser_session = ort.InferenceSession(FACE_PARSER_MODEL_PATH, providers=providers)
         _log(f"[face_enhance] face_parser session loaded (providers={providers})")
     return _face_parser_session
+
+
+_fan_session = None
+
+
+def _get_fan_session():
+    global _fan_session
+    if _fan_session is None:
+        import onnxruntime as ort
+        available = ort.get_available_providers()
+        providers = [p for p in ["CUDAExecutionProvider", "CPUExecutionProvider"] if p in available]
+        _fan_session = ort.InferenceSession(FAN_MODEL_PATH, providers=providers)
+        _log(f"[face_enhance] 2dfan4 session loaded (providers={providers})")
+    return _fan_session
+
+
+def detect_68_landmarks(image_bgr: np.ndarray) -> np.ndarray | None:
+    """
+    Detect the largest face and return 68 landmarks [[x,y], ...].
+
+    Pipeline:
+      1. YOLOFace 8n → 5-point landmarks + bounding box
+      2. Crop + align face to 256×256 (2dfan4 input size)
+      3. 2dfan4 → 68 heatmaps → argmax per heatmap → 68 points
+      4. Inverse-transform points back to original image coords
+
+    Returns None if no face found.
+    """
+    if not os.path.isfile(FAN_MODEL_PATH):
+        _log(f"[68_landmarks] 2dfan4.onnx not found at {FAN_MODEL_PATH}")
+        return None
+
+    # 1. Detect face with yoloface to get bounding box + 5-point landmarks
+    landmarks_5 = _detect_face_landmarks(image_bgr)
+    if landmarks_5 is None:
+        _log("[68_landmarks] No face detected by yoloface")
+        return None
+
+    # 2. Compute face crop: use 5-point landmarks to define a square crop
+    #    centered on the face, padded to include forehead/chin
+    h, w = image_bgr.shape[:2]
+
+    # Face center and size from 5-point landmarks
+    lm_min = landmarks_5.min(axis=0)
+    lm_max = landmarks_5.max(axis=0)
+    face_cx = (lm_min[0] + lm_max[0]) / 2.0
+    face_cy = (lm_min[1] + lm_max[1]) / 2.0
+    face_size = max(lm_max[0] - lm_min[0], lm_max[1] - lm_min[1])
+
+    # Expand crop to 2.0x face size (captures forehead, chin, ears)
+    crop_size = face_size * 2.0
+    x1 = face_cx - crop_size / 2.0
+    y1 = face_cy - crop_size / 2.0
+    x2 = face_cx + crop_size / 2.0
+    y2 = face_cy + crop_size / 2.0
+
+    # Clamp to image bounds
+    x1_c = max(0, int(x1))
+    y1_c = max(0, int(y1))
+    x2_c = min(w, int(x2))
+    y2_c = min(h, int(y2))
+
+    crop = image_bgr[y1_c:y2_c, x1_c:x2_c]
+    if crop.size == 0:
+        _log("[68_landmarks] Empty crop")
+        return None
+
+    # Resize crop to 256×256 for 2dfan4
+    crop_h, crop_w = crop.shape[:2]
+    fan_input = cv2.resize(crop, (256, 256))
+
+    # 3. Preprocess for 2dfan4: RGB, [0,1], NCHW
+    blob = fan_input[:, :, ::-1].astype(np.float32) / 255.0
+    blob = blob.transpose(2, 0, 1)[np.newaxis, ...]  # [1, 3, 256, 256]
+
+    # 4. Run 2dfan4
+    session = _get_fan_session()
+    input_name = session.get_inputs()[0].name
+    outputs = session.run(None, {input_name: blob})
+    heatmaps = outputs[0]  # [1, 68, 64, 64]
+
+    heatmaps = heatmaps.squeeze(0)  # [68, 64, 64]
+    n_points = heatmaps.shape[0]
+
+    # 5. Extract landmarks: argmax of each heatmap → (x, y) in 64×64 space
+    landmarks_64 = np.zeros((n_points, 2), dtype=np.float32)
+    for i in range(n_points):
+        hm = heatmaps[i]
+        idx = np.argmax(hm)
+        y_64 = idx // 64
+        x_64 = idx % 64
+        landmarks_64[i] = [x_64, y_64]
+
+    # 6. Transform from 64×64 heatmap → 256×256 input → crop → original image
+    #    64×64 heatmap maps to 256×256 input: scale by 4
+    landmarks_256 = landmarks_64 * 4.0
+
+    #    256×256 input maps to crop: scale by crop_size / 256
+    scale_x = crop_w / 256.0
+    scale_y = crop_h / 256.0
+    landmarks_orig = np.zeros_like(landmarks_256)
+    landmarks_orig[:, 0] = landmarks_256[:, 0] * scale_x + x1_c
+    landmarks_orig[:, 1] = landmarks_256[:, 1] * scale_y + y1_c
+
+    _log(f"[68_landmarks] Detected {n_points} landmarks, "
+         f"face_center=({face_cx:.0f},{face_cy:.0f}), crop_size={crop_size:.0f}")
+    return landmarks_orig
 
 
 # ---------------------------------------------------------------------------

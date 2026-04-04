@@ -54,10 +54,11 @@ try:
         _detect_face_landmarks,
         _align_face,
         create_semantic_face_mask,
+        detect_68_landmarks,
         FFHQ_TEMPLATE_512,
     )
     DETECTION_AVAILABLE = True
-    _log("[face_swap] Face detection/mask from face_enhance available")
+    _log("[face_swap] Face detection/mask/68-pt landmarks from face_enhance available")
 except ImportError:
     DETECTION_AVAILABLE = False
     _log("[face_swap] face_enhance not available — direct warp disabled")
@@ -84,71 +85,206 @@ except Exception:
 # Core: Direct Source Pixel Warp
 # ---------------------------------------------------------------------------
 
+def _add_boundary_points(landmarks: np.ndarray, img_shape: tuple[int, int]) -> np.ndarray:
+    """Add 8 boundary points (corners + edge midpoints) for stable triangulation."""
+    h, w = img_shape
+    boundary = np.array([
+        [0, 0], [w // 2, 0], [w - 1, 0],          # top
+        [0, h // 2], [w - 1, h // 2],              # sides
+        [0, h - 1], [w // 2, h - 1], [w - 1, h - 1],  # bottom
+    ], dtype=np.float32)
+    return np.vstack([landmarks, boundary])
+
+
+def _warp_triangle(
+    src_img: np.ndarray,
+    dst_img: np.ndarray,
+    src_tri: np.ndarray,
+    dst_tri: np.ndarray,
+) -> None:
+    """Warp a single triangle from src_img into dst_img (in-place)."""
+    # Bounding rects
+    sr = cv2.boundingRect(np.float32([src_tri]))
+    dr = cv2.boundingRect(np.float32([dst_tri]))
+
+    # Clip to image bounds
+    sh, sw = src_img.shape[:2]
+    dh, dw = dst_img.shape[:2]
+
+    sr_x1 = max(sr[0], 0)
+    sr_y1 = max(sr[1], 0)
+    sr_x2 = min(sr[0] + sr[2], sw)
+    sr_y2 = min(sr[1] + sr[3], sh)
+    dr_x1 = max(dr[0], 0)
+    dr_y1 = max(dr[1], 0)
+    dr_x2 = min(dr[0] + dr[2], dw)
+    dr_y2 = min(dr[1] + dr[3], dh)
+
+    if sr_x2 <= sr_x1 or sr_y2 <= sr_y1 or dr_x2 <= dr_x1 or dr_y2 <= dr_y1:
+        return
+
+    # Crop source and compute triangle coords relative to bounding rect
+    src_crop = src_img[sr_y1:sr_y2, sr_x1:sr_x2]
+    src_tri_rect = src_tri - np.float32([sr_x1, sr_y1])
+
+    # Destination rect dimensions
+    dr_w = dr_x2 - dr_x1
+    dr_h = dr_y2 - dr_y1
+    dst_tri_rect = dst_tri - np.float32([dr_x1, dr_y1])
+
+    # Affine transform for this triangle
+    M = cv2.getAffineTransform(
+        np.float32(src_tri_rect[:3]),
+        np.float32(dst_tri_rect[:3]),
+    )
+    warped = cv2.warpAffine(
+        src_crop, M, (dr_w, dr_h),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_REFLECT_101,
+    )
+
+    # Create triangle mask in destination rect space
+    mask = np.zeros((dr_h, dr_w), dtype=np.uint8)
+    cv2.fillConvexPoly(mask, np.int32(dst_tri_rect), 255)
+
+    # Composite into destination image
+    mask_bool = mask > 0
+    dst_region = dst_img[dr_y1:dr_y2, dr_x1:dr_x2]
+    dst_region[mask_bool] = warped[mask_bool]
+
+
 def _direct_warp_swap(
     source_bgr: np.ndarray,
     target_bgr: np.ndarray,
 ) -> np.ndarray | None:
     """
-    Warp the actual source face pixels onto the target image position.
+    Warp the actual source face pixels onto the target image position
+    using 68-point Delaunay triangulation (piecewise affine).
+
     No neural network touches the face — identity preserved exactly.
 
     Steps:
-      1. Detect 5-pt landmarks in source and target (yoloface)
-      2. Compute similarity transform: source face → target face position
-      3. Warp source image so face lands at target location/size/rotation
-      4. Create semantic face mask (face_parser) on the warped result
-      5. Poisson blend (cv2.seamlessClone) for seamless lighting match
+      1. Detect 68-pt landmarks in source and target (yoloface + 2dfan4)
+      2. Add boundary points for stable triangulation
+      3. Delaunay triangulate on target landmarks
+      4. For each triangle: local affine warp source → target
+      5. Create semantic face mask on the warped composite
+      6. Poisson blend (cv2.seamlessClone) for seamless lighting match
     """
     t0 = time.time()
 
-    # 1. Detect faces in both images
-    _log("[warp_swap] Detecting landmarks…")
-    src_landmarks = _detect_face_landmarks(source_bgr)
-    tgt_landmarks = _detect_face_landmarks(target_bgr)
+    # 1. Detect 68-point landmarks in both images
+    _log("[warp_swap] Detecting 68-point landmarks…")
+    src_68 = detect_68_landmarks(source_bgr)
+    tgt_68 = detect_68_landmarks(target_bgr)
 
-    if src_landmarks is None:
-        _log("[warp_swap] No face detected in source")
+    if src_68 is None:
+        _log("[warp_swap] No 68-pt landmarks in source — aborting")
         return None
-    if tgt_landmarks is None:
-        _log("[warp_swap] No face detected in target")
-        return None
-
-    _log(f"[warp_swap] Source landmarks: {src_landmarks.tolist()}")
-    _log(f"[warp_swap] Target landmarks: {tgt_landmarks.tolist()}")
-
-    # 2. Compute similarity transform: source landmarks → target landmarks
-    src_pts = src_landmarks.astype(np.float64)
-    tgt_pts = tgt_landmarks.astype(np.float64)
-    M, _ = cv2.estimateAffinePartial2D(src_pts, tgt_pts, method=cv2.LMEDS)
-    if M is None:
-        M, _ = cv2.estimateAffinePartial2D(src_pts, tgt_pts)
-    if M is None:
-        _log("[warp_swap] Could not compute affine transform")
+    if tgt_68 is None:
+        _log("[warp_swap] No 68-pt landmarks in target — aborting")
         return None
 
-    _log(f"[warp_swap] Affine matrix: scale={np.sqrt(M[0,0]**2 + M[0,1]**2):.3f}")
+    _log(f"[warp_swap] Source 68pts range: x=[{src_68[:,0].min():.0f}..{src_68[:,0].max():.0f}] "
+         f"y=[{src_68[:,1].min():.0f}..{src_68[:,1].max():.0f}]")
+    _log(f"[warp_swap] Target 68pts range: x=[{tgt_68[:,0].min():.0f}..{tgt_68[:,0].max():.0f}] "
+         f"y=[{tgt_68[:,1].min():.0f}..{tgt_68[:,1].max():.0f}]")
 
-    # 3. Warp entire source image so face lands at target position
-    h, w = target_bgr.shape[:2]
-    warped_source = cv2.warpAffine(
-        source_bgr, M, (w, h),
-        flags=cv2.INTER_LANCZOS4,
-        borderMode=cv2.BORDER_REFLECT_101,
-    )
+    detect_ms = round((time.time() - t0) * 1000)
+    _log(f"[warp_swap] Landmark detection done ({detect_ms}ms)")
 
-    warp_ms = round((time.time() - t0) * 1000)
-    _log(f"[warp_swap] Warp done ({warp_ms}ms)")
+    # 2. Add boundary points for stable triangulation at image edges
+    sh, sw = source_bgr.shape[:2]
+    th, tw = target_bgr.shape[:2]
 
-    # 4. Create semantic face mask on the WARPED source
+    src_pts = _add_boundary_points(src_68, (sh, sw))  # 68 + 8 = 76 points
+    tgt_pts = _add_boundary_points(tgt_68, (th, tw))  # 68 + 8 = 76 points
+
+    # 3. Delaunay triangulation on TARGET points
+    _log("[warp_swap] Computing Delaunay triangulation…")
+    rect = (0, 0, tw, th)
+    subdiv = cv2.Subdiv2D(rect)
+
+    # Insert target points, clamped to image bounds
+    for pt in tgt_pts:
+        x = float(np.clip(pt[0], 0, tw - 1))
+        y = float(np.clip(pt[1], 0, th - 1))
+        subdiv.insert((x, y))
+
+    triangles = subdiv.getTriangleList()  # Nx6: [x1,y1,x2,y2,x3,y3]
+    _log(f"[warp_swap] {len(triangles)} Delaunay triangles")
+
+    # Build point index for fast lookup (target points → index)
+    tgt_pts_list = tgt_pts.tolist()
+    pt_to_idx = {}
+    for i, pt in enumerate(tgt_pts_list):
+        # Round to avoid float precision issues
+        key = (round(pt[0], 1), round(pt[1], 1))
+        pt_to_idx[key] = i
+
+    def _find_idx(x: float, y: float) -> int | None:
+        """Find index of nearest point within tolerance."""
+        key = (round(x, 1), round(y, 1))
+        if key in pt_to_idx:
+            return pt_to_idx[key]
+        # Fallback: brute-force nearest within 2px
+        for i, pt in enumerate(tgt_pts_list):
+            if abs(pt[0] - x) < 2.0 and abs(pt[1] - y) < 2.0:
+                return i
+        return None
+
+    # 4. Warp each triangle: source → target
+    _log("[warp_swap] Warping triangles…")
+    t_warp = time.time()
+    warped_face = target_bgr.copy()
+    n_warped = 0
+
+    for tri in triangles:
+        x1, y1, x2, y2, x3, y3 = tri
+
+        # Skip triangles outside image bounds
+        if (x1 < 0 or x1 >= tw or y1 < 0 or y1 >= th or
+            x2 < 0 or x2 >= tw or y2 < 0 or y2 >= th or
+            x3 < 0 or x3 >= tw or y3 < 0 or y3 >= th):
+            continue
+
+        # Map triangle vertices to point indices
+        i1 = _find_idx(x1, y1)
+        i2 = _find_idx(x2, y2)
+        i3 = _find_idx(x3, y3)
+
+        if i1 is None or i2 is None or i3 is None:
+            continue
+
+        # Get corresponding source triangle
+        src_tri = np.float32([src_pts[i1], src_pts[i2], src_pts[i3]])
+        dst_tri = np.float32([tgt_pts[i1], tgt_pts[i2], tgt_pts[i3]])
+
+        # Skip degenerate triangles
+        area = abs((dst_tri[1][0] - dst_tri[0][0]) * (dst_tri[2][1] - dst_tri[0][1]) -
+                    (dst_tri[2][0] - dst_tri[0][0]) * (dst_tri[1][1] - dst_tri[0][1]))
+        if area < 1.0:
+            continue
+
+        _warp_triangle(source_bgr, warped_face, src_tri, dst_tri)
+        n_warped += 1
+
+    warp_ms = round((time.time() - t_warp) * 1000)
+    _log(f"[warp_swap] Warped {n_warped} triangles ({warp_ms}ms)")
+
+    if n_warped == 0:
+        _log("[warp_swap] No triangles warped — aborting")
+        return None
+
+    # 5. Create semantic face mask on the WARPED composite
     # This mask covers only face interior (skin, eyes, nose, brows, mouth)
-    # — no ears, hair, neck, or background from the source photo
     _log("[warp_swap] Creating semantic mask…")
     t_mask = time.time()
-    semantic_mask = create_semantic_face_mask(warped_source, feather=16)
+    semantic_mask = create_semantic_face_mask(warped_face, feather=16)
 
     if semantic_mask is None:
         _log("[warp_swap] Semantic mask failed — trying simple ellipse mask")
-        semantic_mask = _create_ellipse_mask(tgt_landmarks, (h, w))
+        semantic_mask = _create_ellipse_mask(tgt_68[:5], (th, tw))
 
     if semantic_mask is None:
         _log("[warp_swap] All masking failed")
@@ -158,13 +294,12 @@ def _direct_warp_swap(
     coverage = semantic_mask.sum() / semantic_mask.size * 100
     _log(f"[warp_swap] Mask done ({mask_ms}ms, coverage={coverage:.1f}%)")
 
-    # 5. Poisson blend for seamless lighting transition
+    # 6. Poisson blend for seamless lighting transition
     _log("[warp_swap] Poisson blending…")
     t_blend = time.time()
 
     # seamlessClone needs a uint8 binary mask (0 or 255)
     mask_uint8 = (semantic_mask * 255).astype(np.uint8)
-    # Threshold to clean binary — Poisson solver needs clean edges
     _, mask_binary = cv2.threshold(mask_uint8, 127, 255, cv2.THRESH_BINARY)
 
     # Find mask center for seamlessClone
@@ -176,12 +311,13 @@ def _direct_warp_swap(
     cy = int(moments["m01"] / moments["m00"])
 
     result = cv2.seamlessClone(
-        warped_source, target_bgr, mask_binary, (cx, cy), cv2.NORMAL_CLONE
+        warped_face, target_bgr, mask_binary, (cx, cy), cv2.NORMAL_CLONE
     )
 
     blend_ms = round((time.time() - t_blend) * 1000)
     total_ms = round((time.time() - t0) * 1000)
-    _log(f"[warp_swap] Blend done ({blend_ms}ms), total={total_ms}ms")
+    _log(f"[warp_swap] Done: {n_warped} triangles, detect={detect_ms}ms, "
+         f"warp={warp_ms}ms, mask={mask_ms}ms, blend={blend_ms}ms, total={total_ms}ms")
 
     return result
 
@@ -217,15 +353,20 @@ def _create_ellipse_mask(
 # ---------------------------------------------------------------------------
 
 def warmup():
-    """Warmup — preload ONNX sessions."""
-    _log("[face_swap] Warmup: direct pixel warp mode")
+    """Warmup — preload ONNX sessions (yoloface + 2dfan4)."""
+    _log("[face_swap] Warmup: 68-pt Delaunay triangulation warp mode")
     if DETECTION_AVAILABLE:
+        dummy = np.zeros((256, 256, 3), dtype=np.uint8)
         try:
-            # Force-load the yoloface session
-            _detect_face_landmarks(np.zeros((256, 256, 3), dtype=np.uint8))
+            _detect_face_landmarks(dummy)
             _log("[face_swap] Warmup: yoloface loaded")
         except Exception as e:
             _log(f"[face_swap] Warmup: yoloface load failed (will retry on first call): {e}")
+        try:
+            detect_68_landmarks(dummy)
+            _log("[face_swap] Warmup: 2dfan4 loaded")
+        except Exception as e:
+            _log(f"[face_swap] Warmup: 2dfan4 load failed (will retry on first call): {e}")
     else:
         _log("[face_swap] Warmup: detection not available, will fall back to FaceFusion")
 
