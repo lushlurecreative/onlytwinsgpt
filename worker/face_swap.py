@@ -54,14 +54,16 @@ except Exception as e:
     traceback.print_exc()
 
 try:
-    from face_enhance import enhance_face_image
+    from face_enhance import enhance_face_image, create_semantic_face_mask
     ENHANCE_AVAILABLE = True
     print("[face_swap] Face enhancement available", flush=True)
 except ImportError:
     ENHANCE_AVAILABLE = False
+    create_semantic_face_mask = None
     print("[face_swap] Face enhancement not available (face_enhance module missing)", flush=True)
 except Exception as e:
     ENHANCE_AVAILABLE = False
+    create_semantic_face_mask = None
     print(f"[face_swap] Face enhancement import error: {e}", flush=True)
 
 
@@ -175,7 +177,7 @@ def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | N
             target_path=scenario_image_path,
             provider=provider,
             detector_score=0.65,
-            mask_blur=0.5,
+            mask_blur=0.3,
             landmarker_score=0.5,
         )
 
@@ -219,6 +221,31 @@ def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | N
             _log(f"[swap_faces] DIFF_CHECK changed={change_pct}% pixels ({changed_pixels}/{total_pixels})")
             if change_pct < 1.0:
                 _log("[swap_faces] WARNING: output nearly identical to input — swap may not have worked")
+
+        # ── Re-mask: replace facefusionlib's box mask with semantic face mask ──
+        # facefusionlib pastes back with a rectangular mask covering the full
+        # 128×128 aligned crop. This makes the face too large, flat, and
+        # "pasted on" because it overwrites hair, ears, jawline, and 3D shading.
+        # Re-blend using face_parser segmentation: only face interior gets the
+        # swapped pixels; everything outside reverts to the original target.
+        if create_semantic_face_mask is not None and tgt_img is not None:
+            try:
+                _log("[swap_faces] Creating semantic face mask…")
+                t_mask = _time.time()
+                semantic_mask = create_semantic_face_mask(swapped_img)
+                if semantic_mask is not None:
+                    m3 = semantic_mask[:, :, np.newaxis]
+                    swapped_img = (
+                        tgt_img.astype(np.float64) * (1.0 - m3)
+                        + swapped_img.astype(np.float64) * m3
+                    )
+                    swapped_img = np.clip(swapped_img, 0, 255).astype(np.uint8)
+                    mask_ms = round((_time.time() - t_mask) * 1000)
+                    _log(f"[swap_faces] Semantic re-mask applied ({mask_ms}ms)")
+                else:
+                    _log("[swap_faces] Semantic mask unavailable — using facefusionlib mask")
+            except Exception as e:
+                _log(f"[swap_faces] Semantic re-mask failed (non-fatal): {e}")
 
         # ── Stage 3: GFPGAN face restoration + feathered blend ────────
         if ENHANCE_AVAILABLE:

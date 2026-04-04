@@ -24,6 +24,25 @@ MODELS_DIR = os.environ.get(
 )
 GFPGAN_MODEL_PATH = os.path.join(MODELS_DIR, "gfpgan_1.4.onnx")
 YOLO_MODEL_PATH = os.path.join(MODELS_DIR, "yoloface_8n.onnx")
+FACE_PARSER_MODEL_PATH = os.path.join(MODELS_DIR, "face_parser.onnx")
+
+# CelebAMask-HQ class IDs for face interior (no ears, hair, neck, background)
+FACE_MASK_CLASSES = frozenset({
+    1,   # skin
+    2,   # nose
+    3,   # eye glasses
+    4,   # left eye
+    5,   # right eye
+    6,   # left eyebrow
+    7,   # right eyebrow
+    10,  # mouth / inner mouth
+    11,  # upper lip
+    12,  # lower lip
+})
+
+# ImageNet normalization (required by BiSeNet face parser)
+_IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+_IMAGENET_STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
 # Blend: 0.0 = no enhancement, 1.0 = full GFPGAN.
 # Disabled (0.0) until swap identity fidelity is verified.
@@ -111,6 +130,75 @@ def _get_yolo_session():
         _yolo_session = ort.InferenceSession(YOLO_MODEL_PATH, providers=providers)
         _log(f"[face_enhance] YOLOFace session loaded (providers={providers})")
     return _yolo_session
+
+
+_face_parser_session = None
+
+
+def _get_face_parser_session():
+    global _face_parser_session
+    if _face_parser_session is None:
+        import onnxruntime as ort
+        available = ort.get_available_providers()
+        providers = [p for p in ["CUDAExecutionProvider", "CPUExecutionProvider"] if p in available]
+        _face_parser_session = ort.InferenceSession(FACE_PARSER_MODEL_PATH, providers=providers)
+        _log(f"[face_enhance] face_parser session loaded (providers={providers})")
+    return _face_parser_session
+
+
+# ---------------------------------------------------------------------------
+# Semantic face mask (face_parser.onnx)
+# ---------------------------------------------------------------------------
+
+def create_semantic_face_mask(image_bgr: np.ndarray, feather: int = 12) -> np.ndarray | None:
+    """
+    Create a face-contour mask using BiSeNet semantic segmentation.
+    Covers only face interior (skin, eyes, nose, brows, mouth).
+    Excludes ears, hair, neck, background.
+
+    Returns [H, W] float32 mask in original image coords, or None if unavailable.
+    """
+    if not os.path.isfile(FACE_PARSER_MODEL_PATH):
+        _log(f"[face_mask] face_parser not found at {FACE_PARSER_MODEL_PATH}")
+        return None
+
+    # 1. Detect face → 5-point landmarks
+    landmarks = _detect_face_landmarks(image_bgr)
+    if landmarks is None:
+        _log("[face_mask] No face detected")
+        return None
+
+    # 2. Align to 512×512 FFHQ
+    aligned, M = _align_face(image_bgr, landmarks)
+
+    # 3. Run face_parser on aligned crop
+    session = _get_face_parser_session()
+    prep = aligned[:, :, ::-1].astype(np.float32) / 255.0           # BGR→RGB, [0,1]
+    prep = (prep - _IMAGENET_MEAN) / _IMAGENET_STD                   # ImageNet normalize
+    prep = prep.transpose(2, 0, 1)[np.newaxis, ...]                  # NCHW
+
+    input_name = session.get_inputs()[0].name
+    logits = session.run(None, {input_name: prep})[0]                # [1, 19, 512, 512]
+    labels = logits.squeeze(0).argmax(0).astype(np.uint8)            # [512, 512]
+
+    # 4. Binary mask: 1 for face classes, 0 for everything else
+    mask = np.zeros((512, 512), dtype=np.float32)
+    for cls_id in FACE_MASK_CLASSES:
+        mask[labels == cls_id] = 1.0
+
+    # 5. Erode to pull mask slightly inward from edges, then feather
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask = cv2.erode(mask, kernel, iterations=2)
+    blur_k = feather * 2 + 1
+    mask = cv2.GaussianBlur(mask, (blur_k, blur_k), feather / 2.0)
+
+    # 6. Inverse-warp mask to original image space
+    h, w = image_bgr.shape[:2]
+    M_inv = cv2.invertAffineTransform(M)
+    mask_full = cv2.warpAffine(mask, M_inv, (w, h))
+
+    _log(f"[face_mask] Semantic mask created, coverage={mask_full.sum() / mask_full.size * 100:.1f}%")
+    return mask_full
 
 
 def _enhance_via_onnx(image_bgr: np.ndarray, blend: float) -> np.ndarray:
