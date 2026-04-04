@@ -1,176 +1,277 @@
 #!/usr/bin/env python3
 """
-Face-swap module using FaceFusion (industry-leading face swap).
-Downloads user photo and scenario image, swaps faces, returns base64.
+Face-swap module: Direct Source Pixel Warp.
+
+Replaces inswapper_128 neural-net face generation with actual source photo pixels.
+The user's real face is affine-warped to match the target position, masked to
+face-interior-only via face_parser, and Poisson-blended for seamless lighting.
+
+Identity is preserved exactly because no neural network touches the face pixels.
 """
 
 import os
 import base64
+import sys
 import tempfile
+import time
 import cv2
 import numpy as np
 from storage import download_from_url
 
 
+def _log(msg: str):
+    print(msg, flush=True)
+    sys.stdout.flush()
+
+
 def _fix_exif_orientation(image_path: str) -> None:
-    """
-    Apply EXIF orientation tag to pixel data and re-save.
-    Phone cameras store raw sensor data + EXIF rotation tag.
-    cv2.imread ignores EXIF, so the face can be sideways.
-    This causes wrong landmarks → wrong ArcFace embedding → wrong identity.
-    """
+    """Apply EXIF orientation tag to pixel data and re-save."""
     try:
         from PIL import Image, ImageOps
         img = Image.open(image_path)
         exif = img.getexif()
-        orientation = exif.get(0x0112)  # EXIF Orientation tag
+        orientation = exif.get(0x0112)
         if orientation is not None and orientation != 1:
             img = ImageOps.exif_transpose(img)
-            # Save back — use original format, max quality to avoid recompression loss
             fmt = img.format or "JPEG"
             save_kwargs = {"quality": 100} if fmt == "JPEG" else {}
             img.save(image_path, format=fmt, **save_kwargs)
-            print(f"[exif] Fixed orientation {orientation} → 1 for {image_path}", flush=True)
+            _log(f"[exif] Fixed orientation {orientation} → 1 for {image_path}")
         else:
-            print(f"[exif] No rotation needed (orientation={orientation}) for {image_path}", flush=True)
+            _log(f"[exif] No rotation needed (orientation={orientation})")
     except ImportError:
-        print("[exif] Pillow not available — skipping EXIF fix", flush=True)
+        _log("[exif] Pillow not available — skipping EXIF fix")
     except Exception as e:
-        # Non-fatal: if EXIF fix fails, proceed with original image
-        print(f"[exif] Could not fix orientation: {e}", flush=True)
+        _log(f"[exif] Could not fix orientation: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Face detection — reuse yoloface from face_enhance.py
+# ---------------------------------------------------------------------------
+
+try:
+    from face_enhance import (
+        _detect_face_landmarks,
+        _align_face,
+        create_semantic_face_mask,
+        FFHQ_TEMPLATE_512,
+    )
+    DETECTION_AVAILABLE = True
+    _log("[face_swap] Face detection/mask from face_enhance available")
+except ImportError:
+    DETECTION_AVAILABLE = False
+    _log("[face_swap] face_enhance not available — direct warp disabled")
+except Exception as e:
+    DETECTION_AVAILABLE = False
+    _log(f"[face_swap] face_enhance import error: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Legacy FaceFusion — kept as fallback only
+# ---------------------------------------------------------------------------
 
 try:
     from facefusionlib import swapper
     from facefusionlib.swapper import DeviceProvider
     FACEFUSION_AVAILABLE = True
-    print("[face_swap] FaceFusion library available", flush=True)
-except ImportError as e:
-    FACEFUSION_AVAILABLE = False
-    print(f"[face_swap] FaceFusion not available: {e}", flush=True)
-except Exception as e:
-    FACEFUSION_AVAILABLE = False
-    print(f"[face_swap] FaceFusion import error (non-ImportError): {e}", flush=True)
-    import traceback
-    traceback.print_exc()
-
-try:
-    from face_enhance import enhance_face_image, create_semantic_face_mask
-    ENHANCE_AVAILABLE = True
-    print("[face_swap] Face enhancement available", flush=True)
 except ImportError:
-    ENHANCE_AVAILABLE = False
-    create_semantic_face_mask = None
-    print("[face_swap] Face enhancement not available (face_enhance module missing)", flush=True)
-except Exception as e:
-    ENHANCE_AVAILABLE = False
-    create_semantic_face_mask = None
-    print(f"[face_swap] Face enhancement import error: {e}", flush=True)
+    FACEFUSION_AVAILABLE = False
+except Exception:
+    FACEFUSION_AVAILABLE = False
 
 
-def _log(msg: str):
-    """Guaranteed log line with forced flush."""
-    import sys
-    print(msg, flush=True)
-    sys.stdout.flush()
-    sys.stderr.flush()
+# ---------------------------------------------------------------------------
+# Core: Direct Source Pixel Warp
+# ---------------------------------------------------------------------------
 
+def _direct_warp_swap(
+    source_bgr: np.ndarray,
+    target_bgr: np.ndarray,
+) -> np.ndarray | None:
+    """
+    Warp the actual source face pixels onto the target image position.
+    No neural network touches the face — identity preserved exactly.
+
+    Steps:
+      1. Detect 5-pt landmarks in source and target (yoloface)
+      2. Compute similarity transform: source face → target face position
+      3. Warp source image so face lands at target location/size/rotation
+      4. Create semantic face mask (face_parser) on the warped result
+      5. Poisson blend (cv2.seamlessClone) for seamless lighting match
+    """
+    t0 = time.time()
+
+    # 1. Detect faces in both images
+    _log("[warp_swap] Detecting landmarks…")
+    src_landmarks = _detect_face_landmarks(source_bgr)
+    tgt_landmarks = _detect_face_landmarks(target_bgr)
+
+    if src_landmarks is None:
+        _log("[warp_swap] No face detected in source")
+        return None
+    if tgt_landmarks is None:
+        _log("[warp_swap] No face detected in target")
+        return None
+
+    _log(f"[warp_swap] Source landmarks: {src_landmarks.tolist()}")
+    _log(f"[warp_swap] Target landmarks: {tgt_landmarks.tolist()}")
+
+    # 2. Compute similarity transform: source landmarks → target landmarks
+    src_pts = src_landmarks.astype(np.float64)
+    tgt_pts = tgt_landmarks.astype(np.float64)
+    M, _ = cv2.estimateAffinePartial2D(src_pts, tgt_pts, method=cv2.LMEDS)
+    if M is None:
+        M, _ = cv2.estimateAffinePartial2D(src_pts, tgt_pts)
+    if M is None:
+        _log("[warp_swap] Could not compute affine transform")
+        return None
+
+    _log(f"[warp_swap] Affine matrix: scale={np.sqrt(M[0,0]**2 + M[0,1]**2):.3f}")
+
+    # 3. Warp entire source image so face lands at target position
+    h, w = target_bgr.shape[:2]
+    warped_source = cv2.warpAffine(
+        source_bgr, M, (w, h),
+        flags=cv2.INTER_LANCZOS4,
+        borderMode=cv2.BORDER_REFLECT_101,
+    )
+
+    warp_ms = round((time.time() - t0) * 1000)
+    _log(f"[warp_swap] Warp done ({warp_ms}ms)")
+
+    # 4. Create semantic face mask on the WARPED source
+    # This mask covers only face interior (skin, eyes, nose, brows, mouth)
+    # — no ears, hair, neck, or background from the source photo
+    _log("[warp_swap] Creating semantic mask…")
+    t_mask = time.time()
+    semantic_mask = create_semantic_face_mask(warped_source, feather=16)
+
+    if semantic_mask is None:
+        _log("[warp_swap] Semantic mask failed — trying simple ellipse mask")
+        semantic_mask = _create_ellipse_mask(tgt_landmarks, (h, w))
+
+    if semantic_mask is None:
+        _log("[warp_swap] All masking failed")
+        return None
+
+    mask_ms = round((time.time() - t_mask) * 1000)
+    coverage = semantic_mask.sum() / semantic_mask.size * 100
+    _log(f"[warp_swap] Mask done ({mask_ms}ms, coverage={coverage:.1f}%)")
+
+    # 5. Poisson blend for seamless lighting transition
+    _log("[warp_swap] Poisson blending…")
+    t_blend = time.time()
+
+    # seamlessClone needs a uint8 binary mask (0 or 255)
+    mask_uint8 = (semantic_mask * 255).astype(np.uint8)
+    # Threshold to clean binary — Poisson solver needs clean edges
+    _, mask_binary = cv2.threshold(mask_uint8, 127, 255, cv2.THRESH_BINARY)
+
+    # Find mask center for seamlessClone
+    moments = cv2.moments(mask_binary)
+    if moments["m00"] == 0:
+        _log("[warp_swap] Empty mask — aborting")
+        return None
+    cx = int(moments["m10"] / moments["m00"])
+    cy = int(moments["m01"] / moments["m00"])
+
+    result = cv2.seamlessClone(
+        warped_source, target_bgr, mask_binary, (cx, cy), cv2.NORMAL_CLONE
+    )
+
+    blend_ms = round((time.time() - t_blend) * 1000)
+    total_ms = round((time.time() - t0) * 1000)
+    _log(f"[warp_swap] Blend done ({blend_ms}ms), total={total_ms}ms")
+
+    return result
+
+
+def _create_ellipse_mask(
+    landmarks: np.ndarray, img_shape: tuple[int, int], scale: float = 1.6
+) -> np.ndarray | None:
+    """
+    Fallback: create an elliptical mask centered on the face landmarks.
+    Used if face_parser is unavailable.
+    """
+    try:
+        h, w = img_shape
+        # Face center from landmarks
+        cx = int(landmarks[:, 0].mean())
+        cy = int(landmarks[:, 1].mean())
+
+        # Face size from eye-to-eye distance
+        eye_dist = np.linalg.norm(landmarks[0] - landmarks[1])
+        rx = int(eye_dist * scale)
+        ry = int(eye_dist * scale * 1.3)  # taller than wide
+
+        mask = np.zeros((h, w), dtype=np.float32)
+        cv2.ellipse(mask, (cx, cy), (rx, ry), 0, 0, 360, 1.0, -1)
+        mask = cv2.GaussianBlur(mask, (31, 31), 10)
+        return mask
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 def warmup():
-    """Warmup — trigger model download on first import if needed."""
-    if not FACEFUSION_AVAILABLE:
-        _log("[face_swap] Cannot warmup: facefusionlib not installed")
-        _log("[face_swap] Checking what IS installed...")
+    """Warmup — preload ONNX sessions."""
+    _log("[face_swap] Warmup: direct pixel warp mode")
+    if DETECTION_AVAILABLE:
         try:
-            import pkg_resources
-            installed = [str(d) for d in pkg_resources.working_set]
-            face_pkgs = [p for p in installed if 'face' in p.lower() or 'onnx' in p.lower() or 'swap' in p.lower()]
-            _log(f"[face_swap] Relevant packages: {face_pkgs}")
-        except Exception:
-            pass
-        return
-
-    import time
-    start = time.time()
-    _log("[face_swap] Warming up FaceFusion...")
-
-    # Log onnxruntime providers
-    try:
-        import onnxruntime as ort
-        providers = ort.get_available_providers()
-        _log(f"[face_swap] ONNX Runtime providers: {providers}")
-    except Exception as e:
-        _log(f"[face_swap] ONNX Runtime check failed: {e}")
-
-    # Run a tiny test swap to trigger model downloads and GPU init
-    try:
-        test_dir = tempfile.mkdtemp()
-        test_img = np.zeros((256, 256, 3), dtype=np.uint8)
-        test_img[60:200, 60:200] = 200
-        test_src = os.path.join(test_dir, "test_src.jpg")
-        test_tgt = os.path.join(test_dir, "test_tgt.jpg")
-        cv2.imwrite(test_src, test_img)
-        cv2.imwrite(test_tgt, test_img)
-
-        try:
-            _log("[face_swap] Running warmup swap (CPU, dummy images)...")
-            swapper.swap_face(
-                source_paths=[test_src],
-                target_path=test_tgt,
-                provider=DeviceProvider.CPU,
-                detector_score=0.1,
-            )
-            _log("[face_swap] Warmup swap completed (models downloaded)")
+            # Force-load the yoloface session
+            _detect_face_landmarks(np.zeros((256, 256, 3), dtype=np.uint8))
+            _log("[face_swap] Warmup: yoloface loaded")
         except Exception as e:
-            _log(f"[face_swap] Warmup swap expected error (models should be cached): {e}")
-
-        import shutil
-        shutil.rmtree(test_dir, ignore_errors=True)
-    except Exception as e:
-        import traceback
-        _log(f"[face_swap] Warmup failed: {e}\n{traceback.format_exc()}")
-
-    elapsed = round(time.time() - start, 1)
-    _log(f"[face_swap] Warmup complete in {elapsed}s")
+            _log(f"[face_swap] Warmup: yoloface load failed (will retry on first call): {e}")
+    else:
+        _log("[face_swap] Warmup: detection not available, will fall back to FaceFusion")
 
 
 def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | None:
     """
-    Swap face from user_photo into scenario_image using FaceFusion,
-    then enhance with GFPGAN face restoration + feathered blending.
-    Returns the final image as numpy array, or None if swap fails.
+    Replace the face in scenario_image with the actual pixels from user_photo.
+
+    Primary path: direct source pixel warp (preserves exact identity).
+    Fallback: FaceFusion inswapper_128 (if direct warp fails).
     """
     _log(f"[swap_faces] ENTER user={user_photo_path} scenario={scenario_image_path}")
 
-    if not FACEFUSION_AVAILABLE:
-        _log("[swap_faces] RETURN_NONE reason=facefusion_not_available")
+    t0 = time.time()
+
+    src_img = cv2.imread(user_photo_path)
+    tgt_img = cv2.imread(scenario_image_path)
+
+    if src_img is None:
+        _log("[swap_faces] RETURN_NONE reason=source_unreadable")
+        return None
+    if tgt_img is None:
+        _log("[swap_faces] RETURN_NONE reason=target_unreadable")
         return None
 
-    import time as _time
-    try:
-        t0 = _time.time()
+    _log(f"[swap_faces] source={src_img.shape} target={tgt_img.shape}")
 
-        # Determine provider — prefer GPU
+    # ── Primary: direct pixel warp (exact identity) ──────────────────
+    if DETECTION_AVAILABLE:
+        _log("[swap_faces] Using DIRECT PIXEL WARP (no neural net face generation)")
+        result = _direct_warp_swap(src_img, tgt_img)
+        if result is not None:
+            elapsed = round(time.time() - t0, 2)
+            _log(f"[swap_faces] DONE via direct warp ({elapsed}s)")
+            return result
+        _log("[swap_faces] Direct warp failed — falling back to FaceFusion")
+
+    # ── Fallback: FaceFusion inswapper_128 ────────────────────────────
+    if FACEFUSION_AVAILABLE:
+        _log("[swap_faces] FALLBACK: FaceFusion inswapper_128")
         try:
             import onnxruntime as ort
-            providers = ort.get_available_providers()
-            if 'CUDAExecutionProvider' in providers:
-                provider = DeviceProvider.GPU
-                _log("[swap_faces] Using GPU provider")
-            else:
-                provider = DeviceProvider.CPU
-                _log("[swap_faces] Using CPU provider (no CUDA)")
+            provs = ort.get_available_providers()
+            provider = DeviceProvider.GPU if "CUDAExecutionProvider" in provs else DeviceProvider.CPU
         except Exception:
             provider = DeviceProvider.CPU
-            _log("[swap_faces] Using CPU provider (onnxruntime check failed)")
-
-        # Run FaceFusion face swap
-        _log("[swap_faces] Starting FaceFusion swap...")
-        t_swap = _time.time()
-
-        # Log input image sizes for diagnostics
-        src_img = cv2.imread(user_photo_path)
-        tgt_img = cv2.imread(scenario_image_path)
-        _log(f"[swap_faces] source_size={src_img.shape if src_img is not None else 'NONE'} target_size={tgt_img.shape if tgt_img is not None else 'NONE'}")
 
         result = swapper.swap_face(
             source_paths=[user_photo_path],
@@ -181,98 +282,29 @@ def swap_faces(user_photo_path: str, scenario_image_path: str) -> np.ndarray | N
             landmarker_score=0.5,
         )
 
-        swap_elapsed = round(_time.time() - t_swap, 2)
-        _log(f"[swap_faces] FaceFusion returned: type={type(result).__name__} ({swap_elapsed}s)")
-
-        # ── Parse swap result into ndarray ────────────────────────────
         swapped_img = None
-
-        if result is None:
-            _log("[swap_faces] RETURN_NONE reason=swap_returned_none")
-            return None
-
         if isinstance(result, np.ndarray):
-            _log(f"[swap_faces] OK result is ndarray shape={result.shape}")
             swapped_img = result
-
         elif isinstance(result, str) and os.path.exists(result):
-            _log(f"[swap_faces] OK result is file path: {result}")
             swapped_img = cv2.imread(result)
+        elif result is not None:
+            path = str(result)
+            if os.path.exists(path):
+                swapped_img = cv2.imread(path)
 
-        else:
-            result_str = str(result)
-            if os.path.exists(result_str):
-                _log(f"[swap_faces] OK result converted to path: {result_str}")
-                swapped_img = cv2.imread(result_str)
-            else:
-                _log(f"[swap_faces] RETURN_NONE reason=unknown_result_type value={result_str[:200]}")
-                return None
+        if swapped_img is not None:
+            elapsed = round(time.time() - t0, 2)
+            _log(f"[swap_faces] DONE via FaceFusion fallback ({elapsed}s)")
+            return swapped_img
 
-        if swapped_img is None:
-            _log("[swap_faces] RETURN_NONE reason=could_not_read_result")
-            return None
-
-        # Diff check — verify swap actually changed pixels
-        if tgt_img is not None and swapped_img.shape == tgt_img.shape:
-            diff = cv2.absdiff(swapped_img, tgt_img)
-            changed_pixels = np.count_nonzero(diff)
-            total_pixels = diff.size
-            change_pct = round(100 * changed_pixels / total_pixels, 1)
-            _log(f"[swap_faces] DIFF_CHECK changed={change_pct}% pixels ({changed_pixels}/{total_pixels})")
-            if change_pct < 1.0:
-                _log("[swap_faces] WARNING: output nearly identical to input — swap may not have worked")
-
-        # ── Re-mask: replace facefusionlib's box mask with semantic face mask ──
-        # facefusionlib pastes back with a rectangular mask covering the full
-        # 128×128 aligned crop. This makes the face too large, flat, and
-        # "pasted on" because it overwrites hair, ears, jawline, and 3D shading.
-        # Re-blend using face_parser segmentation: only face interior gets the
-        # swapped pixels; everything outside reverts to the original target.
-        if create_semantic_face_mask is not None and tgt_img is not None:
-            try:
-                _log("[swap_faces] Creating semantic face mask…")
-                t_mask = _time.time()
-                semantic_mask = create_semantic_face_mask(swapped_img)
-                if semantic_mask is not None:
-                    m3 = semantic_mask[:, :, np.newaxis]
-                    swapped_img = (
-                        tgt_img.astype(np.float64) * (1.0 - m3)
-                        + swapped_img.astype(np.float64) * m3
-                    )
-                    swapped_img = np.clip(swapped_img, 0, 255).astype(np.uint8)
-                    mask_ms = round((_time.time() - t_mask) * 1000)
-                    _log(f"[swap_faces] Semantic re-mask applied ({mask_ms}ms)")
-                else:
-                    _log("[swap_faces] Semantic mask unavailable — using facefusionlib mask")
-            except Exception as e:
-                _log(f"[swap_faces] Semantic re-mask failed (non-fatal): {e}")
-
-        # ── Stage 3: GFPGAN face restoration + feathered blend ────────
-        if ENHANCE_AVAILABLE:
-            _log("[swap_faces] Running face enhancement (GFPGAN)...")
-            t_enhance = _time.time()
-            swapped_img = enhance_face_image(swapped_img)
-            enhance_elapsed = round(_time.time() - t_enhance, 2)
-            _log(f"[swap_faces] Enhancement done ({enhance_elapsed}s)")
-        else:
-            _log("[swap_faces] Enhancement not available — returning raw swap")
-
-        total_elapsed = round(_time.time() - t0, 2)
-        _log(f"[swap_faces] DONE shape={swapped_img.shape} ({total_elapsed}s total)")
-        return swapped_img
-
-    except Exception as e:
-        import traceback
-        _log(f"[swap_faces] RETURN_NONE reason=exception error={e}\n{traceback.format_exc()}")
-        return None
+    _log("[swap_faces] RETURN_NONE reason=all_methods_failed")
+    return None
 
 
 def do_face_swap(user_photo_url: str, scenario_image_url: str) -> str | None:
-    """
-    Download images, swap faces with FaceFusion, return base64-encoded JPEG.
-    """
-    import time as _time
+    """Download images, swap faces, return base64-encoded JPEG."""
     _log(f"[do_face_swap] ENTER user_url={user_photo_url[:80]} scenario_url={scenario_image_url[:80]}")
+
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
             user_photo_path = os.path.join(tmpdir, "user.jpg")
@@ -281,34 +313,33 @@ def do_face_swap(user_photo_url: str, scenario_image_url: str) -> str | None:
             if not download_from_url(user_photo_url, user_photo_path):
                 _log("[do_face_swap] RETURN_NONE reason=download_user_failed")
                 return None
-            _log(f"[do_face_swap] OK step=download_user: {os.path.getsize(user_photo_path)} bytes")
+            _log(f"[do_face_swap] OK download_user: {os.path.getsize(user_photo_path)} bytes")
 
-            # Fix EXIF orientation BEFORE FaceFusion reads the source face.
-            # Phone photos store rotated pixels + EXIF tag; cv2.imread ignores EXIF.
-            # A sideways face → wrong landmarks → wrong ArcFace embedding → wrong identity.
             _fix_exif_orientation(user_photo_path)
 
             if not download_from_url(scenario_image_url, scenario_path):
                 _log("[do_face_swap] RETURN_NONE reason=download_scenario_failed")
                 return None
-            _log(f"[do_face_swap] OK step=download_scenario: {os.path.getsize(scenario_path)} bytes")
+            _log(f"[do_face_swap] OK download_scenario: {os.path.getsize(scenario_path)} bytes")
 
-            t_swap = _time.time()
-            swapped_array = swap_faces(user_photo_path, scenario_path)
-            swap_elapsed = round(_time.time() - t_swap, 2)
-            if swapped_array is None:
-                _log(f"[do_face_swap] RETURN_NONE reason=swap_faces_returned_none elapsed={swap_elapsed}s")
+            t_swap = time.time()
+            swapped = swap_faces(user_photo_path, scenario_path)
+            elapsed = round(time.time() - t_swap, 2)
+
+            if swapped is None:
+                _log(f"[do_face_swap] RETURN_NONE reason=swap_failed ({elapsed}s)")
                 return None
-            _log(f"[do_face_swap] OK step=swap_faces: shape={swapped_array.shape} ({swap_elapsed}s)")
+            _log(f"[do_face_swap] OK swap: shape={swapped.shape} ({elapsed}s)")
 
-            # Encode as high-quality JPEG
-            success, buf = cv2.imencode('.jpg', swapped_array, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            success, buf = cv2.imencode(".jpg", swapped, [cv2.IMWRITE_JPEG_QUALITY, 95])
             if not success:
                 _log("[do_face_swap] RETURN_NONE reason=imencode_failed")
                 return None
-            b64 = base64.b64encode(buf.tobytes()).decode('ascii')
-            _log(f"[do_face_swap] OK step=encode: {len(b64)} chars base64 ({len(buf)} bytes jpeg)")
+
+            b64 = base64.b64encode(buf.tobytes()).decode("ascii")
+            _log(f"[do_face_swap] OK encode: {len(b64)} chars base64")
             return b64
+
         except Exception as e:
             import traceback
             _log(f"[do_face_swap] RETURN_NONE reason=exception error={e}\n{traceback.format_exc()}")
