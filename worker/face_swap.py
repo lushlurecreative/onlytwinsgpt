@@ -11,6 +11,34 @@ import cv2
 import numpy as np
 from storage import download_from_url
 
+
+def _fix_exif_orientation(image_path: str) -> None:
+    """
+    Apply EXIF orientation tag to pixel data and re-save.
+    Phone cameras store raw sensor data + EXIF rotation tag.
+    cv2.imread ignores EXIF, so the face can be sideways.
+    This causes wrong landmarks → wrong ArcFace embedding → wrong identity.
+    """
+    try:
+        from PIL import Image, ImageOps
+        img = Image.open(image_path)
+        exif = img.getexif()
+        orientation = exif.get(0x0112)  # EXIF Orientation tag
+        if orientation is not None and orientation != 1:
+            img = ImageOps.exif_transpose(img)
+            # Save back — use original format, max quality to avoid recompression loss
+            fmt = img.format or "JPEG"
+            save_kwargs = {"quality": 100} if fmt == "JPEG" else {}
+            img.save(image_path, format=fmt, **save_kwargs)
+            print(f"[exif] Fixed orientation {orientation} → 1 for {image_path}", flush=True)
+        else:
+            print(f"[exif] No rotation needed (orientation={orientation}) for {image_path}", flush=True)
+    except ImportError:
+        print("[exif] Pillow not available — skipping EXIF fix", flush=True)
+    except Exception as e:
+        # Non-fatal: if EXIF fix fails, proceed with original image
+        print(f"[exif] Could not fix orientation: {e}", flush=True)
+
 try:
     from facefusionlib import swapper
     from facefusionlib.swapper import DeviceProvider
@@ -227,6 +255,11 @@ def do_face_swap(user_photo_url: str, scenario_image_url: str) -> str | None:
                 _log("[do_face_swap] RETURN_NONE reason=download_user_failed")
                 return None
             _log(f"[do_face_swap] OK step=download_user: {os.path.getsize(user_photo_path)} bytes")
+
+            # Fix EXIF orientation BEFORE FaceFusion reads the source face.
+            # Phone photos store rotated pixels + EXIF tag; cv2.imread ignores EXIF.
+            # A sideways face → wrong landmarks → wrong ArcFace embedding → wrong identity.
+            _fix_exif_orientation(user_photo_path)
 
             if not download_from_url(scenario_image_url, scenario_path):
                 _log("[do_face_swap] RETURN_NONE reason=download_scenario_failed")

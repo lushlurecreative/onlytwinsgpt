@@ -25,8 +25,11 @@ MODELS_DIR = os.environ.get(
 GFPGAN_MODEL_PATH = os.path.join(MODELS_DIR, "gfpgan_1.4.onnx")
 YOLO_MODEL_PATH = os.path.join(MODELS_DIR, "yoloface_8n.onnx")
 
-# Blend: 0.0 = no enhancement, 1.0 = full GFPGAN.  0.85 is sweet spot.
-DEFAULT_BLEND = float(os.environ.get("FACE_ENHANCE_BLEND", "0.85"))
+# Blend: 0.0 = no enhancement, 1.0 = full GFPGAN.
+# Disabled (0.0) until swap identity fidelity is verified.
+# GFPGAN hallucinates generic face detail that overwrites the source person's features.
+# Re-enable at 0.3–0.5 once identity from inswapper_128 is confirmed acceptable.
+DEFAULT_BLEND = float(os.environ.get("FACE_ENHANCE_BLEND", "0.0"))
 
 # FFHQ 512x512 face alignment template (standard 5-point)
 FFHQ_TEMPLATE_512 = np.array(
