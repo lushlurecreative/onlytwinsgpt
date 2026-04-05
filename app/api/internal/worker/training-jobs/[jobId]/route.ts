@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireWorkerSecret } from "@/lib/worker-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { getModelForTrainingJob, completeModel, failModel } from "@/lib/identity-models";
 
 type Params = { params: Promise<{ jobId: string }> };
 
@@ -20,6 +21,14 @@ export async function PATCH(request: Request, { params }: Params) {
     started_at?: string;
     finished_at?: string;
     lora_model_reference?: string;
+    // Model artifact metadata (optional, from worker)
+    adapter_path?: string;
+    preview_image_path?: string;
+    training_steps?: number;
+    network_dim?: number;
+    network_alpha?: number;
+    learning_rate?: number;
+    caption_strategy?: string;
   } = {};
   try {
     body = await request.json();
@@ -63,7 +72,31 @@ export async function PATCH(request: Request, { params }: Params) {
           updated_at: new Date().toISOString(),
         })
         .eq("subject_id", (data as { subject_id: string }).subject_id);
+
+      // Update identity_model with artifacts and mark ready/active
+      const identityModel = await getModelForTrainingJob(jobId);
+      if (identityModel) {
+        await completeModel(identityModel.id, {
+          model_path: body.lora_model_reference,
+          adapter_path: body.adapter_path ?? null,
+          preview_image_path: body.preview_image_path ?? null,
+          training_steps: body.training_steps ?? null,
+          network_dim: body.network_dim ?? null,
+          network_alpha: body.network_alpha ?? null,
+          learning_rate: body.learning_rate ?? null,
+          caption_strategy: body.caption_strategy ?? null,
+        });
+      }
     }
+
+    // When marking failed, update identity_model
+    if (body.status === "failed") {
+      const identityModel = await getModelForTrainingJob(jobId);
+      if (identityModel) {
+        await failModel(identityModel.id, body.logs ?? "Training failed");
+      }
+    }
+
     return NextResponse.json({ job: data });
   }
 
@@ -88,5 +121,21 @@ export async function PATCH(request: Request, { params }: Params) {
   if (modelError) {
     return NextResponse.json({ error: modelError.message }, { status: 400 });
   }
+
+  // Also update identity_model if it exists
+  const identityModel = await getModelForTrainingJob(jobId);
+  if (identityModel) {
+    await completeModel(identityModel.id, {
+      model_path: body.lora_model_reference,
+      adapter_path: body.adapter_path ?? null,
+      preview_image_path: body.preview_image_path ?? null,
+      training_steps: body.training_steps ?? null,
+      network_dim: body.network_dim ?? null,
+      network_alpha: body.network_alpha ?? null,
+      learning_rate: body.learning_rate ?? null,
+      caption_strategy: body.caption_strategy ?? null,
+    });
+  }
+
   return NextResponse.json({ ok: true });
 }

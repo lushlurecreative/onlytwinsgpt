@@ -14,8 +14,8 @@ export default async function TrainingPhotosPage() {
         <p className="eyebrow">Training pipeline</p>
         <h1 style={{ marginTop: 0, fontSize: 36, letterSpacing: "-0.02em" }}>Upload your training images</h1>
         <p className="wizard-copy">
-          Upload the photos we&apos;ll use to train your twin and generate your selected package. Minimum 10,
-          maximum 50 photos.
+          Upload the photos we&apos;ll use to train your digital twin. Minimum 10, maximum 50 photos.
+          JPEG, PNG, or WEBP only.
         </p>
       </PremiumCard>
 

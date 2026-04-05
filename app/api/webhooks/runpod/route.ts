@@ -4,6 +4,8 @@ import type { LeadStatus } from "@/lib/db-enums";
 import type { GenerationJobStatus } from "@/lib/db-enums";
 import { dispatchGenerationJobToRunPod } from "@/lib/runpod";
 import { generateVideo } from "@/lib/video-generation";
+import { updatePhotoSetStatus } from "@/lib/training-photo-sets";
+import { getModelForTrainingJob, completeModel, failModel, updateModelStatus } from "@/lib/identity-models";
 
 async function ensurePost(admin: ReturnType<typeof getSupabaseAdmin>, userId: string, path: string, caption: string) {
   const { data: existing } = await admin
@@ -163,9 +165,22 @@ export async function POST(request: Request) {
       .from("training_jobs")
       .update({ status: "failed", logs: `RunPod: ${errMsg}` })
       .eq("runpod_job_id", runpodId)
-      .select("id")
+      .select("id, photo_set_id")
       .maybeSingle();
     if (training?.id) {
+      // Update photo set status if linked
+      if ((training as { photo_set_id?: string | null }).photo_set_id) {
+        try {
+          await updatePhotoSetStatus((training as { photo_set_id: string }).photo_set_id, "failed");
+        } catch { /* non-fatal */ }
+      }
+      // Update identity_model on failure
+      try {
+        const model = await getModelForTrainingJob(training.id as string);
+        if (model) {
+          await failModel(model.id, errMsg);
+        }
+      } catch { /* non-fatal */ }
       return NextResponse.json({ ok: true, updated: "training_job" });
     }
     const { data: failedGen } = await admin
@@ -231,7 +246,7 @@ export async function POST(request: Request) {
   if (status === "COMPLETED") {
     const { data: training } = await admin
       .from("training_jobs")
-      .select("id, status")
+      .select("id, status, photo_set_id")
       .eq("runpod_job_id", runpodId)
       .maybeSingle();
     if (training?.id && training.status !== "completed") {
@@ -243,6 +258,51 @@ export async function POST(request: Request) {
           logs: "Completed via RunPod webhook",
         })
         .eq("id", training.id);
+      // Update photo set status to trained
+      if ((training as { photo_set_id?: string | null }).photo_set_id) {
+        try {
+          await updatePhotoSetStatus((training as { photo_set_id: string }).photo_set_id, "trained");
+        } catch { /* non-fatal */ }
+      }
+      // Update identity_model — mark ready if worker already set artifacts, else mark training complete
+      try {
+        const identityModel = await getModelForTrainingJob(training.id as string);
+        if (identityModel && identityModel.status !== "ready") {
+          // If worker already completed with artifacts, completeModel was already called.
+          // If webhook arrives first, just update status to ready (artifacts will come via worker PATCH).
+          if (identityModel.model_path) {
+            await completeModel(identityModel.id, {});
+          } else {
+            await updateModelStatus(identityModel.id, "training", {
+              completed_at: new Date().toISOString(),
+            });
+          }
+        }
+      } catch { /* non-fatal */ }
+
+      // Create user notification for training completion
+      const { data: trainingJob } = await admin
+        .from("training_jobs")
+        .select("subject_id")
+        .eq("id", training.id)
+        .maybeSingle();
+      if (trainingJob?.subject_id) {
+        const { data: subject } = await admin
+          .from("subjects")
+          .select("user_id")
+          .eq("id", trainingJob.subject_id)
+          .maybeSingle();
+        if (subject?.user_id) {
+          await admin.from("user_notifications").insert({
+            user_id: subject.user_id,
+            type: "training_complete",
+            payload_json: {
+              training_job_id: training.id,
+              message: "Your model training is complete. You can now generate images.",
+            },
+          });
+        }
+      }
       return NextResponse.json({ ok: true, updated: "training_job" });
     }
     const { data: gen } = await admin

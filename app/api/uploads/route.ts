@@ -9,6 +9,11 @@ import {
 } from "@/lib/upload-security";
 import { logError, logWarn } from "@/lib/observability";
 import { getMaxUploadBytes, RATE_LIMITS } from "@/lib/security-config";
+import {
+  getOrCreateActivePhotoSet,
+  addPhotoToSet,
+  removePhotoFromSet,
+} from "@/lib/training-photo-sets";
 
 export const runtime = "nodejs";
 
@@ -157,8 +162,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: signedError.message }, { status: 400 });
     }
 
+    // Create training_photos record linked to active photo set
+    let photoId: string | null = null;
+    try {
+      const photoSet = await getOrCreateActivePhotoSet(user.id);
+      const photoRecord = await addPhotoToSet(
+        photoSet.id,
+        user.id,
+        objectPath,
+        fileValue.name,
+        sniffedMime,
+        fileBuffer.byteLength
+      );
+      photoId = photoRecord.id;
+    } catch (err) {
+      // Non-fatal: photo is stored even if record creation fails
+      logWarn("training_photo_record_creation_failed", {
+        userId: user.id,
+        objectPath,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
     return NextResponse.json(
-      { objectPath, signedUrl: signedData?.signedUrl ?? null },
+      {
+        objectPath,
+        signedUrl: signedData?.signedUrl ?? null,
+        photoId,
+      },
       { status: 200 }
     );
   } catch (error) {
@@ -189,6 +220,17 @@ export async function DELETE(request: Request) {
     const { error: removeError } = await admin.storage.from("uploads").remove([objectPath]);
     if (removeError) {
       return NextResponse.json({ error: removeError.message }, { status: 400 });
+    }
+
+    // Remove training_photos record if one exists
+    try {
+      await removePhotoFromSet(objectPath, user.id);
+    } catch (err) {
+      logWarn("training_photo_record_removal_failed", {
+        userId: user.id,
+        objectPath,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });

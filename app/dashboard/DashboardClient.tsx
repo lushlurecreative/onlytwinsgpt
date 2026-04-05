@@ -16,15 +16,19 @@ export default function DashboardClient() {
   const [samplePaths, setSamplePaths] = useState<string[]>([]);
   const [planLabel, setPlanLabel] = useState("Unknown");
   const [latestBatchStatus, setLatestBatchStatus] = useState("No batch queued");
+  const [trainingStatus, setTrainingStatus] = useState("Not started");
+  const [activeModelVersion, setActiveModelVersion] = useState<number | null>(null);
+  const [modelCount, setModelCount] = useState(0);
 
   useEffect(() => {
     const load = async () => {
-      const [intakeRes, uploadsRes, prefsRes, entitlementsRes, requestsRes] = await Promise.all([
+      const [intakeRes, uploadsRes, prefsRes, entitlementsRes, requestsRes, trainingStatusRes] = await Promise.all([
         fetch("/api/me/onboarding-intake"),
         fetch("/api/uploads"),
         fetch("/api/me/request-preferences"),
         fetch("/api/me/entitlements"),
         fetch("/api/generation-requests"),
+        fetch("/api/training/status"),
       ]);
 
       const intakeJson = (await intakeRes.json().catch(() => ({}))) as {
@@ -51,6 +55,13 @@ export default function DashboardClient() {
       };
       const requestsJson = (await requestsRes.json().catch(() => ({}))) as {
         requests?: Array<{ status?: string }>;
+      };
+      const trainingJson = (await trainingStatusRes.json().catch(() => ({}))) as {
+        modelReady?: boolean;
+        trainingStatus?: string | null;
+        latestJob?: { status?: string } | null;
+        activeModel?: { version?: number } | null;
+        modelHistory?: Array<{ id: string; version: number; status: string }>;
       };
 
       let intake = intakeJson.intake;
@@ -102,6 +113,23 @@ export default function DashboardClient() {
       else if (latestStatus === "rejected") setLatestBatchStatus("Not approved — contact support");
       else setLatestBatchStatus("No batch queued");
 
+      // Training status
+      if (trainingJson.modelReady) {
+        setTrainingStatus("Model ready");
+      } else if (trainingJson.latestJob?.status === "running" || trainingJson.trainingStatus === "training") {
+        setTrainingStatus("Training in progress");
+      } else if (trainingJson.latestJob?.status === "pending" || trainingJson.trainingStatus === "pending") {
+        setTrainingStatus("Training queued");
+      } else if (trainingJson.latestJob?.status === "failed" || trainingJson.trainingStatus === "failed") {
+        setTrainingStatus("Training failed");
+      } else {
+        setTrainingStatus("Not started");
+      }
+
+      // Model version info
+      setActiveModelVersion(trainingJson.activeModel?.version ?? null);
+      setModelCount(trainingJson.modelHistory?.length ?? 0);
+
       setCompleted({
         preferences: preferencesDone,
         photos: photosDone,
@@ -134,6 +162,7 @@ export default function DashboardClient() {
           <div className="dashboard-summary-pills">
             <span className="dashboard-inline-pill">Profile: {completed.preferences ? "Complete" : "Incomplete"}</span>
             <span className="dashboard-inline-pill">Training photos: {samplePaths.length} uploaded</span>
+            <span className="dashboard-inline-pill">Model: {trainingStatus}{activeModelVersion ? ` (v${activeModelVersion})` : ""}</span>
             <span className="dashboard-inline-pill">Plan: {planLabel}</span>
             <span className="dashboard-inline-pill">Batch: {latestBatchStatus}</span>
           </div>

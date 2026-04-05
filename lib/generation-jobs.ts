@@ -8,6 +8,7 @@ import { getScenePresetByKey } from "@/lib/scene-presets";
 import { dispatchGenerationJobToRunPod } from "@/lib/runpod";
 import type { GenerationJobStatus } from "@/lib/db-enums";
 import { isGenerationEngineEnabled, logGenerationEngineDisabled } from "@/lib/generation-engine";
+import { getActiveModelForUser } from "@/lib/identity-models";
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 300_000; // 5 min per job
@@ -38,6 +39,20 @@ export async function getApprovedSubjectIdForUser(userId: string): Promise<strin
 
 export async function getLoraReferenceForSubject(subjectId: string): Promise<string | null> {
   const admin = getSupabaseAdmin();
+
+  // Primary: resolve from active identity_model via subject's user_id
+  const { data: subject } = await admin
+    .from("subjects")
+    .select("user_id")
+    .eq("id", subjectId)
+    .maybeSingle();
+  if (subject?.user_id) {
+    const activeModel = await getActiveModelForUser(subject.user_id as string);
+    if (activeModel?.model_path) return activeModel.model_path;
+    if (activeModel?.adapter_path) return activeModel.adapter_path;
+  }
+
+  // Fallback: legacy subjects_models lookup
   const { data, error } = await admin
     .from("subjects_models")
     .select("lora_model_reference")

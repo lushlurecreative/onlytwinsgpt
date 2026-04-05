@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { isAdminUser } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { dispatchTrainingJobToRunPod } from "@/lib/runpod";
+import { createModelRecord, updateModelStatus } from "@/lib/identity-models";
 
 type Params = { params: Promise<{ userId: string }> };
 
@@ -118,14 +119,27 @@ export async function POST(_req: Request, { params }: Params) {
     return NextResponse.json({ error: insertError?.message ?? "Failed to create training job" }, { status: 400 });
   }
 
+  // Create identity_model record for this training run
+  const identityModel = await createModelRecord({
+    user_id: userId,
+    subject_id: subjectId,
+    training_job_id: job.id,
+  });
+
   const runpodJobId = await dispatchTrainingJobToRunPod(job.id, job.subject_id, samplePaths);
   if (runpodJobId) {
     await admin.from("training_jobs").update({ runpod_job_id: runpodJobId }).eq("id", job.id);
+    if (identityModel) {
+      await updateModelStatus(identityModel.id, "training", {
+        started_at: new Date().toISOString(),
+      });
+    }
   }
 
   return NextResponse.json(
     {
       job: { id: job.id, status: job.status, sample_count: samplePaths.length },
+      model_id: identityModel?.id ?? null,
       runpod_dispatched: !!runpodJobId,
     },
     { status: 201 }
