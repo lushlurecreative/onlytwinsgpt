@@ -1,6 +1,6 @@
 # Handoff Master
 
-Last updated: 2026-04-04 (session: Pipeline Audit + System 1 Build)
+Last updated: 2026-04-04 (session: System 2 — Model Training Registry)
 
 ## Project goal
 
@@ -8,9 +8,9 @@ OnlyTwins — production AI content generation SaaS. Paid subscriber pipeline: s
 
 ## Current status
 
-Full codebase audit completed across all 4 pipeline systems. System 1 (Training Intake) implemented — photo sets, per-photo validation, readiness gating, training integration. Systems 2-4 have working foundations but gaps remain.
+System 1 (Training Intake) and System 2 (Model Training Registry) are implemented, migrated to production, and deployed. The subscriber pipeline now has: photo upload → validation → readiness gating → training job creation → versioned model registry → artifact storage → active model resolution for generation.
 
-**Phase:** Phase A (Revenue Reliability) moving into subscriber pipeline buildout.
+**Phase:** Phase A (Revenue Reliability) → subscriber pipeline buildout. Systems 1 and 2 complete. System 3 (Generation) is next.
 
 ## Active bugs
 
@@ -25,44 +25,45 @@ Full codebase audit completed across all 4 pipeline systems. System 1 (Training 
 
 ## Changes made this session
 
-### Pipeline Audit
-Audited all 4 systems (Training Intake, Model Training, Generation, Ops). Found: training/generation core pipeline exists and works. Key gaps: no per-photo tracking, no photo validation, no dataset readiness gating, no model versioning, no dedicated generation page, no job events table.
+### System 2 — Model Training Registry (IMPLEMENTED + DEPLOYED)
 
-### System 1 — Training Intake (IMPLEMENTED)
+**Migrations applied to production:**
+
+| Migration | What it does |
+|-----------|-------------|
+| `202604040001_training_photo_sets_and_photos.sql` | `training_photo_sets` + `training_photos` tables, RLS, indexes, `photo_set_id` FK on `training_jobs` (System 1 prerequisite — was pending deploy) |
+| `202604040002_identity_models.sql` | `identity_models` table with versioning, unique partial index (one active per user), RLS, `updated_at` trigger, `activate_identity_model` atomic RPC |
 
 **New files:**
 
 | File | Purpose |
 |------|---------|
-| `supabase/migrations/202604040001_training_photo_sets_and_photos.sql` | `training_photo_sets` + `training_photos` tables, RLS, indexes, `photo_set_id` FK on `training_jobs` |
-| `lib/training-photo-sets.ts` | Photo set CRUD, readiness assessment, trainable path extraction |
-| `lib/training-photo-validation.ts` | Server-side validation: dimensions, file size, aspect ratio, MIME, duplicates. Uses Range header for 64KB header fetch |
-| `app/api/training/photo-sets/route.ts` | GET active set + POST create set |
-| `app/api/training/photo-sets/[setId]/route.ts` | GET specific set with photos |
-| `app/api/training/photo-sets/[setId]/validate/route.ts` | POST run validation on all photos |
-| `app/api/training/photo-sets/[setId]/finalize/route.ts` | POST mark set as ready |
-| `app/api/training/status/route.ts` | GET training job + model status for polling |
+| `lib/identity-models.ts` | Core model registry: create, complete, fail, activate (via atomic RPC), resolve lora, get history |
+| `app/api/training/models/route.ts` | GET list all model versions for user |
+| `app/api/training/models/[modelId]/activate/route.ts` | POST set a specific model as active |
 
 **Modified files:**
 
 | File | Change |
 |------|--------|
-| `app/api/uploads/route.ts` | Creates `training_photos` record on upload, removes on delete |
-| `app/api/training/route.ts` | Accepts `photoSetId`, validates set readiness, updates set status. Legacy bucket scan preserved. MAX_PHOTOS standardized to 50 |
-| `app/api/webhooks/runpod/route.ts` | Updates photo set status on training completion/failure. Adds `training_complete` user notification |
-| `app/training/photos/TrainingPhotosClient.tsx` | Rebuilt: shows set status bar, per-photo validation badges, readiness reasons, validate/start-training buttons |
-| `app/training/photos/page.tsx` | Copy updated, GIF removed from accepted formats |
-| `app/dashboard/DashboardClient.tsx` | Polls `/api/training/status`, shows model status pill |
+| `app/api/training/route.ts` | Creates `identity_model` record (queued → training) on training job start |
+| `app/api/internal/worker/training-jobs/[jobId]/route.ts` | Updates identity_model with artifacts on completion, failure_reason on failure. Accepts new fields: adapter_path, preview_image_path, training_steps, network_dim, network_alpha, learning_rate, caption_strategy |
+| `app/api/webhooks/runpod/route.ts` | Updates identity_model on webhook COMPLETED/FAILED callbacks |
+| `app/api/training/status/route.ts` | Returns `activeModel` + `modelHistory` alongside existing training status |
+| `app/dashboard/DashboardClient.tsx` | Shows model version number in status pill (e.g. "Model ready (v2)") |
+| `lib/generation-jobs.ts` | `getLoraReferenceForSubject` resolves from active identity_model first, falls back to legacy `subjects_models` |
+| `app/api/admin/users/[userId]/training/route.ts` | Creates identity_model on admin-triggered training |
 
 ## Known facts
 
-- Photo count standardized: 10 min / 50 max everywhere (was 60 in training API)
-- Photo sets track lifecycle: draft → uploaded → validating → ready → training → trained
-- Per-photo validation checks: dimensions (min 512x512), file size (50KB-20MB), aspect ratio, MIME, duplicates
-- Readiness requires: ≥10 photos, all validated (no pending), ≥60% pass rate
-- Training webhook now updates photo set status and creates user notification
-- Validation uses Range header (64KB) to avoid downloading full images
-- RLS policies use `to service_role` correctly (verified in review)
+- `identity_models` table: one row per training run, auto-versioned per user
+- Active model enforced at DB level: unique partial index `(user_id) WHERE is_active = true`
+- Activation uses Postgres RPC `activate_identity_model` — atomic deactivate-old + activate-new
+- `completeModel()` is idempotent — skips if status already `ready`
+- Generation resolution: identity_models (active) → subjects_models (legacy fallback)
+- Worker PATCH endpoint now accepts artifact metadata (training_steps, network_dim, etc.)
+- Both webhook and worker PATCH update identity_model — race-safe (webhook notes completion timestamp, worker stores artifacts and promotes to ready)
+- If worker never PATCHes after RunPod COMPLETED webhook, model stays at `training` forever — no reconciliation job yet
 
 ## Infrastructure
 
@@ -72,20 +73,13 @@ Audited all 4 systems (Training Intake, Model Training, Generation, Ops). Found:
 | RunPod serverless | Endpoint `bd5p04vpmrob2u` |
 | Docker image | `lushlurecreative/onlytwinsgpt-worker:latest` |
 
-## What remains (Systems 2-4)
+## What remains (Systems 3-4)
 
 | System | Key gaps |
 |--------|----------|
-| **S2: Model Training** | No `identity_models` versioning table (single `subjects_models` row per subject, overwrites). No caption strategy. No training progress polling UI. No preview generation |
-| **S3: Generation** | No dedicated `/generate` page. No `generation_outputs` table (outputs are paths on job rows). No scene browse catalog for subscribers. No on-demand generation UX |
-| **S4: Ops** | No `job_events` table. No user-facing failure notifications (only admin alerts). No cancellation support. No comprehensive retry beyond RunPod dispatch |
-
-## Deploy requirements for this session
-
-1. **Run migration BEFORE code deploy**: `supabase/migrations/202604040001_training_photo_sets_and_photos.sql` in Supabase SQL Editor
-2. No new env vars needed
-3. Push to `main` triggers Vercel auto-deploy
+| **S3: Generation** | No dedicated `/generate` page. No `generation_outputs` table (outputs are paths on job rows). No scene browse catalog for subscribers. No on-demand generation UX. No preview generation from trained models |
+| **S4: Ops** | No `job_events` table. No user-facing failure notifications (only admin alerts). No cancellation support. No reconciliation for orphaned training-status models. No comprehensive retry beyond RunPod dispatch |
 
 ## Single next objective
 
-**Run the migration, deploy, and test the training photo upload → validate → ready → start training flow end-to-end with a real subscriber account.** Then begin System 2 (Model Training) — add `identity_models` table with versioning and training progress display.
+**Build System 3 (Generation System)** — the pipeline from a ready/active model to generated content. Start with: generation request creation using active identity_model, on-demand generation UX, output tracking, and delivery to library/vault.
