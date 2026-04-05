@@ -10,14 +10,14 @@ import {
 } from "@/lib/comfyui";
 
 export const runtime = "nodejs";
-export const maxDuration = 300; // 5 min — FLUX generation + face swap
+export const maxDuration = 300; // FLUX scene (~30s) + face swap (~60s) + margin
 
 /**
- * 2-Step Pipeline Preview API (production):
- *   Step 1: FLUX generates scene via ComfyUI (no identity — generic person)
- *   Step 2: FaceFusion swaps user's face via RunPod serverless
+ * 2-Step Preview Pipeline:
+ *   Step 1: FLUX generates scene via ComfyUI (generic person, no identity)
+ *   Step 2: HyperSwap face swap via RunPod (exact identity from user photos)
  *
- * POST { userPhotoUrl: string }
+ * POST { userPhotoUrls: string[], gender?: string }
  * Returns { results: SwapResult[], successCount: number }
  */
 
@@ -49,7 +49,9 @@ interface SwapResult {
 
 function fail(error: string): NextResponse {
   return NextResponse.json({
-    results: [{ targetIdx: 0, targetUrl: "", swappedUrl: null, success: false, error }] as SwapResult[],
+    results: [
+      { targetIdx: 0, targetUrl: "", swappedUrl: null, success: false, error },
+    ] as SwapResult[],
     successCount: 0,
   });
 }
@@ -91,14 +93,17 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const userPhotoUrl: string = body.userPhotoUrl || (body.userPhotoUrls && body.userPhotoUrls[0]);
+    let userPhotoUrls: string[] = body.userPhotoUrls || [];
+    if (!userPhotoUrls.length && body.userPhotoUrl) {
+      userPhotoUrls = [body.userPhotoUrl];
+    }
     const gender: string = body.gender || "neutral";
 
-    if (!userPhotoUrl || typeof userPhotoUrl !== "string") {
-      return NextResponse.json({ error: "Missing userPhotoUrl" }, { status: 400 });
+    if (!userPhotoUrls.length) {
+      return NextResponse.json({ error: "Missing userPhotoUrls" }, { status: 400 });
     }
 
-    console.log(`[gen_swap:${rid}] Start — photo: ${userPhotoUrl.slice(0, 80)}...`);
+    console.log(`[gen_swap:${rid}] Start — ${userPhotoUrls.length} photo(s), gender=${gender}`);
     const t0 = Date.now();
 
     // ── STEP 1: FLUX scene generation via ComfyUI ────────────────────
@@ -120,7 +125,7 @@ export async function POST(req: NextRequest) {
     const step1Ms = Date.now() - t0;
     console.log(`[gen_swap:${rid}] Step 1 done (${(step1Ms / 1000).toFixed(1)}s): ${(sceneBuffer.length / 1024).toFixed(0)} KB`);
 
-    // Upload scene to Supabase so RunPod worker can access it
+    // Upload scene to Supabase so RunPod worker can fetch it
     const admin = getSupabaseAdmin();
     const sceneStoragePath = `preview-scenes/${crypto.randomUUID()}.png`;
     const { error: sceneUploadError } = await admin.storage
@@ -133,10 +138,12 @@ export async function POST(req: NextRequest) {
     }
 
     const sceneSignedUrl = await toSignedUrl(sceneStoragePath);
-    const faceSignedUrl = await resolveUserPhotoUrl(userPhotoUrl);
+    const faceSignedUrls = await Promise.all(
+      userPhotoUrls.map((url) => resolveUserPhotoUrl(url))
+    );
 
-    // ── STEP 2: Face swap via RunPod serverless ──────────────────────
-    console.log(`[gen_swap:${rid}] Step 2: Face swap via RunPod...`);
+    // ── STEP 2: Face swap via RunPod (HyperSwap + post-processing) ──
+    console.log(`[gen_swap:${rid}] Step 2: Face swap via RunPod (${faceSignedUrls.length} source photos)...`);
     const t2 = Date.now();
 
     const runpodUrl = `https://api.runpod.ai/v2/${endpointId}/runsync`;
@@ -152,7 +159,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         input: {
           type: "faceswap",
-          user_photo_url: faceSignedUrl,
+          user_photo_urls: faceSignedUrls,
           scenario_image_url: sceneSignedUrl,
         },
       }),
@@ -224,7 +231,7 @@ export async function POST(req: NextRequest) {
     const totalMs = Date.now() - t0;
     console.log(`[gen_swap:${rid}] Done — ${(totalMs / 1000).toFixed(1)}s total (scene: ${(step1Ms / 1000).toFixed(1)}s, swap: ${(step2Ms / 1000).toFixed(1)}s)`);
 
-    // Clean up intermediate scene image (fire and forget)
+    // Clean up intermediate scene image
     admin.storage.from("uploads").remove([sceneStoragePath]).catch(() => {});
 
     return NextResponse.json({
@@ -237,7 +244,7 @@ export async function POST(req: NextRequest) {
     console.error(`[gen_swap:${rid}] Fatal${isAbort ? " (timeout)" : ""}: ${msg}`);
     return NextResponse.json(
       { error: "AI preview generation failed" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

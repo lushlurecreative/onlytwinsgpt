@@ -1,8 +1,8 @@
 /**
- * ComfyUI API client for InfiniteYou identity-preserving generation.
+ * ComfyUI API client for FLUX scene generation.
  * Talks to a running ComfyUI instance via HTTP API.
  *
- * Node input names discovered from the live pod via /object_info.
+ * Generates scene images only — identity is applied via face swap on RunPod.
  */
 
 const USER_AGENT = "OnlyTwins/1.0";
@@ -97,7 +97,10 @@ export async function uploadImageToComfyUI(
   return data.name || filename;
 }
 
-/** Build FLUX-only scene prompt (no identity — generic person for face swap pipeline). */
+/**
+ * Build FLUX scene prompt — no identity, just a scene with a generic person.
+ * Identity is applied via face swap on RunPod worker (HyperSwap / inswapper).
+ */
 export function buildFluxScenePrompt(
   scenePrompt: string,
   options?: { steps?: number; seed?: number; width?: number; height?: number }
@@ -163,122 +166,6 @@ export function buildFluxScenePrompt(
     "15": {
       class_type: "SaveImage",
       inputs: { images: ["14", 0], filename_prefix: "flux_scene" },
-    },
-  };
-}
-
-/** Build the API-format prompt for one InfiniteYou generation. */
-export function buildInfiniteYouPrompt(
-  imageName: string,
-  scenePrompt: string,
-  options?: { steps?: number }
-): Record<string, unknown> {
-  const steps = options?.steps ?? 28;
-  return {
-    "1": {
-      class_type: "UNETLoader",
-      inputs: { unet_name: "flux1-dev.safetensors", weight_dtype: "fp8_e4m3fn_fast" },
-    },
-    "2": {
-      class_type: "DualCLIPLoader",
-      inputs: {
-        clip_name1: "t5xxl_fp8_e4m3fn.safetensors",
-        clip_name2: "clip_l.safetensors",
-        type: "flux",
-      },
-    },
-    "3": {
-      class_type: "VAELoader",
-      inputs: { vae_name: "ae.safetensors" },
-    },
-    "4": {
-      class_type: "LoadImage",
-      inputs: { image: imageName },
-    },
-    "5": {
-      class_type: "IDEmbeddingModelLoader",
-      inputs: {
-        image_proj_model_name: "sim_stage1/image_proj_model.bin",
-        image_proj_num_tokens: 8,
-        face_analysis_provider: "CUDA",
-        face_analysis_det_size: "640",
-      },
-    },
-    "6": {
-      class_type: "ExtractIDEmbedding",
-      inputs: {
-        face_detector: ["5", 0],
-        arcface_model: ["5", 1],
-        image_proj_model: ["5", 2],
-        image: ["4", 0],
-      },
-    },
-    "7": {
-      class_type: "CLIPTextEncodeFlux",
-      inputs: {
-        clip: ["2", 0],
-        clip_l: scenePrompt,
-        t5xxl: scenePrompt,
-        guidance: 3.5,
-      },
-    },
-    "8": {
-      class_type: "CLIPTextEncode",
-      inputs: { clip: ["2", 0], text: NEGATIVE_PROMPT },
-    },
-    "9": {
-      class_type: "EmptyImage",
-      inputs: { width: 864, height: 1152, batch_size: 1, color: 0 },
-    },
-    "10": {
-      class_type: "InfuseNetLoader",
-      inputs: { controlnet_name: "sim_stage1/infusenet_sim_fp8e4m3fn.safetensors" },
-    },
-    "11": {
-      class_type: "InfuseNetApply",
-      inputs: {
-        positive: ["7", 0],
-        id_embedding: ["6", 0],
-        control_net: ["10", 0],
-        image: ["9", 0],
-        negative: ["8", 0],
-        vae: ["3", 0],
-        strength: 1.0,
-        start_percent: 0.0,
-        end_percent: 1.0,
-      },
-    },
-    "12": {
-      class_type: "KSampler",
-      inputs: {
-        model: ["1", 0],
-        positive: ["11", 0],
-        negative: ["11", 1],
-        latent_image: ["13", 0],
-        seed: Math.floor(Math.random() * 2 ** 32),
-        control_after_generate: "randomize",
-        steps,
-        cfg: 1.0,
-        sampler_name: "euler",
-        scheduler: "simple",
-        denoise: 1.0,
-      },
-    },
-    "13": {
-      class_type: "EmptyLatentImage",
-      inputs: { width: 1024, height: 1024, batch_size: 1 },
-    },
-    "14": {
-      class_type: "VAEDecode",
-      inputs: { samples: ["12", 0], vae: ["3", 0] },
-    },
-    "16": {
-      class_type: "ImageSharpen",
-      inputs: { image: ["14", 0], sharpen_radius: 2, sigma: 0.5, alpha: 0.6 },
-    },
-    "15": {
-      class_type: "SaveImage",
-      inputs: { images: ["16", 0], filename_prefix: "onlytwins_preview" },
     },
   };
 }
@@ -359,18 +246,3 @@ export async function downloadOutput(
   throw new Error("No output images in ComfyUI history");
 }
 
-/**
- * High-level: generate one InfiniteYou image from a face photo + scene prompt.
- * Handles upload → queue → poll → download in one call.
- */
-export async function generateInfiniteYou(
-  serverUrl: string,
-  imageBuffer: Buffer,
-  scenePrompt: string
-): Promise<Buffer> {
-  const imageName = await uploadImageToComfyUI(serverUrl, imageBuffer);
-  const prompt = buildInfiniteYouPrompt(imageName, scenePrompt);
-  const promptId = await queuePrompt(serverUrl, prompt);
-  const history = await waitForCompletion(serverUrl, promptId);
-  return downloadOutput(serverUrl, history);
-}

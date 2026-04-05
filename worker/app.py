@@ -24,15 +24,18 @@ def handler(job):
 
     try:
         if job_type == "faceswap":
-            user_photo_url = input_data.get("user_photo_url")
+            # Accept user_photo_urls (list) or legacy user_photo_url (string)
+            user_photo_urls = input_data.get("user_photo_urls") or []
+            if not user_photo_urls and input_data.get("user_photo_url"):
+                user_photo_urls = [input_data["user_photo_url"]]
             scenario_image_url = input_data.get("scenario_image_url")
 
-            if not user_photo_url or not scenario_image_url:
+            if not user_photo_urls or not scenario_image_url:
                 print(f"[worker:{job_id}] FAILED: missing URLs", flush=True)
-                return {"error": "Missing user_photo_url or scenario_image_url"}
+                return {"error": "Missing user_photo_urls or scenario_image_url"}
 
-            print(f"[worker:{job_id}] Starting face swap...", flush=True)
-            result_b64 = do_face_swap(user_photo_url, scenario_image_url)
+            print(f"[worker:{job_id}] Starting face swap ({len(user_photo_urls)} source(s))...", flush=True)
+            result_b64 = do_face_swap(user_photo_urls, scenario_image_url)
             elapsed = round(time.time() - start, 2)
 
             if not result_b64:
@@ -40,42 +43,6 @@ def handler(job):
                 return {"error": "Face swap processing failed"}
 
             print(f"[worker:{job_id}] COMPLETED in {elapsed}s: {len(result_b64)} chars base64", flush=True)
-            return {"image_base64": result_b64}
-
-        if job_type == "generate_swap":
-            # 2-step pipeline: FLUX generation + FaceFusion face swap
-            import base64
-            import tempfile
-            from generate_swap import generate_and_swap_from_urls
-
-            source_face_url = input_data.get("source_face_url") or input_data.get("user_photo_url")
-            prompt = input_data.get("prompt") or "professional portrait photo, natural lighting, photorealistic"
-            negative_prompt = input_data.get("negative_prompt") or ""
-
-            if not source_face_url:
-                print(f"[worker:{job_id}] FAILED: missing source_face_url", flush=True)
-                return {"error": "Missing source_face_url"}
-
-            print(f"[worker:{job_id}] Starting 2-step generate+swap...", flush=True)
-            with tempfile.TemporaryDirectory() as tmpdir:
-                out_path = os.path.join(tmpdir, "result.jpg")
-                generate_and_swap_from_urls(
-                    source_face_url=source_face_url,
-                    prompt=prompt,
-                    output_path=out_path,
-                    negative_prompt=negative_prompt,
-                    width=int(input_data.get("width", 1024)),
-                    height=int(input_data.get("height", 1024)),
-                    steps=int(input_data.get("steps", 20)),
-                    guidance=float(input_data.get("guidance", 3.5)),
-                    seed=input_data.get("seed"),
-                    upscale=bool(input_data.get("upscale", False)),
-                )
-                with open(out_path, "rb") as f:
-                    result_b64 = base64.b64encode(f.read()).decode("ascii")
-
-            elapsed = round(time.time() - start, 2)
-            print(f"[worker:{job_id}] generate_swap COMPLETED in {elapsed}s: {len(result_b64)} chars base64", flush=True)
             return {"image_base64": result_b64}
 
         print(f"[worker:{job_id}] FAILED: unknown job type '{job_type}'", flush=True)

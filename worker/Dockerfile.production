@@ -60,13 +60,16 @@ RUN curl -fSL -o "$MODELS_DIR/arcface_w600k_r50.onnx"  "$MODELS_URL/arcface_w600
 RUN curl -fSL -o "$MODELS_DIR/gender_age.onnx"          "$MODELS_HF/gender_age.onnx"
 RUN curl -fSL -o "$MODELS_DIR/2dfan4.onnx"              "$MODELS_URL/2dfan4.onnx"
 RUN curl -fSL -o "$MODELS_DIR/inswapper_128.onnx"       "$MODELS_URL/inswapper_128.onnx"
+# HyperSwap 1c 256 — primary swap model (256x256, embedding-based, FaceFusion Labs 2025)
+ENV MODELS_HF_33="https://huggingface.co/facefusion/models-3.3.0/resolve/main"
+RUN curl -fSL -o "$MODELS_DIR/hyperswap_1c_256.onnx"   "$MODELS_HF_33/hyperswap_1c_256.onnx"
 RUN curl -fSL -o "$MODELS_DIR/gfpgan_1.4.onnx"          "$MODELS_URL/gfpgan_1.4.onnx"
 RUN curl -fSL -o "$MODELS_DIR/face_occluder.onnx"       "$MODELS_HF/face_occluder.onnx"
 RUN curl -fSL -o "$MODELS_DIR/face_parser.onnx"          "$MODELS_HF/face_parser.onnx"
 RUN echo "=== All models downloaded ===" && ls -la "$MODELS_DIR/"
 
 # Copy worker code
-COPY app.py face_swap.py face_enhance.py storage.py .
+COPY app.py face_swap.py storage.py .
 
 # Verify imports and models
 RUN python -c "\
@@ -77,8 +80,6 @@ print(f'Models in {models_dir}: {files}'); \
 required = ['yoloface_8n.onnx', 'arcface_w600k_r50.onnx', 'gender_age.onnx', '2dfan4.onnx', 'inswapper_128.onnx', 'gfpgan_1.4.onnx', 'face_occluder.onnx', 'face_parser.onnx']; \
 missing = [m for m in required if m not in files]; \
 assert not missing, f'Missing models: {missing}'; \
-from facefusionlib import swapper; \
-from face_enhance import enhance_face_image; \
 import runpod; \
 print('All imports and models OK'); \
 "

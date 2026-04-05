@@ -77,7 +77,7 @@ export default function HomeClient() {
       const apiResponse = await fetch("/api/preview/generate-swap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userPhotoUrl: photos[0], gender }),
+        body: JSON.stringify({ userPhotoUrls: photos, gender }),
       });
 
       // Stop the animation

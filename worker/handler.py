@@ -48,14 +48,16 @@ def handler(job):
     try:
         if job_type == "faceswap":
             from face_swap import do_face_swap
-            user_photo_url = inp.get("user_photo_url") or ""
+            user_photo_urls = inp.get("user_photo_urls") or []
+            if not user_photo_urls and inp.get("user_photo_url"):
+                user_photo_urls = [inp["user_photo_url"]]
             scenario_image_url = inp.get("scenario_image_url") or ""
-            if not user_photo_url or not scenario_image_url:
-                return {"status": "failed", "error": "Missing user_photo_url or scenario_image_url"}
-            result_url = do_face_swap(user_photo_url, scenario_image_url)
-            if not result_url:
+            if not user_photo_urls or not scenario_image_url:
+                return {"status": "failed", "error": "Missing user_photo_urls or scenario_image_url"}
+            result_b64 = do_face_swap(user_photo_urls, scenario_image_url)
+            if not result_b64:
                 return {"status": "failed", "error": "Face swap processing failed"}
-            return {"status": "completed", "output": {"swapped_image_url": result_url}}
+            return {"status": "completed", "output": {"image_base64": result_b64}}
         if job_type == "decode_watermark":
             from watermark import decode_from_url
             image_url = inp.get("image_url") or ""
@@ -74,34 +76,7 @@ def handler(job):
             report_gpu_usage(app_url, worker_secret, "training", inp.get("job_id"), time.time() - start)
             return {"status": "completed"}
         if job_type == "generate_swap":
-            # 2-step pipeline: FLUX scene generation + FaceFusion face swap
-            from generate_swap import generate_and_swap_from_urls
-            import tempfile
-            source_face_url = inp.get("source_face_url") or inp.get("reference_image_path") or ""
-            prompt = inp.get("prompt") or "professional portrait photo, natural lighting, photorealistic"
-            negative_prompt = inp.get("negative_prompt") or ""
-            if not source_face_url:
-                return {"status": "failed", "error": "Missing source_face_url"}
-            with tempfile.TemporaryDirectory() as tmpdir:
-                out_path = os.path.join(tmpdir, "result.jpg")
-                generate_and_swap_from_urls(
-                    source_face_url=source_face_url,
-                    prompt=prompt,
-                    output_path=out_path,
-                    negative_prompt=negative_prompt,
-                    width=int(inp.get("width", 1024)),
-                    height=int(inp.get("height", 1024)),
-                    steps=int(inp.get("steps", 20)),
-                    guidance=float(inp.get("guidance", 3.5)),
-                    seed=inp.get("seed"),
-                    upscale=bool(inp.get("upscale", False)),
-                )
-                # Read result and return as base64
-                import base64
-                with open(out_path, "rb") as f:
-                    result_b64 = base64.b64encode(f.read()).decode("ascii")
-            report_gpu_usage(app_url, worker_secret, "generation", inp.get("job_id"), time.time() - start, job.get("id"))
-            return {"status": "completed", "image_base64": result_b64, "job_id": inp.get("job_id")}
+            return {"status": "failed", "error": "Generate+swap pipeline removed — identity generation now runs via ComfyUI PuLID"}
         if job_type == "generation":
             import main as main_mod
             importlib.reload(main_mod)
