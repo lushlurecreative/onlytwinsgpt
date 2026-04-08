@@ -51,14 +51,17 @@ RUN python -m pip uninstall -y onnxruntime && \
 # Torch is CUDA 12.1 wheel (matches cuDNN base image).
 RUN python -m pip install --no-cache-dir \
     torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu121
+# diffusers is pinned to 0.30.3: FluxPipeline first shipped in 0.30.0 and
+# 0.30.x does NOT require torch.xpu (added in diffusers 0.36.0 / torch 2.4+).
+# peft 0.12.0 is the last release compatible with diffusers 0.30.x.
 RUN python -m pip install --no-cache-dir \
-    diffusers>=0.36.0 \
-    transformers>=4.41.0 \
-    accelerate>=0.31.0 \
-    peft>=0.11.0 \
-    safetensors \
+    "diffusers==0.30.3" \
+    "transformers==4.44.2" \
+    "accelerate==0.33.0" \
+    "peft==0.12.0" \
+    "safetensors==0.4.5" \
     sentencepiece \
-    supabase>=2.0.0
+    "supabase>=2.0.0"
 
 # Download FaceFusion ONNX models (from facefusion-assets, NOT InsightFace buffalo_l)
 # facefusionlib expects these at ../.assets/models/ relative to the package
