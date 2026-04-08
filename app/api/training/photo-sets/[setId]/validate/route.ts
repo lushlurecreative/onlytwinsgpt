@@ -66,8 +66,13 @@ export async function POST(
   let finalSetStatus: string;
   if (readiness.isReady) {
     finalSetStatus = "ready";
+    // training_photo_sets.quality_score is numeric(4,2) — max value 99.99.
+    // approvedRatio*100 yields 100.00 when all photos pass, which overflows
+    // and silently fails the entire UPDATE (status would never advance).
+    // Round and cap to fit the column.
+    const qs = Math.min(99.99, Math.round(readiness.summary.approvedRatio * 10000) / 100);
     await updatePhotoSetStatus(setId, "ready", {
-      quality_score: readiness.summary.approvedRatio * 100,
+      quality_score: qs,
       validation_summary: readiness.summary as unknown as Record<string, unknown>,
     });
   } else if (readiness.summary.failed > readiness.summary.total * 0.5) {
