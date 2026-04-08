@@ -25,131 +25,149 @@ export interface PhotoValidationResult {
 /**
  * Validate all photos in a training set.
  * Updates each photo's validation fields in the database.
+ *
+ * Per-photo work runs in parallel (Promise.all) so the wall-clock fits inside
+ * Vercel Hobby's 10-second function timeout. Previously the serial loop made
+ * 10 photos × ~1s each, leaving no time for the orchestrator to write the
+ * final set status — the row stayed stuck in "validating" forever.
  */
 export async function validateTrainingPhotos(
   photos: TrainingPhoto[]
 ): Promise<PhotoValidationResult[]> {
   const admin = getSupabaseAdmin();
-  const results: PhotoValidationResult[] = [];
-  const seenPaths = new Set<string>();
 
-  for (const photo of photos) {
-    const issues: string[] = [];
-    const warnings: string[] = [];
-    let width = photo.width;
-    let height = photo.height;
-    let fileSize = photo.file_size;
-
-    // 1. Fetch image metadata from storage if we don't have dimensions
-    if (!width || !height || !fileSize) {
-      try {
-        const dims = await getImageMetadata(photo.storage_path);
-        width = dims.width;
-        height = dims.height;
-        fileSize = dims.fileSize;
-      } catch (err) {
-        issues.push("Could not read image metadata");
-        logWarn("photo_validation_metadata_error", {
-          photoId: photo.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
+  // Pre-pass: detect duplicates by storage path. Done before the parallel loop
+  // because Set.add() inside parallel iterations races and misses dupes.
+  const pathCounts = new Map<string, number>();
+  for (const p of photos) {
+    pathCounts.set(p.storage_path, (pathCounts.get(p.storage_path) ?? 0) + 1);
+  }
+  const seenOnce = new Set<string>();
+  const duplicateIds = new Set<string>();
+  for (const p of photos) {
+    if ((pathCounts.get(p.storage_path) ?? 0) > 1) {
+      if (seenOnce.has(p.storage_path)) {
+        duplicateIds.add(p.id); // every duplicate after the first is flagged
+      } else {
+        seenOnce.add(p.storage_path);
       }
     }
+  }
 
-    // 2. File size checks
-    if (fileSize !== null) {
-      if (fileSize < MIN_FILE_SIZE) {
-        issues.push(
-          `File too small (${Math.round(fileSize / 1024)}KB) — minimum ${Math.round(MIN_FILE_SIZE / 1024)}KB`
-        );
+  const results = await Promise.all(
+    photos.map(async (photo): Promise<PhotoValidationResult> => {
+      const issues: string[] = [];
+      const warnings: string[] = [];
+      let width = photo.width;
+      let height = photo.height;
+      let fileSize = photo.file_size;
+
+      // 1. Fetch image metadata from storage if we don't have dimensions
+      if (!width || !height || !fileSize) {
+        try {
+          const dims = await getImageMetadata(photo.storage_path);
+          width = dims.width;
+          height = dims.height;
+          fileSize = dims.fileSize;
+        } catch (err) {
+          issues.push("Could not read image metadata");
+          logWarn("photo_validation_metadata_error", {
+            photoId: photo.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
       }
-      if (fileSize > MAX_FILE_SIZE) {
-        issues.push(
-          `File too large (${Math.round(fileSize / (1024 * 1024))}MB) — maximum ${Math.round(MAX_FILE_SIZE / (1024 * 1024))}MB`
-        );
-      }
-    }
 
-    // 3. Dimension checks
-    if (width !== null && height !== null) {
-      if (width < MIN_WIDTH || height < MIN_HEIGHT) {
-        issues.push(
-          `Resolution too low (${width}x${height}) — minimum ${MIN_WIDTH}x${MIN_HEIGHT}`
-        );
-      } else if (width < IDEAL_MIN_WIDTH || height < IDEAL_MIN_HEIGHT) {
-        warnings.push(
-          `Resolution below ideal (${width}x${height}) — recommended ${IDEAL_MIN_WIDTH}x${IDEAL_MIN_HEIGHT}+`
-        );
+      // 2. File size checks
+      if (fileSize !== null) {
+        if (fileSize < MIN_FILE_SIZE) {
+          issues.push(
+            `File too small (${Math.round(fileSize / 1024)}KB) — minimum ${Math.round(MIN_FILE_SIZE / 1024)}KB`
+          );
+        }
+        if (fileSize > MAX_FILE_SIZE) {
+          issues.push(
+            `File too large (${Math.round(fileSize / (1024 * 1024))}MB) — maximum ${Math.round(MAX_FILE_SIZE / (1024 * 1024))}MB`
+          );
+        }
       }
 
-      // Extreme aspect ratios are problematic for training
-      const aspectRatio = Math.max(width, height) / Math.min(width, height);
-      if (aspectRatio > 3) {
-        issues.push(
-          `Extreme aspect ratio (${aspectRatio.toFixed(1)}:1) — likely a banner or strip, not a portrait`
-        );
-      } else if (aspectRatio > 2) {
-        warnings.push(
-          `Wide aspect ratio (${aspectRatio.toFixed(1)}:1) — may crop poorly for training`
-        );
+      // 3. Dimension checks
+      if (width !== null && height !== null) {
+        if (width < MIN_WIDTH || height < MIN_HEIGHT) {
+          issues.push(
+            `Resolution too low (${width}x${height}) — minimum ${MIN_WIDTH}x${MIN_HEIGHT}`
+          );
+        } else if (width < IDEAL_MIN_WIDTH || height < IDEAL_MIN_HEIGHT) {
+          warnings.push(
+            `Resolution below ideal (${width}x${height}) — recommended ${IDEAL_MIN_WIDTH}x${IDEAL_MIN_HEIGHT}+`
+          );
+        }
+
+        // Extreme aspect ratios are problematic for training
+        const aspectRatio = Math.max(width, height) / Math.min(width, height);
+        if (aspectRatio > 3) {
+          issues.push(
+            `Extreme aspect ratio (${aspectRatio.toFixed(1)}:1) — likely a banner or strip, not a portrait`
+          );
+        } else if (aspectRatio > 2) {
+          warnings.push(
+            `Wide aspect ratio (${aspectRatio.toFixed(1)}:1) — may crop poorly for training`
+          );
+        }
       }
-    }
 
-    // 4. MIME type check
-    const allowedMimes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-    ];
-    if (!allowedMimes.includes(photo.mime_type)) {
-      issues.push(`Unsupported format (${photo.mime_type}) — use JPEG, PNG, or WEBP`);
-    }
+      // 4. MIME type check
+      const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+      if (!allowedMimes.includes(photo.mime_type)) {
+        issues.push(`Unsupported format (${photo.mime_type}) — use JPEG, PNG, or WEBP`);
+      }
 
-    // 5. Duplicate detection (by storage path — exact duplicates)
-    const isDuplicate = seenPaths.has(photo.storage_path);
-    if (isDuplicate) {
-      issues.push("Duplicate photo detected");
-    }
-    seenPaths.add(photo.storage_path);
+      // 5. Duplicate flag (computed in pre-pass above)
+      const isDuplicate = duplicateIds.has(photo.id);
+      if (isDuplicate) {
+        issues.push("Duplicate photo detected");
+      }
 
-    // Determine overall status
-    let validationStatus: "passed" | "warned" | "failed";
-    if (issues.length > 0) {
-      validationStatus = "failed";
-    } else if (warnings.length > 0) {
-      validationStatus = "warned";
-    } else {
-      validationStatus = "passed";
-    }
+      // Determine overall status
+      let validationStatus: "passed" | "warned" | "failed";
+      if (issues.length > 0) {
+        validationStatus = "failed";
+      } else if (warnings.length > 0) {
+        validationStatus = "warned";
+      } else {
+        validationStatus = "passed";
+      }
 
-    const allNotes = [...issues, ...warnings].join("; ");
+      const allNotes = [...issues, ...warnings].join("; ");
 
-    // Update photo record in database
-    await admin
-      .from("training_photos")
-      .update({
+      // Update photo record in database
+      await admin
+        .from("training_photos")
+        .update({
+          width,
+          height,
+          file_size: fileSize,
+          validation_status: validationStatus,
+          validation_notes: allNotes || null,
+          is_duplicate: isDuplicate,
+          approved: validationStatus !== "failed" ? true : false,
+        })
+        .eq("id", photo.id);
+
+      return {
+        photoId: photo.id,
+        storagePath: photo.storage_path,
+        validation_status: validationStatus,
+        validation_notes: allNotes,
         width,
         height,
         file_size: fileSize,
-        validation_status: validationStatus,
-        validation_notes: allNotes || null,
-        is_duplicate: isDuplicate,
-        approved: validationStatus !== "failed" ? true : false,
-      })
-      .eq("id", photo.id);
-
-    results.push({
-      photoId: photo.id,
-      storagePath: photo.storage_path,
-      validation_status: validationStatus,
-      validation_notes: allNotes,
-      width,
-      height,
-      file_size: fileSize,
-      issues,
-      warnings,
-    });
-  }
+        issues,
+        warnings,
+      };
+    })
+  );
 
   logInfo("training_photos_validation_complete", {
     total: results.length,
