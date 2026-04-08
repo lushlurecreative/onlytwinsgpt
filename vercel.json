@@ -6,6 +6,7 @@
     { "path": "/api/cron/enqueue-lead-samples", "schedule": "0 9 * * *" },
     { "path": "/api/cron/send-outreach", "schedule": "0 10 * * *" },
     { "path": "/api/cron/process-customer-generation", "schedule": "0 12 * * *" },
-    { "path": "/api/cron/monthly-customer-generation", "schedule": "0 0 * * *" }
+    { "path": "/api/cron/monthly-customer-generation", "schedule": "0 0 * * *" },
+    { "path": "/api/cron/job-reaper", "schedule": "0 */2 * * *" }
   ]
 }

@@ -32,7 +32,8 @@ export type GenerationJobStatus =
   | "upscaling"
   | "watermarking"
   | "completed"
-  | "failed";
+  | "failed"
+  | "cancelled";
 
 export const GENERATION_JOB_STATUSES: GenerationJobStatus[] = [
   "pending",
@@ -41,4 +42,5 @@ export const GENERATION_JOB_STATUSES: GenerationJobStatus[] = [
   "watermarking",
   "completed",
   "failed",
+  "cancelled",
 ];
