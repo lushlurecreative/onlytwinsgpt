@@ -297,15 +297,36 @@ def train_and_save(
     # Save LoRA via FluxPipeline.save_lora_weights so the resulting
     # pytorch_lora_weights.safetensors is loadable via pipe.load_lora_weights() — this
     # handles the "transformer." key prefixing diffusers' FluxLoraLoaderMixin expects.
+    # Cast the LoRA state dict to bfloat16 before saving: peft trains LoRA params in
+    # fp32 for optimizer stability, but the saved artifact is only ever loaded for
+    # inference, so fp32 wastes 2x disk/bandwidth. Supabase uploads bucket on the free
+    # tier caps objects at 50 MB — fp32 FLUX LoRA at r=16 is ~75 MB and gets HTTP 413;
+    # bf16 is ~38 MB and uploads fine.
     transformer.eval()
     transformer_lora_layers = get_peft_model_state_dict(transformer)
+    transformer_lora_layers = {
+        k: v.detach().to(torch.bfloat16).contiguous()
+        for k, v in transformer_lora_layers.items()
+    }
     FluxPipeline.save_lora_weights(
         save_directory=output_dir,
         transformer_lora_layers=transformer_lora_layers,
         text_encoder_lora_layers=None,
     )
     out_path = os.path.join(output_dir, "pytorch_lora_weights.safetensors")
-    print("Saved LoRA to", out_path, flush=True)
+
+    # Log the exact saved file size so the worker log shows bytes + MB for every run —
+    # this is the single source of truth for diagnosing Supabase upload failures.
+    try:
+        saved_bytes = os.path.getsize(out_path)
+    except OSError as e:
+        saved_bytes = -1
+        print(f"LoRA size stat failed: {e}", flush=True)
+    saved_mb = saved_bytes / (1024 * 1024) if saved_bytes >= 0 else -1
+    print(
+        f"Saved LoRA to {out_path} dtype=bf16 bytes={saved_bytes} mb={saved_mb:.2f}",
+        flush=True,
+    )
     return out_path
 
 
