@@ -64,13 +64,13 @@ def _run_training(input_data, job_id):
 
         # Upload LoRA safetensors to Supabase uploads bucket under a stable path
         storage_path = f"models/{subject_id}/{training_job_id}/pytorch_lora_weights.safetensors"
-        uploaded_url = upload_to_uploads(
+        uploaded_url, upload_err = upload_to_uploads(
             lora_local_path,
             storage_path,
             content_type="application/octet-stream",
         )
         if not uploaded_url:
-            return {"error": "LoRA upload to Supabase failed"}
+            return {"error": f"LoRA upload failed: {upload_err or 'unknown'}"}
 
         # PATCH the OnlyTwins internal worker endpoint so identity_models.model_path
         # is set and the model is activated before the RunPod webhook cascade fires.

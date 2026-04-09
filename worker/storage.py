@@ -110,24 +110,29 @@ def upload_to_model_artifacts(local_path: str, storage_path: str) -> bool:
         return False
 
 
-def upload_to_uploads(local_path: str, storage_path: str, content_type: str = "image/jpeg") -> str | None:
-    """Upload file to uploads bucket using direct REST API (bypasses supabase SDK entirely)."""
+def upload_to_uploads(local_path: str, storage_path: str, content_type: str = "image/jpeg") -> tuple[str | None, str | None]:
+    """Upload file to uploads bucket using direct REST API (bypasses supabase SDK entirely).
+
+    Returns (public_url, error_message):
+      - On success: (url, None)
+      - On failure: (None, short_error_string) — error_string is safe to propagate as
+        the worker return value so the training_jobs.logs row gets a useful message
+        instead of a generic "LoRA upload to Supabase failed".
+    """
     import sys
     supabase_url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL") or os.environ.get("SUPABASE_URL", "")
     service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
-    print(f"[storage] upload_to_uploads: path={storage_path} local={local_path} size={os.path.getsize(local_path) if os.path.exists(local_path) else 'MISSING'}", flush=True)
+    size = os.path.getsize(local_path) if os.path.exists(local_path) else None
+    print(f"[storage] upload_to_uploads: path={storage_path} local={local_path} size={size if size is not None else 'MISSING'}", flush=True)
     sys.stdout.flush()
 
+    if size is None:
+        return None, f"local file missing: {local_path}"
     if not supabase_url or not service_key:
-        print(f"[storage] upload_to_uploads: FAILED url={'SET' if supabase_url else 'MISSING'} key={'SET' if service_key else 'MISSING'}", flush=True)
-        sys.stdout.flush()
-        return None
-
+        return None, f"supabase env missing: url={'SET' if supabase_url else 'MISSING'} key={'SET' if service_key else 'MISSING'}"
     if not requests:
-        print("[storage] upload_to_uploads: FAILED requests module not available", flush=True)
-        sys.stdout.flush()
-        return None
+        return None, "requests module not available"
 
     try:
         with open(local_path, "rb") as f:
@@ -145,24 +150,23 @@ def upload_to_uploads(local_path: str, storage_path: str, content_type: str = "i
                 "x-upsert": "true",
             },
             data=data,
-            timeout=30,
+            timeout=180,
         )
 
-        print(f"[storage] upload_to_uploads: response status={resp.status_code} body={resp.text[:300]}", flush=True)
+        body_head = resp.text[:300]
+        print(f"[storage] upload_to_uploads: response status={resp.status_code} body={body_head}", flush=True)
         sys.stdout.flush()
 
         if resp.status_code not in (200, 201):
-            print(f"[storage] upload_to_uploads: FAILED status={resp.status_code}", flush=True)
-            sys.stdout.flush()
-            return None
+            return None, f"HTTP {resp.status_code}: {body_head}"
 
         public_url = f"{supabase_url}/storage/v1/object/public/uploads/{storage_path}"
         print(f"[storage] upload_to_uploads: OK url={public_url}", flush=True)
         sys.stdout.flush()
-        return public_url
+        return public_url, None
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
         print(f"[storage] upload_to_uploads: EXCEPTION {e}\n{tb}", flush=True)
         sys.stdout.flush()
-        return None
+        return None, f"exception: {type(e).__name__}: {str(e)[:200]}"
