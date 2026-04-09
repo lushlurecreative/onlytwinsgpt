@@ -1,7 +1,13 @@
 """
-FLUX LoRA training: load FLUX.1-dev, add LoRA, train on instance images, save safetensors.
-Requires: HF token (FLUX.1-dev is gated), GPU, diffusers, peft, torch, transformers.
-Run from worker dir: python train_lora.py --instance_data_dir ./samples --output_dir ./out --instance_prompt "photo of TOK person"
+FLUX LoRA training: load FLUX.1-dev (4-bit NF4 quant), add LoRA adapters, train on instance
+images using flow-matching loss, save safetensors.
+
+Requires: HF token (FLUX.1-dev is gated), 24 GB+ GPU, diffusers==0.31.0, peft==0.13.2,
+bitsandbytes==0.43.3, torch==2.2.0, transformers==4.44.2.
+
+Run from worker dir:
+  python train_lora.py --instance_data_dir ./samples --output_dir ./out \
+      --instance_prompt "photo of TOK person"
 """
 
 import argparse
@@ -12,6 +18,7 @@ from pathlib import Path
 # Optional heavy deps - fail with clear message if not installed
 try:
     import torch
+    import torch.nn.functional as F
     from PIL import Image
     from torch.utils.data import Dataset
     from torchvision import transforms
@@ -33,6 +40,7 @@ except ImportError as e:
 FLUX_MODEL = "black-forest-labs/FLUX.1-dev"
 DEFAULT_INSTANCE_PROMPT = "photo of TOK person"
 RESOLUTION = 512  # 512 keeps VRAM low enough for 4-bit FLUX LoRA on a 24 GB card
+VAE_SCALE_FACTOR = 8  # FLUX VAE is 8x spatial downsample
 DEFAULT_STEPS = 500  # Tune for quality/speed; 500–1500 typical
 
 
@@ -65,7 +73,7 @@ def train_and_save(
     instance_prompt: str = DEFAULT_INSTANCE_PROMPT,
     max_train_steps: int = DEFAULT_STEPS,
     lr: float = 1e-4,
-    batch_size: int = 2,
+    batch_size: int = 1,
     seed: int = 42,
 ) -> str:
     """Train FLUX LoRA and save to output_dir. Returns path to saved safetensors."""
@@ -114,18 +122,34 @@ def train_and_save(
             prompt_2=instance_prompt,
             device=device,
         )
+    prompt_embeds = prompt_embeds.to(device=device, dtype=dtype)
+    pooled_embeds = pooled_embeds.to(device=device, dtype=dtype)
+    text_ids = text_ids.to(device=device, dtype=dtype)
 
+    del pipe.text_encoder
+    del pipe.text_encoder_2
     pipe.text_encoder = None
     pipe.text_encoder_2 = None
     torch.cuda.empty_cache()
     print("Text encoders freed.", flush=True)
+
+    # FLUX VAE normalization factors
+    vae_shift = float(pipe.vae.config.shift_factor)
+    vae_scale = float(pipe.vae.config.scaling_factor)
+    print(f"VAE shift={vae_shift} scale={vae_scale}", flush=True)
+
+    # FLUX.1-dev is guidance-distilled — transformer expects a guidance scalar per sample.
+    guidance_embeds = bool(getattr(transformer.config, "guidance_embeds", False))
+    print(f"Transformer guidance_embeds={guidance_embeds}", flush=True)
 
     # Freeze quantized base; only LoRA adapters are trainable.
     transformer.requires_grad_(False)
     if hasattr(transformer, "gradient_checkpointing_enable"):
         transformer.gradient_checkpointing_enable()
 
-    # LoRA config (attention layers)
+    # LoRA config targeting both double-stream and single-stream attention projections.
+    # FLUX.1-dev attention layers use to_k/to_q/to_v/to_out.0 plus context projections;
+    # the base set covers the main attention path and matches diffusers' flux lora example.
     lora_config = LoraConfig(
         r=16,
         lora_alpha=32,
@@ -135,6 +159,10 @@ def train_and_save(
     transformer = get_peft_model(transformer, lora_config)
     transformer.train()
     # DO NOT call transformer.to(device) — 4-bit base is already device-placed.
+
+    trainable = [p for p in transformer.parameters() if p.requires_grad]
+    num_trainable = sum(p.numel() for p in trainable)
+    print(f"Trainable LoRA params: {num_trainable:,}", flush=True)
 
     # Dataset and dataloader
     dataset = ImageFolderDataset(instance_data_dir, size=RESOLUTION)
@@ -147,41 +175,94 @@ def train_and_save(
         num_workers=0,
     )
 
-    trainable = [p for p in transformer.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(trainable, lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max_train_steps)
 
     global_step = 0
-    transformer.train()
+    print(f"Starting training for {max_train_steps} steps (batch={batch_size}, lr={lr})...", flush=True)
+
     while global_step < max_train_steps:
         for batch in dataloader:
             if global_step >= max_train_steps:
                 break
-            pixel_values = batch.to(device, dtype=dtype)
-            # VAE encode
+
+            pixel_values = batch.to(device=device, dtype=dtype)
+            bsz = pixel_values.shape[0]
+
+            # --- VAE encode with FLUX's (raw - shift) * scale formula ---
             with torch.no_grad():
-                latents = pipe.vae.encode(pixel_values).latent_dist.sample()
-                latents = latents * pipe.vae.config.scaling_factor
-            # Sample timestep
-            timesteps = torch.randint(0, pipe.scheduler.config.num_train_timesteps, (pixel_values.shape[0],), device=device).long()
-            noise = torch.randn_like(latents, device=device, dtype=dtype)
-            noisy_latents = pipe.scheduler.add_noise(latents, noise, timesteps)
+                raw_latents = pipe.vae.encode(pixel_values).latent_dist.sample()
+                latents = (raw_latents - vae_shift) * vae_scale
+            latents = latents.to(dtype=dtype)
 
-            # Expand prompt embeds for batch
-            batch_size_curr = pixel_values.shape[0]
-            pe = prompt_embeds[:1].expand(batch_size_curr, -1, -1)
-            po = pooled_embeds[:1].expand(batch_size_curr, -1)
+            latent_h, latent_w = latents.shape[-2], latents.shape[-1]
 
-            # FLUX uses flow matching: model predicts velocity; target = noise - latents
-            model_pred = transformer(
+            # --- Flow-matching noise (sigma ~ logit-normal on [0,1]) ---
+            # Logit-normal density is what the FLUX paper and the official HF training
+            # example use for timestep sampling on rectified-flow models.
+            u = torch.randn(bsz, device=device, dtype=torch.float32)
+            sigma = torch.sigmoid(u)  # (B,) in (0, 1)
+            sigma_broadcast = sigma.view(-1, 1, 1, 1).to(dtype=latents.dtype)
+
+            noise = torch.randn_like(latents)
+
+            # Linear flow-matching interpolation between clean latents and noise
+            noisy_latents = (1.0 - sigma_broadcast) * latents + sigma_broadcast * noise
+
+            # --- Pack latents for FLUX transformer (B, C, H, W) -> (B, (H/2)*(W/2), C*4) ---
+            packed_noisy_latents = FluxPipeline._pack_latents(
                 noisy_latents,
-                timesteps,
-                encoder_hidden_states=pe,
+                batch_size=bsz,
+                num_channels_latents=noisy_latents.shape[1],
+                height=latent_h,
+                width=latent_w,
+            )
+
+            # Latent image ids: positional embeddings for 2x2 latent patches
+            latent_image_ids = FluxPipeline._prepare_latent_image_ids(
+                bsz,
+                latent_h // 2,
+                latent_w // 2,
+                device,
+                dtype,
+            )
+
+            # Guidance vector (FLUX.1-dev is guidance-distilled). Use 1.0 during training.
+            guidance = (
+                torch.ones(bsz, device=device, dtype=dtype) if guidance_embeds else None
+            )
+
+            # Expand pooled/prompt embeds to batch
+            pe = prompt_embeds[:1].expand(bsz, -1, -1)
+            po = pooled_embeds[:1].expand(bsz, -1)
+
+            # FLUX transformer expects timestep in [0, 1] (see FluxPipeline.__call__
+            # which passes `timestep / 1000` — we sampled sigma directly in [0,1]).
+            timestep = sigma.to(dtype=dtype)
+
+            # --- Forward ---
+            model_pred_packed = transformer(
+                hidden_states=packed_noisy_latents,
+                timestep=timestep,
+                guidance=guidance,
                 pooled_projections=po,
+                encoder_hidden_states=pe,
+                txt_ids=text_ids,
+                img_ids=latent_image_ids,
                 return_dict=False,
             )[0]
-            velocity_target = noise - latents
-            loss = torch.nn.functional.mse_loss(model_pred.float(), velocity_target.float(), reduction="mean")
+
+            # --- Unpack prediction back to (B, C, H, W) to match target shape ---
+            model_pred = FluxPipeline._unpack_latents(
+                model_pred_packed,
+                height=latent_h * VAE_SCALE_FACTOR,
+                width=latent_w * VAE_SCALE_FACTOR,
+                vae_scale_factor=VAE_SCALE_FACTOR,
+            )
+
+            # --- Flow-matching target: velocity = noise - clean_latents ---
+            target = (noise - latents).to(dtype=torch.float32)
+            loss = F.mse_loss(model_pred.to(torch.float32), target, reduction="mean")
 
             opt.zero_grad()
             loss.backward()
@@ -189,16 +270,21 @@ def train_and_save(
             opt.step()
             scheduler.step()
             global_step += 1
-            if global_step % 50 == 0:
-                print(f"Step {global_step}/{max_train_steps} loss={loss.item():.4f}")
+
+            if global_step == 1 or global_step % 25 == 0:
+                print(
+                    f"Step {global_step}/{max_train_steps} loss={loss.item():.4f} "
+                    f"sigma_mean={float(sigma.mean()):.3f}",
+                    flush=True,
+                )
 
     # Save LoRA
     lora_state = get_peft_model_state_dict(transformer, adapter_name="default")
-    # Diffusers expects unet key format for Flux; transformer LoRA is often saved with transformer prefix
+    # Diffusers expects transformer LoRA saved without the peft wrapper prefix.
     state_for_save = {k.replace("base_model.model.", ""): v for k, v in lora_state.items()}
     out_path = os.path.join(output_dir, "pytorch_lora_weights.safetensors")
     safetensors.torch.save_file(state_for_save, out_path)
-    print("Saved LoRA to", out_path)
+    print("Saved LoRA to", out_path, flush=True)
     return out_path
 
 
@@ -209,7 +295,7 @@ def main():
     p.add_argument("--instance_prompt", default=DEFAULT_INSTANCE_PROMPT)
     p.add_argument("--max_train_steps", type=int, default=DEFAULT_STEPS)
     p.add_argument("--lr", type=float, default=1e-4)
-    p.add_argument("--batch_size", type=int, default=2)
+    p.add_argument("--batch_size", type=int, default=1)
     p.add_argument("--seed", type=int, default=42)
     args = p.parse_args()
     train_and_save(
