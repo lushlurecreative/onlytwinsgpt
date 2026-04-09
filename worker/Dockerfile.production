@@ -88,7 +88,7 @@ RUN curl -fSL -o "$MODELS_DIR/face_parser.onnx"          "$MODELS_HF/face_parser
 RUN echo "=== All models downloaded ===" && ls -la "$MODELS_DIR/"
 
 # Copy worker code
-COPY app.py face_swap.py storage.py train_lora.py .
+COPY app.py face_swap.py storage.py train_lora.py main.py generate_flux.py watermark.py .
 
 # Verify imports and models (face-swap path + training path)
 RUN python -c "\

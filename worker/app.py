@@ -150,6 +150,51 @@ def handler(job):
                 print(f"[worker:{job_id}] TRAINING COMPLETED in {elapsed}s", flush=True)
             return result
 
+        if job_type == "generation":
+            # Delegate to the existing worker/main.py generation implementation.
+            # Lazy import so face-swap / training cold starts are not penalized.
+            app_url = (input_data.get("app_url") or "").rstrip("/")
+            worker_secret = input_data.get("worker_secret") or ""
+            os.environ["APP_URL"] = app_url
+            os.environ["WORKER_SECRET"] = worker_secret
+
+            try:
+                import main as main_mod  # noqa: WPS433 (lazy import is intentional)
+                import importlib
+                importlib.reload(main_mod)
+            except Exception as import_err:
+                print(f"[worker:{job_id}] GENERATION FAILED: main import error: {import_err}", flush=True)
+                return {"error": f"main import error: {import_err}"}
+
+            gen_job_id = input_data.get("job_id")
+            print(
+                f"[worker:{job_id}] GENERATION: job_id={gen_job_id} "
+                f"subject={input_data.get('subject_id')} preset={input_data.get('preset_id')}",
+                flush=True,
+            )
+
+            try:
+                main_mod.run_generation_job({
+                    "id": gen_job_id,
+                    "subject_id": input_data.get("subject_id"),
+                    "preset_id": input_data.get("preset_id"),
+                    "reference_image_path": input_data.get("reference_image_path") or "",
+                    "lora_model_reference": input_data.get("lora_model_reference"),
+                    "controlnet_input_path": input_data.get("controlnet_input_path"),
+                    "job_type": input_data.get("job_type") or "user",
+                    "lead_id": input_data.get("lead_id"),
+                })
+            except Exception as gen_err:
+                elapsed = round(time.time() - start, 2)
+                print(f"[worker:{job_id}] GENERATION FAILED after {elapsed}s: {gen_err}", flush=True)
+                traceback.print_exc(file=sys.stdout)
+                sys.stdout.flush()
+                return {"error": str(gen_err)}
+
+            elapsed = round(time.time() - start, 2)
+            print(f"[worker:{job_id}] GENERATION COMPLETED in {elapsed}s", flush=True)
+            return {"status": "completed", "job_id": gen_job_id}
+
         print(f"[worker:{job_id}] FAILED: unknown job type '{job_type}'", flush=True)
         return {"error": f"Unknown job type: {job_type}"}
 
