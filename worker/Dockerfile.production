@@ -46,19 +46,21 @@ RUN python -m pip uninstall -y onnxruntime && \
     python -m pip install --no-cache-dir onnxruntime-gpu==1.17.1 \
     --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
 
-# Training path: FLUX LoRA via diffusers + peft. Installed AFTER face-swap deps
-# so the face-swap pipeline still builds even if training pulls evolve.
+# Training path: FLUX LoRA via diffusers + peft + bitsandbytes 4-bit quant.
+# Installed AFTER face-swap deps so the face-swap pipeline still builds.
 # Torch is CUDA 12.1 wheel (matches cuDNN base image).
 RUN python -m pip install --no-cache-dir \
     torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu121
-# diffusers is pinned to 0.30.3: FluxPipeline first shipped in 0.30.0 and
-# 0.30.x does NOT require torch.xpu (added in diffusers 0.36.0 / torch 2.4+).
-# peft 0.12.0 is the last release compatible with diffusers 0.30.x.
+# diffusers 0.31.0 is the first release with BitsAndBytesConfig quantization
+# support and still does NOT require torch.xpu (added in 0.36+).
+# peft 0.13.2 is compatible with diffusers 0.31.
+# bitsandbytes 0.43.3 is the last release supporting torch 2.2 + CUDA 12.1.
 RUN python -m pip install --no-cache-dir \
-    "diffusers==0.30.3" \
+    "diffusers==0.31.0" \
     "transformers==4.44.2" \
     "accelerate==0.33.0" \
-    "peft==0.12.0" \
+    "peft==0.13.2" \
+    "bitsandbytes==0.43.3" \
     "safetensors==0.4.5" \
     sentencepiece \
     "supabase>=2.0.0"
@@ -101,8 +103,11 @@ import runpod; \
 import torch; \
 import diffusers; \
 import peft; \
+import bitsandbytes; \
 import safetensors; \
-print(f'torch={torch.__version__} diffusers={diffusers.__version__} peft={peft.__version__}'); \
+from diffusers import BitsAndBytesConfig as _BnbCfg; \
+from diffusers import FluxTransformer2DModel as _FluxT; \
+print(f'torch={torch.__version__} diffusers={diffusers.__version__} peft={peft.__version__} bnb={bitsandbytes.__version__}'); \
 print('All imports and models OK'); \
 "
 

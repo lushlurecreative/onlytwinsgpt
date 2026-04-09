@@ -21,18 +21,18 @@ except ImportError as e:
 
 try:
     from diffusers import FluxPipeline, FluxTransformer2DModel
-    from diffusers.utils import convert_unet_state_dict_to_peft
-    from peft import LoraConfig, get_peft_model, set_peft_model_state_dict
+    from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
+    from peft import LoraConfig, get_peft_model
     from peft.utils import get_peft_model_state_dict
     import safetensors.torch
 except ImportError as e:
-    print("Install diffusers, peft, safetensors:", e, file=sys.stderr)
+    print("Install diffusers>=0.31, peft, bitsandbytes, safetensors:", e, file=sys.stderr)
     sys.exit(1)
 
 
 FLUX_MODEL = "black-forest-labs/FLUX.1-dev"
 DEFAULT_INSTANCE_PROMPT = "photo of TOK person"
-RESOLUTION = 1024
+RESOLUTION = 512  # 512 keeps VRAM low enough for 4-bit FLUX LoRA on a 24 GB card
 DEFAULT_STEPS = 500  # Tune for quality/speed; 500–1500 typical
 
 
@@ -76,18 +76,54 @@ def train_and_save(
 
     torch.manual_seed(seed)
     dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+    hf_token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
 
-    # Load pipeline for tokenizer/scheduler/VAE; we only train the transformer
-    print("Loading FLUX pipeline (this may download models)...")
+    # 4-bit NF4 quantize the FLUX transformer so it fits on a 24 GB GPU.
+    # fp16/bf16 transformer is ~22 GB; nf4 is ~6 GB and still trainable via LoRA adapters.
+    nf4_config = DiffusersBitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=dtype,
+    )
+    print("Loading FLUX transformer in 4-bit NF4 (this may download ~24 GB)...", flush=True)
+    transformer = FluxTransformer2DModel.from_pretrained(
+        FLUX_MODEL,
+        subfolder="transformer",
+        quantization_config=nf4_config,
+        torch_dtype=dtype,
+        token=hf_token,
+    )
+
+    print("Loading FLUX pipeline with quantized transformer...", flush=True)
     pipe = FluxPipeline.from_pretrained(
         FLUX_MODEL,
+        transformer=transformer,
         torch_dtype=dtype,
-        token=os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN"),
+        token=hf_token,
     )
-    pipe.to(device)
 
-    transformer = pipe.transformer
+    # Move non-transformer modules to GPU (4-bit transformer is already device-placed).
+    pipe.vae.to(device)
+    pipe.text_encoder.to(device)
+    pipe.text_encoder_2.to(device)
+
+    # Encode the instance prompt once, then drop the text encoders to free ~10 GB VRAM.
+    with torch.no_grad():
+        prompt_embeds, pooled_embeds, text_ids = pipe.encode_prompt(
+            instance_prompt,
+            prompt_2=instance_prompt,
+            device=device,
+        )
+
+    pipe.text_encoder = None
+    pipe.text_encoder_2 = None
+    torch.cuda.empty_cache()
+    print("Text encoders freed.", flush=True)
+
+    # Freeze quantized base; only LoRA adapters are trainable.
     transformer.requires_grad_(False)
+    if hasattr(transformer, "gradient_checkpointing_enable"):
+        transformer.gradient_checkpointing_enable()
 
     # LoRA config (attention layers)
     lora_config = LoraConfig(
@@ -98,7 +134,7 @@ def train_and_save(
     )
     transformer = get_peft_model(transformer, lora_config)
     transformer.train()
-    transformer.to(device)
+    # DO NOT call transformer.to(device) — 4-bit base is already device-placed.
 
     # Dataset and dataloader
     dataset = ImageFolderDataset(instance_data_dir, size=RESOLUTION)
@@ -111,16 +147,9 @@ def train_and_save(
         num_workers=0,
     )
 
-    opt = torch.optim.AdamW(transformer.parameters(), lr=lr)
+    trainable = [p for p in transformer.parameters() if p.requires_grad]
+    opt = torch.optim.AdamW(trainable, lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max_train_steps)
-
-    # Encode prompt once (FLUX uses dual encoders)
-    with torch.no_grad():
-        prompt_embeds, pooled_embeds, text_ids = pipe.encode_prompt(
-            instance_prompt,
-            prompt_2=instance_prompt,
-            device=device,
-        )
 
     global_step = 0
     transformer.train()
@@ -156,7 +185,7 @@ def train_and_save(
 
             opt.zero_grad()
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(transformer.parameters(), 1.0)
+            torch.nn.utils.clip_grad_norm_(trainable, 1.0)
             opt.step()
             scheduler.step()
             global_step += 1
