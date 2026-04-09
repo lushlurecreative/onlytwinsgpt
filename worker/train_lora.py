@@ -29,7 +29,7 @@ except ImportError as e:
 try:
     from diffusers import FluxPipeline, FluxTransformer2DModel
     from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
-    from peft import LoraConfig, get_peft_model
+    from peft import LoraConfig
     from peft.utils import get_peft_model_state_dict
     import safetensors.torch
 except ImportError as e:
@@ -40,7 +40,6 @@ except ImportError as e:
 FLUX_MODEL = "black-forest-labs/FLUX.1-dev"
 DEFAULT_INSTANCE_PROMPT = "photo of TOK person"
 RESOLUTION = 512  # 512 keeps VRAM low enough for 4-bit FLUX LoRA on a 24 GB card
-VAE_SCALE_FACTOR = 8  # FLUX VAE is 8x spatial downsample
 DEFAULT_STEPS = 500  # Tune for quality/speed; 500–1500 typical
 
 
@@ -148,21 +147,28 @@ def train_and_save(
         transformer.gradient_checkpointing_enable()
 
     # LoRA config targeting both double-stream and single-stream attention projections.
-    # FLUX.1-dev attention layers use to_k/to_q/to_v/to_out.0 plus context projections;
-    # the base set covers the main attention path and matches diffusers' flux lora example.
+    # Match the diffusers official FLUX LoRA example — uses PeftAdapterMixin.add_adapter
+    # (not get_peft_model wrap) so the transformer keeps its FluxTransformer2DModel forward
+    # signature intact for all the FLUX-specific kwargs (txt_ids, img_ids, guidance, ...).
     lora_config = LoraConfig(
         r=16,
         lora_alpha=32,
         init_lora_weights="gaussian",
         target_modules=["to_k", "to_q", "to_v", "to_out.0"],
     )
-    transformer = get_peft_model(transformer, lora_config)
+    transformer.add_adapter(lora_config)
     transformer.train()
     # DO NOT call transformer.to(device) — 4-bit base is already device-placed.
 
     trainable = [p for p in transformer.parameters() if p.requires_grad]
     num_trainable = sum(p.numel() for p in trainable)
     print(f"Trainable LoRA params: {num_trainable:,}", flush=True)
+
+    # FLUX uses vae_scale_factor = 2 ** len(block_out_channels) (16 for FLUX), which is
+    # twice the actual VAE downsample (8) because FLUX also packs latents into 2x2 patches.
+    # Use the pipeline's property so it always matches the VAE that was loaded.
+    vae_scale_factor = pipe.vae_scale_factor
+    print(f"FluxPipeline.vae_scale_factor={vae_scale_factor}", flush=True)
 
     # Dataset and dataloader
     dataset = ImageFolderDataset(instance_data_dir, size=RESOLUTION)
@@ -210,6 +216,11 @@ def train_and_save(
             noisy_latents = (1.0 - sigma_broadcast) * latents + sigma_broadcast * noise
 
             # --- Pack latents for FLUX transformer (B, C, H, W) -> (B, (H/2)*(W/2), C*4) ---
+            # _pack_latents and _prepare_latent_image_ids BOTH expect the full latent
+            # height/width and divide by 2 internally. Passing half (as I did initially)
+            # produces a (latent_h/4)*(latent_w/4) rotary embedding that no longer matches
+            # the 1024-token packed sequence, yielding a 1536-vs-768 shape mismatch inside
+            # attention's apply_rotary_emb.
             packed_noisy_latents = FluxPipeline._pack_latents(
                 noisy_latents,
                 batch_size=bsz,
@@ -218,11 +229,10 @@ def train_and_save(
                 width=latent_w,
             )
 
-            # Latent image ids: positional embeddings for 2x2 latent patches
             latent_image_ids = FluxPipeline._prepare_latent_image_ids(
                 bsz,
-                latent_h // 2,
-                latent_w // 2,
+                latent_h,
+                latent_w,
                 device,
                 dtype,
             )
@@ -253,11 +263,17 @@ def train_and_save(
             )[0]
 
             # --- Unpack prediction back to (B, C, H, W) to match target shape ---
+            # Image-space height/width = latent_h * (vae_scale_factor / 2). With
+            # vae_scale_factor=16 for FLUX, that's latent_h * 8 — matches the VAE's
+            # actual downsample of 8. This matches the official FLUX LoRA training
+            # script's call pattern (examples/dreambooth/train_dreambooth_lora_flux.py).
+            image_h = int(latent_h * vae_scale_factor / 2)
+            image_w = int(latent_w * vae_scale_factor / 2)
             model_pred = FluxPipeline._unpack_latents(
                 model_pred_packed,
-                height=latent_h * VAE_SCALE_FACTOR,
-                width=latent_w * VAE_SCALE_FACTOR,
-                vae_scale_factor=VAE_SCALE_FACTOR,
+                height=image_h,
+                width=image_w,
+                vae_scale_factor=vae_scale_factor,
             )
 
             # --- Flow-matching target: velocity = noise - clean_latents ---
@@ -278,12 +294,17 @@ def train_and_save(
                     flush=True,
                 )
 
-    # Save LoRA
-    lora_state = get_peft_model_state_dict(transformer, adapter_name="default")
-    # Diffusers expects transformer LoRA saved without the peft wrapper prefix.
-    state_for_save = {k.replace("base_model.model.", ""): v for k, v in lora_state.items()}
+    # Save LoRA via FluxPipeline.save_lora_weights so the resulting
+    # pytorch_lora_weights.safetensors is loadable via pipe.load_lora_weights() — this
+    # handles the "transformer." key prefixing diffusers' FluxLoraLoaderMixin expects.
+    transformer.eval()
+    transformer_lora_layers = get_peft_model_state_dict(transformer)
+    FluxPipeline.save_lora_weights(
+        save_directory=output_dir,
+        transformer_lora_layers=transformer_lora_layers,
+        text_encoder_lora_layers=None,
+    )
     out_path = os.path.join(output_dir, "pytorch_lora_weights.safetensors")
-    safetensors.torch.save_file(state_for_save, out_path)
     print("Saved LoRA to", out_path, flush=True)
     return out_path
 
