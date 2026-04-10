@@ -641,13 +641,16 @@ export async function POST(request: Request) {
           payload_json: { generation_job_id: gen.id, output_path: outputPath },
         });
       }
-      if ((gen.status as GenerationJobStatus) !== "completed" || leadId) {
-        const requestId = (gen as { generation_request_id?: string | null }).generation_request_id ?? null;
-        if (requestId) {
-          await syncCustomerRequestState(admin, requestId);
-        }
-        return NextResponse.json({ ok: true, updated: "generation_job" });
+      // Always roll up the parent generation_request when the worker reports a
+      // completed generation, even if the row was already PATCHed to "completed"
+      // by the worker's internal update before the RunPod COMPLETED webhook
+      // fires. syncCustomerRequestState is idempotent (ensurePost / createGenerationOutput
+      // both dedupe), so it is safe to call on duplicate webhooks.
+      const requestId = (gen as { generation_request_id?: string | null }).generation_request_id ?? null;
+      if (requestId) {
+        await syncCustomerRequestState(admin, requestId);
       }
+      return NextResponse.json({ ok: true, updated: "generation_job" });
     }
   }
 
