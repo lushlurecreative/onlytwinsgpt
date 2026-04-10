@@ -249,11 +249,27 @@ def run_generation_job(job: dict) -> None:
             try:
                 from generate_flux import generate
                 lora_local = None
-                if lora_model_reference and lora_model_reference.startswith("model_artifacts/"):
-                    storage_path = lora_model_reference.replace("model_artifacts/", "", 1)
+                if lora_model_reference:
+                    # Support both:
+                    #  1) legacy "model_artifacts/<path>" → model_artifacts bucket
+                    #  2) canonical active identity_model path "models/<user>/<job>/pytorch_lora_weights.safetensors"
+                    #     which lives in the `uploads` bucket (written by training pipeline)
                     lora_local = os.path.join(tmp, "lora.safetensors")
-                    if not download_from_model_artifacts(storage_path, lora_local):
+                    downloaded = False
+                    if lora_model_reference.startswith("model_artifacts/"):
+                        storage_path = lora_model_reference.replace("model_artifacts/", "", 1)
+                        downloaded = download_from_model_artifacts(storage_path, lora_local)
+                    else:
+                        # Active identity_model.model_path is relative to the uploads bucket.
+                        storage_path = lora_model_reference
+                        if storage_path.startswith("uploads/"):
+                            storage_path = storage_path.replace("uploads/", "", 1)
+                        downloaded = download_from_uploads(storage_path, lora_local)
+                    if not downloaded:
+                        print(f"LoRA download failed for reference: {lora_model_reference}", flush=True)
                         lora_local = None
+                    else:
+                        print(f"LoRA downloaded locally: {lora_local}", flush=True)
                 generate(
                     prompt=prompt,
                     negative_prompt=negative_prompt,
@@ -285,7 +301,11 @@ def run_generation_job(job: dict) -> None:
 
         user_prefix = reference_image_path.split("/")[0] if "/" in reference_image_path and not reference_image_path.startswith("http") else "leads"
         output_path = f"{user_prefix}/generated/{job_id}-{uuid.uuid4().hex[:8]}.jpg"
-        if not upload_to_uploads(out_local, output_path):
+        upload_result = upload_to_uploads(out_local, output_path)
+        # upload_to_uploads now returns (public_url, error_message)
+        uploaded_url, upload_err = upload_result if isinstance(upload_result, tuple) else (upload_result, None)
+        if not uploaded_url:
+            print(f"Upload to uploads bucket failed: {upload_err}", flush=True)
             update_generation_job(job_id, "failed", None)
             return
 

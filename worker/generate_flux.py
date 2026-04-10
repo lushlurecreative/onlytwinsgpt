@@ -15,9 +15,10 @@ except ImportError as e:
     sys.exit(1)
 
 try:
-    from diffusers import FluxPipeline
+    from diffusers import FluxPipeline, FluxTransformer2DModel
+    from diffusers import BitsAndBytesConfig as DiffusersBitsAndBytesConfig
 except ImportError as e:
-    print("Install diffusers:", e, file=sys.stderr)
+    print("Install diffusers>=0.31 and bitsandbytes:", e, file=sys.stderr)
     sys.exit(1)
 
 FLUX_MODEL = "black-forest-labs/FLUX.1-dev"
@@ -62,8 +63,37 @@ def generate(
     dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
 
     token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
-    pipe = FluxPipeline.from_pretrained(FLUX_MODEL, torch_dtype=dtype, token=token)
-    pipe.to(device)
+
+    # Load the FLUX transformer in 4-bit NF4 so it fits on a 24 GB GPU for inference.
+    # bf16 transformer is ~22 GB and leaves no room for activations on an RTX 4090;
+    # NF4 is ~6 GB. Same pattern proven in worker/train_lora.py.
+    nf4_config = DiffusersBitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=dtype,
+    )
+    print("Loading FLUX transformer in 4-bit NF4...", flush=True)
+    transformer = FluxTransformer2DModel.from_pretrained(
+        FLUX_MODEL,
+        subfolder="transformer",
+        quantization_config=nf4_config,
+        torch_dtype=dtype,
+        token=token,
+    )
+    print("Loading FLUX pipeline with quantized transformer...", flush=True)
+    pipe = FluxPipeline.from_pretrained(
+        FLUX_MODEL,
+        transformer=transformer,
+        torch_dtype=dtype,
+        token=token,
+    )
+    # DO NOT call pipe.to(device) — the 4-bit transformer is already device-placed.
+    # Move the non-quantized submodules individually.
+    pipe.vae.to(device)
+    if getattr(pipe, "text_encoder", None) is not None:
+        pipe.text_encoder.to(device)
+    if getattr(pipe, "text_encoder_2", None) is not None:
+        pipe.text_encoder_2.to(device)
 
     if lora_path and os.path.isfile(lora_path):
         lora_dir = os.path.dirname(os.path.abspath(lora_path))
