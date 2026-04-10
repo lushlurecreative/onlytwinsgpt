@@ -115,9 +115,10 @@ def generate(
         if base_path == output_path:
             base_path = output_path + "_pre.png"
 
+    # FLUX is a flow-matching / guidance-distilled model and does not accept
+    # negative_prompt — passing it raises TypeError on FluxPipeline.__call__.
     image = pipe(
         prompt=prompt,
-        negative_prompt=negative_prompt or None,
         width=width,
         height=height,
         num_inference_steps=num_inference_steps,
