@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir torch torchvision --index-url https://download.py
 # Optional: install realesrgan if available
 RUN pip install --no-cache-dir realesrgan 2>/dev/null || true
 
-COPY storage.py train_lora.py generate_flux.py main.py ./
+COPY storage.py train_lora.py generate_flux.py generate_swap.py main.py ./
 
 # HF token for gated FLUX.1-dev (set at run time)
 # ENV HF_TOKEN=

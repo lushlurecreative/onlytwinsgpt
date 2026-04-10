@@ -233,43 +233,40 @@ def run_generation_job(job: dict) -> None:
 
         out_local = os.path.join(tmp, "out.png")
 
+        # Download LoRA weights before generation (used by both paths)
+        lora_local = None
+        if lora_model_reference:
+            lora_local = os.path.join(tmp, "lora.safetensors")
+            downloaded = False
+            if lora_model_reference.startswith("model_artifacts/"):
+                storage_path = lora_model_reference.replace("model_artifacts/", "", 1)
+                downloaded = download_from_model_artifacts(storage_path, lora_local)
+            else:
+                storage_path = lora_model_reference
+                if storage_path.startswith("uploads/"):
+                    storage_path = storage_path.replace("uploads/", "", 1)
+                downloaded = download_from_uploads(storage_path, lora_local)
+            if not downloaded:
+                print(f"LoRA download failed for reference: {lora_model_reference}", flush=True)
+                lora_local = None
+            else:
+                print(f"LoRA downloaded locally: {lora_local}", flush=True)
+
         # 2-step pipeline: FLUX scene generation + FaceFusion face swap
         try:
-            from generate_swap import generate_and_swap
-            generate_and_swap(
-                source_face_path=ref_local,
-                prompt=prompt,
-                output_path=out_local,
-                negative_prompt=negative_prompt,
-                upscale=True,
-            )
-        except ImportError as e:
-            print(f"generate_swap module missing, falling back to generate_flux: {e}")
-            # Fallback: old pipeline (FLUX only, no face swap)
             try:
+                from generate_swap import generate_and_swap
+                generate_and_swap(
+                    source_face_path=ref_local,
+                    prompt=prompt,
+                    output_path=out_local,
+                    negative_prompt=negative_prompt,
+                    upscale=True,
+                    lora_path=lora_local,
+                )
+            except ImportError:
+                print("generate_swap module missing, falling back to generate_flux", flush=True)
                 from generate_flux import generate
-                lora_local = None
-                if lora_model_reference:
-                    # Support both:
-                    #  1) legacy "model_artifacts/<path>" → model_artifacts bucket
-                    #  2) canonical active identity_model path "models/<user>/<job>/pytorch_lora_weights.safetensors"
-                    #     which lives in the `uploads` bucket (written by training pipeline)
-                    lora_local = os.path.join(tmp, "lora.safetensors")
-                    downloaded = False
-                    if lora_model_reference.startswith("model_artifacts/"):
-                        storage_path = lora_model_reference.replace("model_artifacts/", "", 1)
-                        downloaded = download_from_model_artifacts(storage_path, lora_local)
-                    else:
-                        # Active identity_model.model_path is relative to the uploads bucket.
-                        storage_path = lora_model_reference
-                        if storage_path.startswith("uploads/"):
-                            storage_path = storage_path.replace("uploads/", "", 1)
-                        downloaded = download_from_uploads(storage_path, lora_local)
-                    if not downloaded:
-                        print(f"LoRA download failed for reference: {lora_model_reference}", flush=True)
-                        lora_local = None
-                    else:
-                        print(f"LoRA downloaded locally: {lora_local}", flush=True)
                 generate(
                     prompt=prompt,
                     negative_prompt=negative_prompt,
@@ -277,12 +274,10 @@ def run_generation_job(job: dict) -> None:
                     lora_path=lora_local,
                     upscale=True,
                 )
-            except ImportError as e2:
-                print(f"Generation module missing: {e2}")
-                update_generation_job(job_id, "failed", None)
-                return
         except Exception as e:
-            print(f"Generation failed: {e}")
+            print(f"Generation failed: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
             update_generation_job(job_id, "failed", None)
             return
 

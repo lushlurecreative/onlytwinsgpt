@@ -18,7 +18,7 @@ COPY requirements.txt requirements-full.txt ./
 RUN pip install --no-cache-dir -r requirements-full.txt
 
 # Copy application files
-COPY storage.py train_lora.py generate_flux.py main.py watermark.py face_swap.py app.py ./
+COPY storage.py train_lora.py generate_flux.py generate_swap.py main.py watermark.py face_swap.py app.py ./
 
 # Load Balancer: HTTP server for face-swap
 CMD ["python3", "app.py"]
