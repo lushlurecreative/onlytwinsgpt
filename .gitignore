@@ -55,3 +55,11 @@ __pycache__/
 output_*.png
 test_*.jpg
 faceswap_test_*.jpg
+
+# Backup output — real backups live at $HOME/onlytwins-backups/, but if any
+# backup artefact ever lands inside the repo by accident it must not be
+# committed. Never remove these lines.
+/backups/
+/onlytwins-backups/
+*.bundle
+*.sql.gz
