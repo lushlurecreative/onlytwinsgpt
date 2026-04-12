@@ -174,7 +174,7 @@ def handler(job):
             )
 
             try:
-                main_mod.run_generation_job({
+                success = main_mod.run_generation_job({
                     "id": gen_job_id,
                     "subject_id": input_data.get("subject_id"),
                     "preset_id": input_data.get("preset_id"),
@@ -192,8 +192,12 @@ def handler(job):
                 return {"error": str(gen_err)}
 
             elapsed = round(time.time() - start, 2)
-            print(f"[worker:{job_id}] GENERATION COMPLETED in {elapsed}s", flush=True)
-            return {"status": "completed", "job_id": gen_job_id}
+            if success:
+                print(f"[worker:{job_id}] GENERATION COMPLETED in {elapsed}s", flush=True)
+                return {"status": "completed", "job_id": gen_job_id}
+            else:
+                print(f"[worker:{job_id}] GENERATION FAILED in {elapsed}s (internal)", flush=True)
+                return {"error": f"Generation job {gen_job_id} failed internally"}
 
         print(f"[worker:{job_id}] FAILED: unknown job type '{job_type}'", flush=True)
         return {"error": f"Unknown job type: {job_type}"}

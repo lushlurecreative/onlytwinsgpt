@@ -1,53 +1,37 @@
-# Bug: Face Swap / Identity Quality
+# Bug: Worker 2-step pipeline — FLUX + FaceFusion crashes on cold start
 
 ## Expected behavior
 
-Generated images preserve the subject's identity convincingly — sharp eyes, natural skin, seamless blending, no "pasted on" look. Quality suitable for premium homepage showcase.
+`generate_swap.py` runs FLUX scene generation (with LoRA), saves base image, then runs FaceFusion face swap using training photo as source face. Output is an identity-preserving image uploaded to Supabase.
 
 ## Actual behavior
 
-- Docker build: **FIXED** — all 8 facefusionlib models download, image on Docker Hub.
-- Worker runs on RunPod: **WORKING** — jobs execute, return base64 JPEG.
-- Face swap quality: **NOT PRODUCTION GRADE** — facefusionlib + inswapper_128 is a black-box 128x128 swap with no face parsing, no dedicated restoration, no identity scoring, no color harmonization.
+Worker pulls new Docker image (confirmed: different worker ID `3x1fkylcuay8uk`), starts the job, runs for 32 seconds, then sets job status to `failed` with no output_path. RunPod reports COMPLETED (bug: `app.py` handler masks internal failures). No worker logs visible from app side.
 
-## Decision: Replace entire stack
+## Root cause (identified 2026-04-12)
 
-After full audit (2026-04-01), the facefusionlib approach was determined to be fundamentally insufficient. A new stack was chosen:
+**PyTorch CUDA allocator cache** — `generate_flux.py` loaded the FLUX pipeline (~16GB VRAM) but never freed it. When `generate()` returned, Python deallocated the objects, but PyTorch's CUDA allocator cached the freed GPU memory instead of returning it to CUDA. FaceFusion (ONNX Runtime) then tried to allocate via CUDA directly and failed — PyTorch was holding all the memory.
 
-**Homepage Hook (Phase 1A — offline, manual curation):**
-- InfiniteYou-FLUX sim_stage1 — identity-preserving generation (works from 1 photo, ICCV 2025)
-- ReActor (inswapper_128 via ComfyUI) — refinement when identity drifts
-- CodeFormer — face restoration
-- ComfyUI — workflow orchestration
-- Real-ESRGAN x4plus — upscaling
+Three contributing factors:
+1. No `torch.cuda.empty_cache()` after FLUX inference (PRIMARY)
+2. `warmup()` in `app.py` preloaded FaceFusion models (~1.5GB), reducing headroom
+3. `generate_swap.py` had a fallback that reloaded FLUX a second time on face-swap failure (guaranteed OOM)
 
-**Production (Phase 2 — later):**
-- Same stack integrated into RunPod workers
-- AlphaFace for face swap (pose robustness)
-- BiSeNet + Poisson blending for masking
-- ArcFace quality scoring + auto-rejection
+## Fix applied (2026-04-12)
 
-Full plan: `/.claude/plans/optimized-plotting-pearl.md`
+| File | Change |
+|------|--------|
+| `worker/generate_flux.py` | Wrap FLUX pipeline in try/finally: `del pipe; del transformer; gc.collect(); torch.cuda.empty_cache()` after inference |
+| `worker/generate_swap.py` | Belt-and-suspenders `gc.collect(); torch.cuda.empty_cache()` between FLUX and FaceFusion steps. Removed double-FLUX fallback. Added VRAM diagnostic logging. |
+| `worker/main.py` | `run_generation_job()` returns `True`/`False` instead of void |
+| `worker/app.py` | Handler checks return value — returns `{"error": ...}` when generation fails internally |
 
-## Confirmed facts
+## Verification needed
 
-- facefusionlib 1.1.3 uses `inswapper_128` — 128x128 resolution, inherently low quality ceiling
-- No face parsing (only gaussian blur mask), no dedicated eye/teeth restoration, no color harmonization
-- InfiniteYou-FLUX confirmed strongest available identity-preserving generation model
-- InfiniteYou has official ComfyUI nodes (`bytedance/ComfyUI_InfiniteYou`)
-- InfiniteYou works from a single source photo (no training set needed for homepage)
-- ReActor is the most mature ComfyUI face swap node (AlphaFace has no ComfyUI integration)
+- [ ] Push to main, Docker image built via GitHub Actions
+- [ ] Cycle RunPod workers to pull new image
+- [ ] Trigger generation job via admin UI
+- [ ] Verify: FLUX generates scene → GPU freed → FaceFusion runs face swap → output uploaded → job status = completed
+- [ ] Check RunPod logs for `[generate_flux] GPU memory released` and `[generate_swap] GPU after FLUX cleanup: XX.X GB free`
 
-## Things already tried
-
-| Attempt | Result |
-|---|---|
-| facefusionlib param tuning (detector_score, mask_blur) | Quality still fundamentally limited by 128x128 swap |
-| RunPod A40 pod setup with ComfyUI + InfiniteYou | Partial — hit 20GB volume disk limit, FLUX UNET downloaded, other models blocked |
-| `huggingface_hub` downloads on RunPod | Fills container disk unless `HF_HOME=/workspace/hf_cache` is set |
-
-## Next single step
-
-Terminate current RunPod pod. Create new pod with **200GB volume disk**. Re-run setup (ComfyUI + InfiniteYou + all models). Generate first test image. Instructions in `worker/workflows/STEP_BY_STEP.md`.
-
-## Status: STACK REPLACED — NEW SETUP BLOCKED ON POD DISK SIZE
+## Status: FIX APPLIED — awaiting deploy and verification (2026-04-12)

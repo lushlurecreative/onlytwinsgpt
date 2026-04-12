@@ -3,6 +3,7 @@ FLUX inference: load pipeline, optional LoRA, run with preset prompt, upscale wi
 Requires: GPU, diffusers, torch; optional realesrgan for upscale.
 """
 
+import gc
 import os
 import sys
 from pathlib import Path
@@ -64,73 +65,86 @@ def generate(
 
     token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
 
-    # Load the FLUX transformer in 4-bit NF4 so it fits on a 24 GB GPU for inference.
-    # bf16 transformer is ~22 GB and leaves no room for activations on an RTX 4090;
-    # NF4 is ~6 GB. Same pattern proven in worker/train_lora.py.
-    nf4_config = DiffusersBitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=dtype,
-    )
-    print("Loading FLUX transformer in 4-bit NF4...", flush=True)
-    transformer = FluxTransformer2DModel.from_pretrained(
-        FLUX_MODEL,
-        subfolder="transformer",
-        quantization_config=nf4_config,
-        torch_dtype=dtype,
-        token=token,
-    )
-    print("Loading FLUX pipeline with quantized transformer...", flush=True)
-    pipe = FluxPipeline.from_pretrained(
-        FLUX_MODEL,
-        transformer=transformer,
-        torch_dtype=dtype,
-        token=token,
-    )
-    # DO NOT call pipe.to(device) — the 4-bit transformer is already device-placed.
-    # Move the non-quantized submodules individually.
-    pipe.vae.to(device)
-    if getattr(pipe, "text_encoder", None) is not None:
-        pipe.text_encoder.to(device)
-    if getattr(pipe, "text_encoder_2", None) is not None:
-        pipe.text_encoder_2.to(device)
+    pipe = None
+    transformer = None
+    try:
+        # Load the FLUX transformer in 4-bit NF4 so it fits on a 24 GB GPU for inference.
+        # bf16 transformer is ~22 GB and leaves no room for activations on an RTX 4090;
+        # NF4 is ~6 GB. Same pattern proven in worker/train_lora.py.
+        nf4_config = DiffusersBitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=dtype,
+        )
+        print("Loading FLUX transformer in 4-bit NF4...", flush=True)
+        transformer = FluxTransformer2DModel.from_pretrained(
+            FLUX_MODEL,
+            subfolder="transformer",
+            quantization_config=nf4_config,
+            torch_dtype=dtype,
+            token=token,
+        )
+        print("Loading FLUX pipeline with quantized transformer...", flush=True)
+        pipe = FluxPipeline.from_pretrained(
+            FLUX_MODEL,
+            transformer=transformer,
+            torch_dtype=dtype,
+            token=token,
+        )
+        # DO NOT call pipe.to(device) — the 4-bit transformer is already device-placed.
+        # Move the non-quantized submodules individually.
+        pipe.vae.to(device)
+        if getattr(pipe, "text_encoder", None) is not None:
+            pipe.text_encoder.to(device)
+        if getattr(pipe, "text_encoder_2", None) is not None:
+            pipe.text_encoder_2.to(device)
 
-    if lora_path and os.path.isfile(lora_path):
-        lora_dir = os.path.dirname(os.path.abspath(lora_path))
-        weight_name = os.path.basename(lora_path)
-        pipe.load_lora_weights(lora_dir, weight_name=weight_name)
-        pipe.set_adapters(["default"], adapter_weights=[lora_scale])
-        print(f"LoRA loaded: {weight_name}, scale={lora_scale}", flush=True)
-    elif lora_path and os.path.isdir(lora_path):
-        pipe.load_lora_weights(lora_path, weight_name="pytorch_lora_weights.safetensors")
-        pipe.set_adapters(["default"], adapter_weights=[lora_scale])
-        print(f"LoRA loaded from dir, scale={lora_scale}", flush=True)
+        if lora_path and os.path.isfile(lora_path):
+            lora_dir = os.path.dirname(os.path.abspath(lora_path))
+            weight_name = os.path.basename(lora_path)
+            pipe.load_lora_weights(lora_dir, weight_name=weight_name)
+            pipe.set_adapters(["default"], adapter_weights=[lora_scale])
+            print(f"LoRA loaded: {weight_name}, scale={lora_scale}", flush=True)
+        elif lora_path and os.path.isdir(lora_path):
+            pipe.load_lora_weights(lora_path, weight_name="pytorch_lora_weights.safetensors")
+            pipe.set_adapters(["default"], adapter_weights=[lora_scale])
+            print(f"LoRA loaded from dir, scale={lora_scale}", flush=True)
 
-    generator = None
-    if seed is not None:
-        generator = torch.Generator(device=device).manual_seed(seed)
+        generator = None
+        if seed is not None:
+            generator = torch.Generator(device=device).manual_seed(seed)
 
-    out_dir = os.path.dirname(output_path)
-    if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
-    base_path = output_path
-    if upscale:
-        base_path = output_path.replace(".png", "_pre.png").replace(".jpg", "_pre.jpg")
-        if base_path == output_path:
-            base_path = output_path + "_pre.png"
+        out_dir = os.path.dirname(output_path)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+        base_path = output_path
+        if upscale:
+            base_path = output_path.replace(".png", "_pre.png").replace(".jpg", "_pre.jpg")
+            if base_path == output_path:
+                base_path = output_path + "_pre.png"
 
-    # FLUX is a flow-matching / guidance-distilled model and does not accept
-    # negative_prompt — passing it raises TypeError on FluxPipeline.__call__.
-    image = pipe(
-        prompt=prompt,
-        width=width,
-        height=height,
-        num_inference_steps=num_inference_steps,
-        guidance_scale=guidance_scale,
-        generator=generator,
-    ).images[0]
+        # FLUX is a flow-matching / guidance-distilled model and does not accept
+        # negative_prompt — passing it raises TypeError on FluxPipeline.__call__.
+        image = pipe(
+            prompt=prompt,
+            width=width,
+            height=height,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            generator=generator,
+        ).images[0]
 
-    image.save(base_path)
+        image.save(base_path)
+    finally:
+        # Free FLUX pipeline GPU memory (~16GB) so subsequent steps (FaceFusion)
+        # can allocate. Without this, PyTorch's CUDA allocator holds the memory
+        # in its cache even after Python objects are deallocated.
+        del pipe
+        del transformer
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        print(f"[generate_flux] GPU memory released", flush=True)
 
     if upscale:
         upscaler = load_upscaler()
