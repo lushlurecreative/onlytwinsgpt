@@ -102,12 +102,12 @@ def generate(
         if lora_path and os.path.isfile(lora_path):
             lora_dir = os.path.dirname(os.path.abspath(lora_path))
             weight_name = os.path.basename(lora_path)
-            pipe.load_lora_weights(lora_dir, weight_name=weight_name)
-            pipe.set_adapters(["default"], adapter_weights=[lora_scale])
+            pipe.load_lora_weights(lora_dir, weight_name=weight_name, adapter_name="identity")
+            pipe.set_adapters(["identity"], adapter_weights=[lora_scale])
             print(f"LoRA loaded: {weight_name}, scale={lora_scale}", flush=True)
         elif lora_path and os.path.isdir(lora_path):
-            pipe.load_lora_weights(lora_path, weight_name="pytorch_lora_weights.safetensors")
-            pipe.set_adapters(["default"], adapter_weights=[lora_scale])
+            pipe.load_lora_weights(lora_path, weight_name="pytorch_lora_weights.safetensors", adapter_name="identity")
+            pipe.set_adapters(["identity"], adapter_weights=[lora_scale])
             print(f"LoRA loaded from dir, scale={lora_scale}", flush=True)
 
         generator = None
