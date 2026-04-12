@@ -174,7 +174,7 @@ def handler(job):
             )
 
             try:
-                success = main_mod.run_generation_job({
+                result = main_mod.run_generation_job({
                     "id": gen_job_id,
                     "subject_id": input_data.get("subject_id"),
                     "preset_id": input_data.get("preset_id"),
@@ -184,6 +184,11 @@ def handler(job):
                     "job_type": input_data.get("job_type") or "user",
                     "lead_id": input_data.get("lead_id"),
                 })
+                # Unpack (success, error_reason) tuple
+                if isinstance(result, tuple):
+                    success, error_reason = result
+                else:
+                    success, error_reason = bool(result), None
             except Exception as gen_err:
                 elapsed = round(time.time() - start, 2)
                 print(f"[worker:{job_id}] GENERATION FAILED after {elapsed}s: {gen_err}", flush=True)
@@ -196,8 +201,9 @@ def handler(job):
                 print(f"[worker:{job_id}] GENERATION COMPLETED in {elapsed}s", flush=True)
                 return {"status": "completed", "job_id": gen_job_id}
             else:
-                print(f"[worker:{job_id}] GENERATION FAILED in {elapsed}s (internal)", flush=True)
-                return {"error": f"Generation job {gen_job_id} failed internally"}
+                reason = error_reason or "unknown"
+                print(f"[worker:{job_id}] GENERATION FAILED in {elapsed}s: {reason}", flush=True)
+                return {"error": f"generation_failed: {reason}"}
 
         print(f"[worker:{job_id}] FAILED: unknown job type '{job_type}'", flush=True)
         return {"error": f"Unknown job type: {job_type}"}

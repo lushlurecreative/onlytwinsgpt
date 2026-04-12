@@ -198,9 +198,9 @@ def run_training_job(job: dict) -> None:
     )
 
 
-def run_generation_job(job: dict) -> bool:
+def run_generation_job(job: dict) -> tuple[bool, str | None]:
     """
-    Run one generation job. Returns True on success, False on failure.
+    Run one generation job. Returns (True, None) on success, (False, error_reason) on failure.
     - If subject_id set, verify consent; else (lead sample) allow.
     - Download reference_image_path, run FLUX+LoRA+IP-Adapter+ControlNet, upload to uploads.
     """
@@ -210,7 +210,7 @@ def run_generation_job(job: dict) -> bool:
 
     if subject_id and not subject_consent_allowed(subject_id):
         update_generation_job(job_id, "failed", None)
-        return False
+        return False, "consent_not_approved"
 
     update_generation_job(job_id, "running")
 
@@ -225,11 +225,11 @@ def run_generation_job(job: dict) -> bool:
         if reference_image_path.strip().startswith("http"):
             if not download_from_url(reference_image_path, ref_local):
                 update_generation_job(job_id, "failed", None)
-                return False
+                return False, f"ref_download_url_failed: {reference_image_path[:80]}"
         else:
             if not download_from_uploads(reference_image_path, ref_local):
                 update_generation_job(job_id, "failed", None)
-                return False
+                return False, f"ref_download_uploads_failed: {reference_image_path[:80]}"
 
         out_local = os.path.join(tmp, "out.png")
 
@@ -279,7 +279,7 @@ def run_generation_job(job: dict) -> bool:
             import traceback
             traceback.print_exc()
             update_generation_job(job_id, "failed", None)
-            return False
+            return False, f"generation_exception: {type(e).__name__}: {str(e)[:200]}"
 
         job_type = job.get("job_type") or "user"
         lead_id = job.get("lead_id")
@@ -292,7 +292,7 @@ def run_generation_job(job: dict) -> bool:
             except Exception as e:
                 print(f"Watermark embed failed: {e}")
                 update_generation_job(job_id, "failed", None)
-                return False
+                return False, f"watermark_failed: {e}"
 
         user_prefix = reference_image_path.split("/")[0] if "/" in reference_image_path and not reference_image_path.startswith("http") else "leads"
         output_path = f"{user_prefix}/generated/{job_id}-{uuid.uuid4().hex[:8]}.jpg"
@@ -302,7 +302,7 @@ def run_generation_job(job: dict) -> bool:
         if not uploaded_url:
             print(f"Upload to uploads bucket failed: {upload_err}", flush=True)
             update_generation_job(job_id, "failed", None)
-            return False
+            return False, f"upload_failed: {upload_err}"
 
         if job_type == "lead_sample" and lead_id and watermark_hash and APP_URL and WORKER_SECRET:
             try:
@@ -324,7 +324,7 @@ def run_generation_job(job: dict) -> bool:
                 print(f"Watermark log error: {e}")
 
     update_generation_job(job_id, "completed", output_path)
-    return True
+    return True, None
 
 
 def main():
