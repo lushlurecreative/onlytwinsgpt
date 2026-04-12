@@ -1,37 +1,37 @@
-# Bug: Worker 2-step pipeline — FLUX + FaceFusion crashes on cold start
+# Bug: Worker 2-step pipeline — FLUX + FaceFusion generation pipeline
 
 ## Expected behavior
 
-`generate_swap.py` runs FLUX scene generation (with LoRA), saves base image, then runs FaceFusion face swap using training photo as source face. Output is an identity-preserving image uploaded to Supabase.
+`generate_swap.py` runs FLUX scene generation (with LoRA for identity hints), saves base image, frees GPU memory, runs FaceFusion face swap using training photo as source face, uploads identity-preserving image to Supabase, marks job completed.
 
 ## Actual behavior
 
-Worker pulls new Docker image (confirmed: different worker ID `3x1fkylcuay8uk`), starts the job, runs for 32 seconds, then sets job status to `failed` with no output_path. RunPod reports COMPLETED (bug: `app.py` handler masks internal failures). No worker logs visible from app side.
+Three bugs fixed, one remaining:
 
-## Root cause (identified 2026-04-12)
+1. **FIXED (c1c7089):** FLUX held ~16GB VRAM after inference. PyTorch CUDA cache blocked FaceFusion. Job crashed at 32s.
+2. **FIXED (b8ebc17):** `app.py` returned `{"status": "completed"}` even on internal failure. RunPod showed COMPLETED for failed jobs.
+3. **FIXED (359fc9d):** `importlib.reload(main_mod)` caused diffusers to auto-name adapter `default_0` but `set_adapters()` referenced `default`. Error: `ValueError: Adapter name(s) {'default'} not in the list of present adapters: {'default_0'}`.
+4. **PENDING:** Commit `359fc9d` pushed but Docker image not yet built/tested. Pipeline should work end-to-end once deployed.
 
-**PyTorch CUDA allocator cache** — `generate_flux.py` loaded the FLUX pipeline (~16GB VRAM) but never freed it. When `generate()` returned, Python deallocated the objects, but PyTorch's CUDA allocator cached the freed GPU memory instead of returning it to CUDA. FaceFusion (ONNX Runtime) then tried to allocate via CUDA directly and failed — PyTorch was holding all the memory.
+## Confirmed facts
 
-Three contributing factors:
-1. No `torch.cuda.empty_cache()` after FLUX inference (PRIMARY)
-2. `warmup()` in `app.py` preloaded FaceFusion models (~1.5GB), reducing headroom
-3. `generate_swap.py` had a fallback that reloaded FLUX a second time on face-swap failure (guaranteed OOM)
+- GPU memory cleanup works: FLUX runs 28-step inference then `del pipe; gc.collect(); torch.cuda.empty_cache()` frees VRAM. Proven by 62s and 221s execution times (was 32s crash).
+- Error reporting works: RunPod job output now shows specific failure reason (e.g., `generation_exception: ValueError: Adapter name(s) {'default'}...`).
+- `importlib.reload(main_mod)` in `app.py` is the root cause of the adapter naming collision. Fix: explicit `adapter_name="identity"` in `load_lora_weights()`.
+- FaceFusion warmup models coexist with FLUX on 24GB GPU (confirmed by old FLUX-only path working at 60s with warmup loaded).
 
-## Fix applied (2026-04-12)
+## Things already tried
 
-| File | Change |
-|------|--------|
-| `worker/generate_flux.py` | Wrap FLUX pipeline in try/finally: `del pipe; del transformer; gc.collect(); torch.cuda.empty_cache()` after inference |
-| `worker/generate_swap.py` | Belt-and-suspenders `gc.collect(); torch.cuda.empty_cache()` between FLUX and FaceFusion steps. Removed double-FLUX fallback. Added VRAM diagnostic logging. |
-| `worker/main.py` | `run_generation_job()` returns `True`/`False` instead of void |
-| `worker/app.py` | Handler checks return value — returns `{"error": ...}` when generation fails internally |
+| Attempt | Result |
+|---|---|
+| GPU memory cleanup: try/finally + del + empty_cache (`c1c7089`) | FLUX freed, pipeline reached downstream. Job ran 62s instead of 32s crash. |
+| Error reporting: return (success, error_reason) tuple (`b8ebc17`) | RunPod output shows exact error. Identified adapter naming bug. |
+| LoRA adapter name: explicit `adapter_name="identity"` (`359fc9d`) | Pushed, awaiting Docker build + test. |
+| Worker cycling: GraphQL `workersMax=0→2` | Confirmed new workers pull new image (different worker IDs). |
+| 3 test jobs dispatched directly to RunPod via API | All ran on new workers. Error messages surfaced correctly. |
 
-## Verification needed
+## Next single step
 
-- [ ] Push to main, Docker image built via GitHub Actions
-- [ ] Cycle RunPod workers to pull new image
-- [ ] Trigger generation job via admin UI
-- [ ] Verify: FLUX generates scene → GPU freed → FaceFusion runs face swap → output uploaded → job status = completed
-- [ ] Check RunPod logs for `[generate_flux] GPU memory released` and `[generate_swap] GPU after FLUX cleanup: XX.X GB free`
+Build Docker image from `359fc9d`, cycle RunPod workers, dispatch test generation job. Check RunPod status endpoint for COMPLETED + verify `output_path` set in `generation_jobs` table + verify image exists in Supabase uploads bucket.
 
-## Status: FIX APPLIED — awaiting deploy and verification (2026-04-12)
+## Status: FIX DEPLOYED — awaiting Docker build and final verification test (2026-04-12)

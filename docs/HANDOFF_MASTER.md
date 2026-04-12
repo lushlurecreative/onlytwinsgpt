@@ -1,85 +1,64 @@
 # Handoff Master
 
-Last updated: 2026-04-04 (session: System 2 — Model Training Registry)
+Last updated: 2026-04-12 (session: GPU memory fix + error reporting + LoRA adapter name fix)
 
 ## Project goal
 
-OnlyTwins — production AI content generation SaaS. Paid subscriber pipeline: subscribe → upload training photos → train LoRA → generate identity-preserving content → deliver to library. Target: $80k-$150k/month.
+OnlyTwins — production AI content generation SaaS. Paid subscriber pipeline: subscribe → upload training photos → train LoRA → generate identity-preserving content → deliver to library. Target: $80k–$150k/month.
 
 ## Current status
 
-System 1 (Training Intake) and System 2 (Model Training Registry) are implemented, migrated to production, and deployed. The subscriber pipeline now has: photo upload → validation → readiness gating → training job creation → versioned model registry → artifact storage → active model resolution for generation.
+**2-step pipeline (FLUX + FaceFusion) GPU memory fix deployed. LoRA adapter naming fix deployed, awaiting Docker build + test.** Three bugs were fixed this session: (1) FLUX never freed ~16GB VRAM after inference, (2) RunPod handler masked internal failures as COMPLETED, (3) LoRA adapter registered as `default_0` but code referenced `default`. The pipeline now runs past FLUX inference successfully. The adapter naming fix (commit `359fc9d`) is deployed to GitHub but the Docker image has not yet been built/tested.
 
-**Phase:** Phase A (Revenue Reliability) → subscriber pipeline buildout. Systems 1 and 2 complete. System 3 (Generation) is next.
+**Phase:** Phase A verification — pipeline functional, identity application pending final test.
+
+**Active model:** Identity model v8 (`c07e4f66`), 10 verified single-identity photos, `is_active=true`, `status=ready`.
+
+**Production deployment:** `main` at commit `359fc9d`. Docker image rebuild triggered by GitHub Actions (both `worker-docker-build.yml` and `build-worker-image.yml`). RunPod endpoint `bd5p04vpmrob2u` workers need cycling after build completes.
 
 ## Active bugs
 
 | Bug file | Status | Summary |
 |----------|--------|---------|
-| `BUG_infiniteyou_quality.md` | OPEN | HyperSwap 1c 256 deployed, awaiting E2E test |
-| `BUG_generation_503.md` | See file | Generation endpoint errors |
-| `BUG_onboarding_pending.md` | See file | Onboarding flag race |
-| `BUG_vault_role_rls.md` | See file | RLS blocks role update |
-| `BUG_webhook_race.md` | See file | Thank-you page race |
-| `BUG_worker_startup.md` | See file | Worker startup issues |
+| `BUG_worker_startup.md` | ACTIVE | GPU memory fix + error reporting deployed. LoRA adapter name fix deployed, awaiting build+test. |
+| `BUG_generation_503.md` | DEFERRED | `GENERATION_ENGINE_ENABLED` env gating — not blocking. |
+| `BUG_infiniteyou_quality.md` | DEFERRED | Face-swap quality (homepage hook). On hold. |
+| `BUG_onboarding_pending.md` | See file | Onboarding flag race. |
+| `BUG_vault_role_rls.md` | See file | RLS blocks role update. |
+| `BUG_webhook_race.md` | RESOLVED | Closed by dedup index. |
 
-## Changes made this session
+## Changes made this session (2026-04-12)
 
-### System 2 — Model Training Registry (IMPLEMENTED + DEPLOYED)
+### GPU memory cleanup (commit `c1c7089`, deployed + tested)
+- `generate_flux.py`: Wrapped FLUX pipeline in try/finally with `del pipe; del transformer; gc.collect(); torch.cuda.empty_cache()`. Frees ~16GB VRAM before FaceFusion runs.
+- `generate_swap.py`: Belt-and-suspenders cleanup between FLUX and FaceFusion. Removed double-FLUX fallback that guaranteed OOM on face-swap failure. Added VRAM diagnostic logging.
+- `main.py`: `run_generation_job()` returns `(True, None)` or `(False, error_reason)`.
+- `app.py`: Handler checks return value, reports actual error to RunPod output.
+- **Test result:** Job ran 62s (vs 32s crash before). FLUX completed. Failed downstream — but error was masked ("failed internally").
 
-**Migrations applied to production:**
+### Error reporting (commit `b8ebc17`, deployed + tested)
+- `main.py`: Each failure path returns specific error string (e.g., `generation_exception: ValueError: ...`, `upload_failed: ...`, `ref_download_uploads_failed: ...`).
+- `app.py`: Unpacks tuple, surfaces error reason in RunPod job output.
+- **Test result:** Job ran 221s. Error now visible: `ValueError: Adapter name(s) {'default'} not in the list of present adapters: {'default_0'}`.
 
-| Migration | What it does |
-|-----------|-------------|
-| `202604040001_training_photo_sets_and_photos.sql` | `training_photo_sets` + `training_photos` tables, RLS, indexes, `photo_set_id` FK on `training_jobs` (System 1 prerequisite — was pending deploy) |
-| `202604040002_identity_models.sql` | `identity_models` table with versioning, unique partial index (one active per user), RLS, `updated_at` trigger, `activate_identity_model` atomic RPC |
-
-**New files:**
-
-| File | Purpose |
-|------|---------|
-| `lib/identity-models.ts` | Core model registry: create, complete, fail, activate (via atomic RPC), resolve lora, get history |
-| `app/api/training/models/route.ts` | GET list all model versions for user |
-| `app/api/training/models/[modelId]/activate/route.ts` | POST set a specific model as active |
-
-**Modified files:**
-
-| File | Change |
-|------|--------|
-| `app/api/training/route.ts` | Creates `identity_model` record (queued → training) on training job start |
-| `app/api/internal/worker/training-jobs/[jobId]/route.ts` | Updates identity_model with artifacts on completion, failure_reason on failure. Accepts new fields: adapter_path, preview_image_path, training_steps, network_dim, network_alpha, learning_rate, caption_strategy |
-| `app/api/webhooks/runpod/route.ts` | Updates identity_model on webhook COMPLETED/FAILED callbacks |
-| `app/api/training/status/route.ts` | Returns `activeModel` + `modelHistory` alongside existing training status |
-| `app/dashboard/DashboardClient.tsx` | Shows model version number in status pill (e.g. "Model ready (v2)") |
-| `lib/generation-jobs.ts` | `getLoraReferenceForSubject` resolves from active identity_model first, falls back to legacy `subjects_models` |
-| `app/api/admin/users/[userId]/training/route.ts` | Creates identity_model on admin-triggered training |
+### LoRA adapter name fix (commit `359fc9d`, pushed, build pending)
+- `generate_flux.py`: Changed from auto-named `default` adapter to explicit `adapter_name="identity"` in `load_lora_weights()` and `set_adapters()`. Fixes collision caused by `importlib.reload(main_mod)` in `app.py` which increments the default adapter name.
 
 ## Known facts
 
-- `identity_models` table: one row per training run, auto-versioned per user
-- Active model enforced at DB level: unique partial index `(user_id) WHERE is_active = true`
-- Activation uses Postgres RPC `activate_identity_model` — atomic deactivate-old + activate-new
-- `completeModel()` is idempotent — skips if status already `ready`
-- Generation resolution: identity_models (active) → subjects_models (legacy fallback)
-- Worker PATCH endpoint now accepts artifact metadata (training_steps, network_dim, etc.)
-- Both webhook and worker PATCH update identity_model — race-safe (webhook notes completion timestamp, worker stores artifacts and promotes to ready)
-- If worker never PATCHes after RunPod COMPLETED webhook, model stays at `training` forever — no reconciliation job yet
+- GPU memory fix works: FLUX pipeline loads, runs 28-step inference, frees VRAM via try/finally cleanup. Confirmed by 62s and 221s execution times (was 32s crash before).
+- Error reporting works: RunPod job output now contains specific failure reason instead of generic "failed internally".
+- `importlib.reload(main_mod)` in `app.py` causes diffusers to auto-increment adapter names (`default` → `default_0`). Fixed by using explicit `adapter_name="identity"`.
+- RunPod endpoint `bd5p04vpmrob2u` has 2 workers, ADA_24 GPU (RTX 4090 24GB). Endpoint env vars show `null` via GraphQL but Supabase credentials work at runtime (likely set via RunPod template).
+- RunPod health at session end: 52 completed, 41 failed jobs total. Failure rate will drop once pipeline is fixed.
+- `warmup()` in `app.py` preloads FaceFusion models (InsightFace, HyperSwap, GFPGAN, Real-ESRGAN) at container startup. These coexist with FLUX inference after the memory cleanup fix.
 
-## Infrastructure
+## Open hypotheses
 
-| Component | Details |
-|-----------|---------|
-| ComfyUI pod | `uezkz34ux59drh`, RTX A6000 48GB |
-| RunPod serverless | Endpoint `bd5p04vpmrob2u` |
-| Docker image | `lushlurecreative/onlytwinsgpt-worker:latest` |
+1. **LoRA adapter name fix should complete the pipeline.** The 221s execution time means FLUX loaded but crashed at `set_adapters()` before inference. With the explicit name, inference should run, face swap should follow, and upload should succeed. This is the most likely path to a fully working pipeline.
+2. **FaceFusion face swap may fail on first use** if InsightFace buffalo_l model pack wasn't downloaded during warmup. The Docker image doesn't include it — InsightFace downloads it at runtime. If the download fails or times out, swap_faces() raises RuntimeError.
+3. **Supabase upload could fail** if the uploads bucket has RLS or storage policies blocking the write. Untestable until the LoRA fix lets the pipeline reach that step.
 
-## What remains (Systems 3-4)
+## Next best single step
 
-| System | Key gaps |
-|--------|----------|
-| **S3: Generation** | No dedicated `/generate` page. No `generation_outputs` table (outputs are paths on job rows). No scene browse catalog for subscribers. No on-demand generation UX. No preview generation from trained models |
-| **S4: Ops** | No `job_events` table. No user-facing failure notifications (only admin alerts). No cancellation support. No reconciliation for orphaned training-status models. No comprehensive retry beyond RunPod dispatch |
-
-## Single next objective
-
-**Build System 3 (Generation System)** — the pipeline from a ready/active model to generated content. Start with: generation request creation using active identity_model, on-demand generation UX, output tracking, and delivery to library/vault.
+Wait for Docker build of commit `359fc9d` to complete (~10 min). Cycle RunPod workers (`workersMax=0` → `workersMax=2`). Create a test generation job and dispatch to RunPod. Verify the full pipeline: FLUX → face swap → upload → job status = completed. If it fails, the error reason will be in the RunPod output (no guessing needed).
