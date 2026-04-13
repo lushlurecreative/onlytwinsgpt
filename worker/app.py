@@ -173,17 +173,24 @@ def handler(job):
                 flush=True,
             )
 
+            # Build job dict, forwarding any cheap-mode overrides from input
+            gen_job_dict = {
+                "id": gen_job_id,
+                "subject_id": input_data.get("subject_id"),
+                "preset_id": input_data.get("preset_id"),
+                "reference_image_path": input_data.get("reference_image_path") or "",
+                "lora_model_reference": input_data.get("lora_model_reference"),
+                "controlnet_input_path": input_data.get("controlnet_input_path"),
+                "job_type": input_data.get("job_type") or "user",
+                "lead_id": input_data.get("lead_id"),
+            }
+            # Forward cheap-mode overrides if present
+            for cheap_key in ("cheap_mode", "width", "height", "num_inference_steps", "guidance_scale", "skip_face_swap"):
+                if cheap_key in input_data:
+                    gen_job_dict[cheap_key] = input_data[cheap_key]
+
             try:
-                result = main_mod.run_generation_job({
-                    "id": gen_job_id,
-                    "subject_id": input_data.get("subject_id"),
-                    "preset_id": input_data.get("preset_id"),
-                    "reference_image_path": input_data.get("reference_image_path") or "",
-                    "lora_model_reference": input_data.get("lora_model_reference"),
-                    "controlnet_input_path": input_data.get("controlnet_input_path"),
-                    "job_type": input_data.get("job_type") or "user",
-                    "lead_id": input_data.get("lead_id"),
-                })
+                result = main_mod.run_generation_job(gen_job_dict)
                 # Unpack (success, error_reason) tuple
                 if isinstance(result, tuple):
                     success, error_reason = result
@@ -217,18 +224,26 @@ def handler(job):
 
 
 if __name__ == "__main__":
-    print(f"[worker] Starting RunPod Serverless. Python={sys.version}", flush=True)
-
-    # Preload models at startup
-    warmup()
-
-    # Log dependency versions
     try:
-        import requests as _req
-        print(f"[worker] deps: requests={_req.__version__}", flush=True)
-    except Exception as e:
-        print(f"[worker] deps check failed: {e}", flush=True)
+        print(f"[worker] Starting RunPod Serverless. Python={sys.version}", flush=True)
 
-    # Start RunPod serverless handler
-    print("[worker] Starting RunPod serverless handler...", flush=True)
-    runpod.serverless.start({"handler": handler})
+        # Preload models at startup
+        warmup()
+
+        # Log dependency versions
+        try:
+            import requests as _req
+            print(f"[worker] deps: requests={_req.__version__}", flush=True)
+        except Exception as e:
+            print(f"[worker] deps check failed: {e}", flush=True)
+
+        # Start RunPod serverless handler
+        print("[worker] Starting RunPod serverless handler...", flush=True)
+        runpod.serverless.start({"handler": handler})
+    except Exception as startup_err:
+        print(f"[worker] STARTUP CRASH: {startup_err}", flush=True)
+        traceback.print_exc(file=sys.stdout)
+        sys.stdout.flush()
+        # Sleep to prevent restart loop so we can read logs
+        print("[worker] Sleeping 300s to prevent restart loop (check logs now)...", flush=True)
+        time.sleep(300)
