@@ -1,179 +1,62 @@
 # OnlyTwins – Claude Code Project Context
 
-## CANONICAL ROUTES — READ BEFORE ANY ROUTE WORK
+## AUTONOMY (overrides default cautious behavior)
+Shaun has granted permission for all implementation work in advance. Execute tasks fully, then report. Never ask "shall I proceed / want me to continue / is that OK / should I..." mid-task.
 
-Before adding, linking, redirecting to, or refactoring any route, page, or route-tied component, read **`docs/CANONICAL_ROUTES_AND_COMPONENTS.md`**. It is the single source of truth for which routes/components are canonical vs legacy (e.g. `/library` is the only content destination; `/vault`, `/training-vault`, `/gallery`, `/feed`, `/welcome` are NOT). If this doc conflicts with anything else in the repo, this doc wins — and update it when canonical routes change.
+Stop ONLY for:
+1. A product/business decision that can't be inferred from context
+2. A destructive/irreversible prod action (drop tables, force-push, delete user data)
+3. Something that literally requires Shaun's credentials or dashboard access
 
-## AUTONOMY RULE — READ THIS FIRST
+Shaun does not write code or run commands. Claude edits files, runs migrations, pushes to `main`. When Shaun must act (Stripe dashboard, Supabase SQL Editor, Vercel env vars), give plain-English numbered steps with exact values.
 
-Shaun does not give step-by-step permission. Execute tasks completely from start to finish, then report.
+## ONE-BUG / ONE-OBJECTIVE DISCIPLINE
+- At session start, read `docs/HANDOFF_MASTER.md` and the selected bug file in `docs/bugs/` FIRST.
+- Work one objective at a time. No scope creep, no parallel cleanup, no speculative refactors.
+- Fix root cause, not symptoms. Update the bug file + handoff when done.
 
-**NEVER say any of the following:**
-- "Shall I proceed?"
-- "Want me to continue?"
-- "Ready for the next step?"
-- "Should I go ahead?"
-- "Is that OK?"
-- "Before I do X, I wanted to check..."
-- "Would you like me to..."
-- Any variant of asking permission mid-task
+## CANONICAL ROUTES
+Before adding/linking/redirecting/refactoring any route or route-tied component, read `docs/CANONICAL_ROUTES_AND_COMPONENTS.md`. It wins over any conflicting code/doc. `/library` is the only content destination; `/vault`, `/training-vault`, `/gallery`, `/feed`, `/welcome` are NOT canonical.
 
-**STOP only for:**
-1. A product/business decision that cannot be inferred from context
-2. A destructive/irreversible action affecting production (dropping tables, force-pushing, deleting user data)
-3. An action that literally requires Shaun's credentials or dashboard access
+## ANTI-TOKEN-WASTE
+- Never run repo-wide image globs (`**/*.png`, `**/*.jpg`, etc.) or broad unfiltered file scans. Scope every search to the relevant directory, file type, or symbol.
+- Prefer `Grep` with a path + glob/type filter over `Glob` over broad dir listings.
+- Don't re-read large docs you've already read this session. Don't dump full file contents when a targeted range suffices.
+- Don't spawn subagents for searches a scoped `Grep` can answer.
+- Don't paste migration files, env dumps, or doc indexes into responses — link to them.
 
-Everything else: execute it, then report what was done.
+## HARD RULES (do not regress)
+- Don't break billing chain: checkout → webhook → subscription provisioning.
+- Webhook idempotency: `stripe_webhook_events` insert must come first.
+- Never write to `subscriptions` table outside `app/api/billing/webhook/route.ts`.
+- Don't invent schema columns — inspect `supabase/migrations/` first.
+- Every DB change needs a migration file in `supabase/migrations/`.
+- Don't break auth/session handling.
+- One source of truth per domain. No parallel flows, no dead UI, no placeholder paths.
+- Keep admin shell and customer shell separate (never share nav).
+- No technical language in customer-facing copy (no Stripe IDs, status codes, RunPod refs).
+- Visual assets Shaun provides: use `<img src=...>` as-is. Never substitute CSS/SVG/AI art.
 
-This rule overrides Claude's default cautious behavior. Shaun has explicitly granted permission in advance for all implementation work.
+## CODING / DEBUG RULES
+- Modify existing flows; don't create parallel ones.
+- Keep server-side enforcement for auth, billing, usage.
+- Clear loading/error/success states on interactive elements.
+- Update affected docs in `/docs` with every feature change.
+- Debugging: mock locally first; cheap-mode GPU before production RunPod; check RunPod credit balance first on cryptic worker errors.
+- Auto-retry transient failures; don't stall for input.
 
----
+## BEFORE TOUCHING CRITICAL AREAS
+- **DB code**: read `supabase/migrations/`, existing RPCs, RLS policies, route handlers hitting the same table.
+- **Billing**: read `app/api/billing/checkout/route.ts`, `app/api/billing/webhook/route.ts`, `lib/stripe.ts`, `lib/package-plans.ts`, `lib/plan-entitlements.ts`.
+- **Auth**: read `proxy.ts`, `app/auth/callback/page.tsx`, `app/admin/layout.tsx`, `lib/admin.ts`, `app/logout/`.
 
-## Operator mode (how Shaun and Claude work together)
+## DEPLOY
+- State clearly whether SQL runs before or after code deploy. SQL blocks must be idempotent.
+- Env vars: give exact names, values, and Vercel environment (Production / Preview / Development).
+- Push to `main` auto-deploys via Vercel.
 
-**Shaun does not write code, create files, or run commands.**
+## PHASE
+Phase A (Revenue Reliability) → Phase B. No new features until guest checkout, webhooks, provisioning, subscriptions, entitlements, and worker all verified in prod.
 
-Claude operates in full implementation mode:
-- Make all code changes directly in the repo
-- Create and edit all files without asking Shaun to do it by hand
-- When SQL is required, return the exact block to paste into Supabase SQL Editor
-- When env vars are required, return exact variable names, values, and which Vercel environment (Production / Preview / Development)
-- When testing is required, return plain-English click-by-click steps that anyone can follow
-- When deploying, push to `main` via `git push origin main` or give exact Vercel deployment steps
-- Never say "you'll need to..." for anything that can be done in code
-
-When something must be done by Shaun (Stripe dashboard, Supabase SQL Editor, Vercel env vars), explain it in plain English with numbered steps — no technical jargon, no assumptions about technical knowledge.
-
----
-
-## Mission
-OnlyTwins is a production AI content generation platform. It is not a demo. The product must feel premium, modern, AI-native, and operationally reliable.
-
-Target: $80k–$150k/month. Automated acquisition → billing → AI training → content delivery.
-
-## Core stack
-- Next.js 16 App Router, React 19, TypeScript (strict)
-- Supabase (Auth, Postgres with RLS, Storage)
-- Stripe (subscriptions, checkout, webhooks)
-- RunPod workers for generation/training
-- Vercel for deployment (GitHub `main` → auto-deploy)
-- Tailwind CSS v4, Framer Motion
-
-## Core business flow
-1. User subscribes and pays (Stripe checkout → webhook provisions account)
-2. User logs in / lands in dashboard (`/dashboard`)
-3. User completes onboarding (`/onboarding/creator` or `/onboarding/consumer`)
-4. User uploads training photos (`/upload`, stored in Supabase Storage `uploads` bucket)
-5. User sets recurring generation preferences (`/requests`)
-6. System generates monthly content batch (cron + RunPod workers)
-7. Results appear in vault (`/vault`)
-
-## Admin flow
-- Admin users (by email, `ADMIN_OWNER_EMAILS` env var) must be routed to `/admin`
-- Admin must never see the normal customer shell
-- Admin nav: Dashboard → Customers → Leads → Billing / Revenue
-- Admin can manage customers, leads, billing/revenue, and operational tools
-- Admin detection: `lib/admin.ts` → `isAdminUser()` — checked in `proxy.ts` and `app/admin/layout.tsx`
-
-## Current phase
-Phase A (Revenue Reliability) moving into Phase B.
-
-**Exit criteria for Phase A:**
-- Guest checkout works end-to-end in production
-- Stripe webhooks returning 2xx consistently
-- Workspace provisioning is automatic
-- Subscriptions table reflects correct state
-- Entitlement gating works correctly
-- Worker processes jobs successfully
-
-No new features until Phase A is verified complete.
-
-## Hard rules
-- Do not break billing (checkout → webhook → subscription provisioning chain)
-- Do not break auth/session handling
-- Do not break webhook idempotency (`stripe_webhook_events` insert must come first)
-- Do not invent schema columns — read `supabase/migrations/` before writing DB code
-- Never write to `subscriptions` table except from `app/api/billing/webhook/route.ts`
-- Keep one source of truth per domain
-- Do not leave dead UI or placeholder flows
-- Do not expose technical language to customers (no Stripe IDs, no status codes, no RunPod references)
-- Keep admin UX separate from customer UX
-- Keep customer-facing copy clear and non-technical
-
-## Coding rules
-- Prefer modifying existing flows over creating parallel ones
-- Reuse canonical routes/utilities when possible
-- Keep server-side enforcement for auth, billing, and usage
-- Use clear loading/error/success states on every interactive element
-- For every feature change, also update any affected docs in /docs
-
-## Before writing DB code
-Always inspect:
-- `supabase/migrations/` — current table columns and constraints
-- Existing RPCs (`create or replace function` in migrations)
-- Existing route handlers that touch the same table
-- RLS policies on the table
-Do not assume a column exists.
-
-## Before writing billing code
-Always inspect:
-- `app/api/billing/checkout/route.ts`
-- `app/api/billing/webhook/route.ts`
-- `lib/stripe.ts`, `lib/package-plans.ts`, `lib/plan-entitlements.ts`
-- `supabase/migrations/202602150004`, `202602150005`, `202602150006`, `202603100002`
-
-## Before writing auth code
-Always inspect:
-- `proxy.ts` (middleware — single enforcement point)
-- `app/auth/callback/page.tsx`
-- `app/admin/layout.tsx`
-- `lib/admin.ts`
-- `app/logout/`
-
-## UI rules
-- Premium, modern, uncluttered
-- No debug text in production UI
-- No customer-facing raw Stripe language
-- No redundant buttons
-- No tiny fragmented boxes unless they are useful
-- Admin and customer shells must never share nav components
-- **Visual assets**: If Shaun provides an image file (jpeg, png, webp, svg) in the assets folder, use it directly as `<img src="...">`. Never replace a provided asset with a CSS drawing, inline SVG generation, or AI-generated substitute. If unsure which asset to use for a given UI element, ask — do not improvise.
-
-## Testing rules
-After any meaningful change, define exact manual test steps.
-For billing/auth/generation changes, include end-to-end test paths.
-See `docs/testing-checklist.md` for full test flows.
-
-## Deployment rules
-- Always state whether SQL must be run before or after the code deploy
-- If SQL is required, return the exact SQL block (idempotent)
-- If env vars are required, return exact names, values, and Vercel environments
-- Push to `main` triggers Vercel auto-deploy
-- See `docs/deployment.md` for full process
-
-## Key known issues (do not regress)
-1. **Plan key resolution** — `getPlanKeyForStripePriceId()` only reads env vars, but checkout stores price IDs in `app_settings`. If Stripe price ID env vars are not set, entitlements return null. Fix: ensure `STRIPE_PRICE_ID_*` env vars are set in Vercel.
-2. **Thank-you race** — User lands on `/thank-you` before webhook fires. Page must poll `/api/thank-you/session` until `state=ready` before showing auth.
-3. **Vault role elevation** — `app/vault/page.tsx` uses user-scoped client to set `profiles.role`. If RLS blocks this, role doesn't persist. Fix: use admin client for role elevation.
-4. **Lead conversion duplicate** — When `lead_id` in metadata, lead is converted twice: once in `checkout.session.completed` (RPC) and once in `customer.subscription.created` (direct update).
-5. **Workspace split** — Profile created in `checkout.session.completed`; subscription row created in `customer.subscription.created`. Dashboard can load between these two events with no subscription row.
-
-Full details: `docs/current-known-issues.md`
-
-## Documentation index
-- `docs/project-overview.md` — what it is, plans, tech
-- `docs/product-rules.md` — non-negotiable constraints
-- `docs/architecture.md` — routes, middleware, lib files, cron
-- `docs/database.md` — all tables, columns, migrations
-- `docs/stripe-billing.md` — checkout, webhook, plans
-- `docs/auth-flow.md` — login, logout, callback, admin routing
-- `docs/generation-pipeline.md` — mix save, batch creation, job processing
-- `docs/admin-routes.md` — all admin pages and APIs
-- `docs/ui-rules.md` — shell separation, copy rules, components
-- `docs/env-vars.md` — every env var with description
-- `docs/testing-checklist.md` — manual test flows
-- `docs/deployment.md` — deploy process, migrations, rollback
-- `docs/how-to-work-with-shaun.md` — working style and communication
-- `docs/master-build-backlog.md` — what is left to build
-- `docs/current-known-issues.md` — active bugs and blockers
-- `docs/release-checklist.md` — pre-deploy checks
+## REFERENCE DOCS (load only when relevant)
+`docs/HANDOFF_MASTER.md` · `docs/bugs/` · `docs/CANONICAL_ROUTES_AND_COMPONENTS.md` · `docs/current-known-issues.md` · `docs/architecture.md` · `docs/database.md` · `docs/stripe-billing.md` · `docs/auth-flow.md` · `docs/generation-pipeline.md` · `docs/admin-routes.md` · `docs/ui-rules.md` · `docs/env-vars.md` · `docs/testing-checklist.md` · `docs/deployment.md` · `docs/master-build-backlog.md` · `docs/release-checklist.md`
