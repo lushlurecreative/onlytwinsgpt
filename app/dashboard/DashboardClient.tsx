@@ -148,7 +148,7 @@ export default function DashboardClient() {
 
   const topAction = useMemo(() => {
     if (!completed.preferences) return { href: "/onboarding/intake", label: "Continue setup" };
-    if (!completed.photos) return { href: "/training/photos", label: "Upload photos" };
+    if (!completed.photos) return { href: "/upload", label: "Upload photos" };
     if (!completed.generation) return { href: "/requests", label: "Choose generation preferences" };
     return { href: "/requests", label: "View my requests" };
   }, [completed]);
@@ -192,7 +192,7 @@ export default function DashboardClient() {
           <article className="dashboard-step-card">
             <h3>Step 2: Upload Training Photos</h3>
             <p>Upload approved source images so we can train your twin with clean, high-quality data.</p>
-            <PremiumButton href="/training/photos">{completed.photos ? "View" : "Upload photos"}</PremiumButton>
+            <PremiumButton href="/upload">{completed.photos ? "View" : "Upload photos"}</PremiumButton>
             <div className="dashboard-step-footer">
               <span className="dashboard-status-pill">{completed.photos ? "Complete" : "Incomplete"}</span>
             </div>
