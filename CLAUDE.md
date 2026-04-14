@@ -1,5 +1,9 @@
 # OnlyTwins – Claude Code Project Context
 
+## CANONICAL ROUTES — READ BEFORE ANY ROUTE WORK
+
+Before adding, linking, redirecting to, or refactoring any route, page, or route-tied component, read **`docs/CANONICAL_ROUTES_AND_COMPONENTS.md`**. It is the single source of truth for which routes/components are canonical vs legacy (e.g. `/library` is the only content destination; `/vault`, `/training-vault`, `/gallery`, `/feed`, `/welcome` are NOT). If this doc conflicts with anything else in the repo, this doc wins — and update it when canonical routes change.
+
 ## AUTONOMY RULE — READ THIS FIRST
 
 Shaun does not give step-by-step permission. Execute tasks completely from start to finish, then report.
