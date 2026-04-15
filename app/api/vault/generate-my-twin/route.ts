@@ -12,11 +12,12 @@ import { sendAlert } from "@/lib/observability";
 import { createCanonicalCustomerGenerationBatch } from "@/lib/customer-generation";
 import { getCurrentSubscriptionSummary } from "@/lib/request-planner";
 import { processPendingCustomerGeneration } from "@/lib/customer-generation-processor";
+import { MIN_INTAKE_PHOTOS, MAX_INTAKE_PHOTOS } from "@/lib/intake";
 
-const MIN_PHOTOS_TRAINING = 30;
-const MAX_PHOTOS_TRAINING = 60;
-const MIN_SAMPLE_PATHS = 10;
-const MAX_SAMPLE_PATHS = 20;
+const MIN_PHOTOS_TRAINING = MIN_INTAKE_PHOTOS;
+const MAX_PHOTOS_TRAINING = MAX_INTAKE_PHOTOS;
+const MIN_SAMPLE_PATHS = MIN_INTAKE_PHOTOS;
+const MAX_SAMPLE_PATHS = MAX_INTAKE_PHOTOS;
 
 type Body = {
   sceneCounts?: Record<string, number>;

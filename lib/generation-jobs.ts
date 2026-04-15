@@ -9,6 +9,7 @@ import { dispatchGenerationJobToRunPod } from "@/lib/runpod";
 import type { GenerationJobStatus } from "@/lib/db-enums";
 import { isGenerationEngineEnabled, logGenerationEngineDisabled } from "@/lib/generation-engine";
 import { getActiveModelForUser } from "@/lib/identity-models";
+import { logJobEvent } from "@/lib/job-events";
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 300_000; // 5 min per job
@@ -118,6 +119,19 @@ export async function createGenerationJob(input: CreateGenerationJobInput): Prom
       .update({ runpod_job_id: runpodJobId })
       .eq("id", jobId);
   }
+
+  await logJobEvent({
+    jobType: "generation",
+    jobId,
+    event: "created",
+    message: runpodJobId ? "Dispatched to RunPod" : "Created (no RunPod dispatch)",
+    meta: {
+      runpod_job_id: runpodJobId ?? null,
+      preset_id: input.preset_id,
+      job_type: jobType,
+    },
+  });
+
   return jobId;
 }
 

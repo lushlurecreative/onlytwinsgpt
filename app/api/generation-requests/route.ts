@@ -7,6 +7,7 @@ import { isUserSuspended } from "@/lib/suspend";
 import { createCanonicalCustomerGenerationBatch } from "@/lib/customer-generation";
 import { getCurrentSubscriptionSummary } from "@/lib/request-planner";
 import { processPendingCustomerGeneration } from "@/lib/customer-generation-processor";
+import { MIN_INTAKE_PHOTOS, MAX_INTAKE_PHOTOS } from "@/lib/intake";
 
 type CreateBody = {
   samplePaths?: string[];
@@ -29,7 +30,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("generation_requests")
     .select(
-      "id, sample_paths, scene_preset, image_count, video_count, status, admin_notes, progress_done, progress_total, retry_count, created_at, updated_at"
+      "id, sample_paths, scene_preset, image_count, video_count, content_mode, status, admin_notes, progress_done, progress_total, retry_count, identity_model_id, created_at, updated_at"
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
@@ -64,8 +65,11 @@ export async function POST(request: Request) {
   const idempotencyKey = request.headers.get("idempotency-key")?.trim() || null;
 
   const samplePaths = (body.samplePaths ?? []).map((p) => p.trim()).filter(Boolean);
-  if (samplePaths.length < 10 || samplePaths.length > 20) {
-    return NextResponse.json({ error: "Between 10 and 20 sample paths are required" }, { status: 400 });
+  if (samplePaths.length < MIN_INTAKE_PHOTOS || samplePaths.length > MAX_INTAKE_PHOTOS) {
+    return NextResponse.json(
+      { error: `Between ${MIN_INTAKE_PHOTOS} and ${MAX_INTAKE_PHOTOS} training photos are required` },
+      { status: 400 }
+    );
   }
   const ownsAll = samplePaths.every((p) => p.startsWith(`${user.id}/`));
   if (!ownsAll) {

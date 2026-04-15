@@ -3,6 +3,8 @@ import { createGenerationJob, getApprovedSubjectIdForUser, getLoraReferenceForSu
 import { createCanonicalCustomerGenerationBatch } from "@/lib/customer-generation";
 import { normalizeMixLines } from "@/lib/request-planner";
 import { isGenerationEngineEnabled, logGenerationEngineDisabled } from "@/lib/generation-engine";
+import { getActiveModelForUser } from "@/lib/identity-models";
+import { logJobEvent } from "@/lib/job-events";
 
 type GenerationRequestRow = {
   id: string;
@@ -101,28 +103,51 @@ export async function processPendingCustomerGeneration(admin: SupabaseClient, ma
 
     const subjectId = await getApprovedSubjectIdForUser(claimed.user_id);
     if (!subjectId) {
+      const failReason = "No approved subject found for user.";
       await admin
         .from("generation_requests")
         .update({
           status: "failed",
+          failure_reason: failReason,
           failed_at: new Date().toISOString(),
-          admin_notes: "No approved subject found for user.",
+          admin_notes: failReason,
         })
         .eq("id", claimed.id);
+      await logJobEvent({ jobType: "generation_request", jobId: claimed.id, event: "failed", message: failReason });
       continue;
     }
     const loraRef = await getLoraReferenceForSubject(subjectId);
+
+    // Resolve and record the active identity model for lineage tracking
+    const { data: subjectRow } = await admin
+      .from("subjects")
+      .select("user_id")
+      .eq("id", subjectId)
+      .maybeSingle();
+    if (subjectRow?.user_id) {
+      const activeModel = await getActiveModelForUser(subjectRow.user_id as string);
+      if (activeModel?.id) {
+        await admin
+          .from("generation_requests")
+          .update({ identity_model_id: activeModel.id })
+          .eq("id", claimed.id);
+      }
+    }
+
     const lines = await ensureLines(admin, claimed);
     const samplePaths = (claimed.sample_paths ?? []).filter(Boolean);
     if (samplePaths.length === 0 || lines.length === 0) {
+      const failReason = "Missing sample paths or request lines.";
       await admin
         .from("generation_requests")
         .update({
           status: "failed",
+          failure_reason: failReason,
           failed_at: new Date().toISOString(),
-          admin_notes: "Missing sample paths or request lines.",
+          admin_notes: failReason,
         })
         .eq("id", claimed.id);
+      await logJobEvent({ jobType: "generation_request", jobId: claimed.id, event: "failed", message: failReason });
       continue;
     }
 
@@ -154,17 +179,27 @@ export async function processPendingCustomerGeneration(admin: SupabaseClient, ma
     }
 
     if (jobCount === 0) {
+      const failReason = "No generation jobs could be created from request lines.";
       await admin
         .from("generation_requests")
         .update({
           status: "failed",
+          failure_reason: failReason,
           failed_at: new Date().toISOString(),
-          admin_notes: "No generation jobs could be created from request lines.",
+          admin_notes: failReason,
         })
         .eq("id", claimed.id);
+      await logJobEvent({ jobType: "generation_request", jobId: claimed.id, event: "failed", message: failReason });
       continue;
     }
 
+    await logJobEvent({
+      jobType: "generation_request",
+      jobId: claimed.id,
+      event: "dispatched",
+      message: `${jobCount} generation jobs created`,
+      meta: { jobs_created: jobCount },
+    });
     processed.push({ requestId: claimed.id, jobsCreated: jobCount });
   }
   return processed;

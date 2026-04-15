@@ -6,6 +6,8 @@
  */
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { logJobEvent } from "@/lib/job-events";
+import type { IntakeReport } from "@/lib/intake";
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -120,6 +122,15 @@ export async function createModelRecord(input: CreateModelInput): Promise<Identi
     console.error("createModelRecord error:", error.message);
     return null;
   }
+
+  await logJobEvent({
+    jobType: "identity_model",
+    jobId: data.id as string,
+    event: "created",
+    message: `Version ${nextVersion} for user ${input.user_id}`,
+    meta: { version: nextVersion, base_model: input.base_model ?? "FLUX.1-dev" },
+  });
+
   return asModel(data);
 }
 
@@ -187,6 +198,29 @@ export async function completeModel(
  */
 export async function failModel(modelId: string, reason: string): Promise<void> {
   await updateModelStatus(modelId, "failed", { failure_reason: reason });
+}
+
+/**
+ * Attach a preprocessing intake_report to the identity model. Worker writes
+ * this before training kicks off; used for admin diagnostics and UI copy.
+ */
+export async function setIntakeReport(modelId: string, report: IntakeReport): Promise<void> {
+  const admin = getSupabaseAdmin();
+  await admin
+    .from("identity_models")
+    .update({ intake_report: report })
+    .eq("id", modelId);
+  await logJobEvent({
+    jobType: "identity_model",
+    jobId: modelId,
+    event: "intake_report",
+    message: `accepted=${report.accepted} auto_fixed=${report.auto_fixed} rejected=${report.rejected} tiles=${report.filtered_tiles_total} ready=${report.ready_for_training}`,
+    meta: {
+      dominant_identity_ratio: report.dominant_identity_ratio,
+      counts_by_rejection_reason: report.counts_by_rejection_reason,
+      ready_for_training: report.ready_for_training,
+    },
+  });
 }
 
 /**

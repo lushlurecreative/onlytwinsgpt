@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireWorkerSecret } from "@/lib/worker-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { getModelForTrainingJob, completeModel, failModel } from "@/lib/identity-models";
+import { getModelForTrainingJob, completeModel, failModel, setIntakeReport } from "@/lib/identity-models";
+import type { IntakeReport } from "@/lib/intake";
 
 type Params = { params: Promise<{ jobId: string }> };
 
@@ -29,6 +30,7 @@ export async function PATCH(request: Request, { params }: Params) {
     network_alpha?: number;
     learning_rate?: number;
     caption_strategy?: string;
+    intake_report?: IntakeReport;
   } = {};
   try {
     body = await request.json();
@@ -42,8 +44,19 @@ export async function PATCH(request: Request, { params }: Params) {
   if (body.logs !== undefined) updates.logs = body.logs;
   if (body.started_at) updates.started_at = body.started_at;
   if (body.finished_at) updates.finished_at = body.finished_at;
-  if (Object.keys(updates).length === 0 && !body.lora_model_reference) {
+  if (
+    Object.keys(updates).length === 0 &&
+    !body.lora_model_reference &&
+    !body.intake_report
+  ) {
     return NextResponse.json({ error: "No updates" }, { status: 400 });
+  }
+
+  if (body.intake_report) {
+    const identityModel = await getModelForTrainingJob(jobId);
+    if (identityModel) {
+      await setIntakeReport(identityModel.id, body.intake_report);
+    }
   }
 
   if (Object.keys(updates).length > 0) {

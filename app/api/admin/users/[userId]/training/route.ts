@@ -4,11 +4,12 @@ import { isAdminUser } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { dispatchTrainingJobToRunPod } from "@/lib/runpod";
 import { createModelRecord, updateModelStatus } from "@/lib/identity-models";
+import { MIN_INTAKE_PHOTOS, MAX_INTAKE_PHOTOS } from "@/lib/intake";
 
 type Params = { params: Promise<{ userId: string }> };
 
-const MIN_PHOTOS = 10;
-const MAX_PHOTOS = 60;
+const MIN_PHOTOS = MIN_INTAKE_PHOTOS;
+const MAX_PHOTOS = MAX_INTAKE_PHOTOS;
 
 /**
  * POST: Admin triggers LoRA training for a customer.
