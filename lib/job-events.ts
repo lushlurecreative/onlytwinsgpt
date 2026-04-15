@@ -27,7 +27,8 @@ export type JobEventName =
   | "refunded"
   | "callback_received"
   | "callback_duplicate"
-  | "status_change";
+  | "status_change"
+  | "intake_report";
 
 export type LogJobEventInput = {
   jobType: JobType;
