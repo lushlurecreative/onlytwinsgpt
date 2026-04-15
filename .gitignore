@@ -63,3 +63,15 @@ faceswap_test_*.jpg
 /onlytwins-backups/
 *.bundle
 *.sql.gz
+
+# Local Python venvs
+.venv*/
+
+# Claude Code local tooling
+/.agents/
+/.claude/agents/
+/.claude/skills/
+/skills-lock.json
+
+# Local test inputs
+/test-fixtures/
