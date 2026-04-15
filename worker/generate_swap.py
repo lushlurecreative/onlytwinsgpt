@@ -25,6 +25,8 @@ def generate_and_swap(
     num_inference_steps: int = 28,
     guidance_scale: float = 3.5,
     seed: int = None,
+    width: int = 1024,
+    height: int = 1024,
 ):
     """
     Generate a scene image with FLUX, then swap the source face onto it.
@@ -57,6 +59,8 @@ def generate_and_swap(
             output_path=base_path,
             lora_path=lora_path,
             lora_scale=lora_scale,
+            width=width,
+            height=height,
             upscale=False,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,

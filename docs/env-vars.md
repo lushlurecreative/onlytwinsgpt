@@ -79,6 +79,7 @@ These env vars are read by `lib/plan-entitlements.ts` → `loadPriceIdPlanMap()`
 |---|---|---|
 | `GENERATION_ENGINE_ENABLED` | Must be `"true"` for generation to run. Checked by `lib/generation-engine.ts` → `isGenerationEngineEnabled()`. No fallback — if not set, all generation silently returns 503. | **Confirmed required** |
 | `GENERATION_JOB_MAX_RETRIES` | Integer. Max RunPod retries for failed `job_type = "user"` jobs. Default `2`. Set in `app/api/webhooks/runpod/route.ts`. | Optional (defaults to 2) |
+| `RUNPOD_MODE` | Controls RunPod dispatch behavior. `"mock"` = no GPU, simulates full lifecycle locally. `"cheap"` = real GPU, minimal params (512x512, 4 steps, no face swap). `"production"` = real GPU, full quality. Default `"production"`. Set in `lib/runpod.ts`. | Optional (defaults to production) |
 
 ### Bitcoin / Coinbase Commerce
 | Variable | Notes |

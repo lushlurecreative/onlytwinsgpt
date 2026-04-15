@@ -82,6 +82,7 @@ def update_training_job(
     started_at: str = None,
     finished_at: str = None,
     lora_model_reference: str = None,
+    intake_report: dict = None,
 ):
     """PATCH training job status (worker auth). When status=completed, send lora_model_reference to update subjects_models."""
     payload = {"status": status}
@@ -93,6 +94,8 @@ def update_training_job(
         payload["finished_at"] = finished_at
     if lora_model_reference is not None:
         payload["lora_model_reference"] = lora_model_reference
+    if intake_report is not None:
+        payload["intake_report"] = intake_report
     try:
         r = requests.patch(
             f"{APP_URL}/api/internal/worker/training-jobs/{job_id}",
@@ -167,11 +170,43 @@ def run_training_job(job: dict) -> None:
             update_training_job(job_id, "failed", f"Could not download enough samples (got {len(local_paths)}).")
             return
 
+        # ── Phase 1 real-world intake preprocessing ──────────────────────
+        # Filters raw uploads (no-face / wrong-person / blurry / too-small /
+        # duplicate), crops usable tiles, and emits a structured report.
+        # Training consumes ONLY the filtered tiles.
+        preproc_dir = os.path.join(tmp, "preproc")
+        try:
+            from preprocess_intake import preprocess_folder
+            from pathlib import Path as _Path
+            report = preprocess_folder(_Path(samples_dir), _Path(preproc_dir))
+        except ImportError as e:
+            update_training_job(
+                job_id, "failed",
+                f"Preprocess module missing (install insightface, onnxruntime, opencv, Pillow): {e}",
+            )
+            return
+        except Exception as e:
+            update_training_job(job_id, "failed", f"Preprocess failed: {e}")
+            return
+
+        report_dict = report.to_dict()
+        update_training_job(job_id, "running", logs="Preprocess complete", intake_report=report_dict)
+
+        if not report.ready_for_training:
+            update_training_job(
+                job_id, "failed",
+                f"Intake rejected: {report.failure_reason}",
+                intake_report=report_dict,
+            )
+            return
+
+        tiles_dir = os.path.join(preproc_dir, "tiles")
+
         out_dir = os.path.join(tmp, "lora_out")
         try:
             from train_lora import train_and_save
             lora_file = train_and_save(
-                instance_data_dir=samples_dir,
+                instance_data_dir=tiles_dir,
                 output_dir=out_dir,
                 instance_prompt="photo of TOK person",
                 max_train_steps=int(os.environ.get("FLUX_LORA_STEPS", "500")),
@@ -252,28 +287,63 @@ def run_generation_job(job: dict) -> tuple[bool, str | None]:
             else:
                 print(f"LoRA downloaded locally: {lora_local}", flush=True)
 
+        # Read optional cheap-mode overrides from input
+        cheap_mode = job.get("cheap_mode", False)
+        override_width = int(job.get("width", 0)) or None
+        override_height = int(job.get("height", 0)) or None
+        override_steps = int(job.get("num_inference_steps", 0)) or None
+        override_guidance = float(job.get("guidance_scale", 0)) or None
+        skip_face_swap = job.get("skip_face_swap", False)
+
+        gen_kwargs = {}
+        if override_width:
+            gen_kwargs["width"] = override_width
+        if override_height:
+            gen_kwargs["height"] = override_height
+        if override_steps:
+            gen_kwargs["num_inference_steps"] = override_steps
+        if override_guidance:
+            gen_kwargs["guidance_scale"] = override_guidance
+
+        if cheap_mode:
+            print(f"[generation:{job_id}] CHEAP MODE: {gen_kwargs}, skip_face_swap={skip_face_swap}", flush=True)
+
         # 2-step pipeline: FLUX scene generation + FaceFusion face swap
         try:
-            try:
-                from generate_swap import generate_and_swap
-                generate_and_swap(
-                    source_face_path=ref_local,
-                    prompt=prompt,
-                    output_path=out_local,
-                    negative_prompt=negative_prompt,
-                    upscale=True,
-                    lora_path=lora_local,
-                )
-            except ImportError:
-                print("generate_swap module missing, falling back to generate_flux", flush=True)
+            if skip_face_swap:
+                # Cheap mode: skip face swap entirely, just run FLUX
                 from generate_flux import generate
                 generate(
                     prompt=prompt,
                     negative_prompt=negative_prompt,
                     output_path=out_local,
                     lora_path=lora_local,
-                    upscale=True,
+                    upscale=not cheap_mode,
+                    **gen_kwargs,
                 )
+            else:
+                try:
+                    from generate_swap import generate_and_swap
+                    generate_and_swap(
+                        source_face_path=ref_local,
+                        prompt=prompt,
+                        output_path=out_local,
+                        negative_prompt=negative_prompt,
+                        upscale=True,
+                        lora_path=lora_local,
+                        **gen_kwargs,
+                    )
+                except ImportError:
+                    print("generate_swap module missing, falling back to generate_flux", flush=True)
+                    from generate_flux import generate
+                    generate(
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        output_path=out_local,
+                        lora_path=lora_local,
+                        upscale=True,
+                        **gen_kwargs,
+                    )
         except Exception as e:
             print(f"Generation failed: {e}", flush=True)
             import traceback
