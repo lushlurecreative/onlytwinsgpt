@@ -4,7 +4,7 @@
 
 Next.js 16 App Router with React 19. All pages under `app/`.
 
-**Customer routes:** `/` (landing), `/login`, `/dashboard`, `/vault`, `/upload`, `/requests`, `/onboarding/*`, `/thank-you`, `/billing/*`, `/feed`, `/creators`
+**Customer routes:** `/` (landing), `/login`, `/dashboard`, `/vault`, `/upload`, `/requests`, `/library`, `/onboarding/*`, `/thank-you`, `/billing/*`, `/feed`, `/creators`
 
 **Admin routes:** `/admin/dashboard`, `/admin/customers`, `/admin/leads`, `/admin/subscriptions`, `/admin/worker`, `/admin/analytics/*`, `/admin/webhooks`, `/admin/settings`
 
@@ -16,9 +16,10 @@ All under `app/api/`. Grouped by domain:
 
 - **Billing:** `billing/checkout`, `billing/webhook`, `billing/portal`, `billing/cancel`, `billing/bitcoin/checkout`
 - **Auth:** `auth/login`, `me/entitlements`, `me/profile`, `me/referral`, `thank-you/session`, `thank-you/complete`
-- **Generation:** `generate/*`, `training/*`, `uploads/*`, `preview/faceswap`
-- **Admin:** `admin/customers/*`, `admin/leads/*`, `admin/subscriptions/*`, `admin/worker/*`, `admin/analytics/*`, `admin/automation/*`
-- **Cron:** `cron/daily-lead-scrape`, `cron/enqueue-lead-samples`, `cron/send-outreach`, `cron/process-customer-generation`, `cron/monthly-customer-generation`
+- **Generation:** `generate-images`, `generation-requests`, `generation-outputs`, `scenes`, `vault/generate-my-twin`, `training/*`, `uploads/*`, `preview/generate-swap`
+- **Admin:** `admin/customers/*`, `admin/leads/*`, `admin/subscriptions/*`, `admin/worker/*`, `admin/analytics/*`, `admin/automation/*`, `admin/ops/*` (System 4 recovery tools)
+- **Admin Ops (System 4):** `admin/ops` (list failed/stuck/cancelled), `admin/ops/retry-job`, `admin/ops/cancel-job`, `admin/ops/mark-failed`, `admin/ops/job-events`
+- **Cron:** `cron/daily-lead-scrape`, `cron/enqueue-lead-samples`, `cron/send-outreach`, `cron/process-customer-generation`, `cron/monthly-customer-generation`, `cron/job-reaper` (timeout + cascade)
 - **Webhooks:** `webhooks/coinbase`, `webhooks/runpod`, `webhooks/outreach-reply`
 - **Internal:** `internal/execute-sql`
 
@@ -40,7 +41,7 @@ Supabase Postgres with RLS. 29 tables. Schema source of truth: `supabase/migrati
 
 **Billing/tracking:** `stripe_webhook_events`, `revenue_events`, `usage_ledger`, `admin_payment_links`, `admin_referral_links`, `referrals`
 
-**Operations:** `automation_events`, `outreach_logs`, `reply_inbox`, `scrape_triggers`, `audit_log`, `system_events`, `gpu_usage`, `watermark_logs`, `idempotency_keys`, `user_notifications`, `app_settings`
+**Operations:** `automation_events`, `outreach_logs`, `reply_inbox`, `scrape_triggers`, `audit_log`, `system_events`, `gpu_usage`, `watermark_logs`, `idempotency_keys`, `user_notifications`, `app_settings`, `job_events` (System 4)
 
 **Key RPCs:** `convert_lead_to_customer()` (lead → customer conversion)
 

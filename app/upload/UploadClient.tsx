@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { SCENE_PRESETS, type ScenePresetKey } from "@/lib/scene-presets";
+import { MIN_INTAKE_PHOTOS, MAX_INTAKE_PHOTOS, INTAKE_COPY } from "@/lib/intake";
 
 type UploadClientProps = {
   userId: string;
@@ -156,8 +157,13 @@ export default function UploadClient({ userId }: UploadClientProps) {
 
   async function submitGenerationRequest() {
     if (isSubmittingRequest) return;
-    if (selectedSamplePaths.length !== 10) {
-      setRequestMessage("Select exactly 10 sample uploads before submitting.");
+    if (
+      selectedSamplePaths.length < MIN_INTAKE_PHOTOS ||
+      selectedSamplePaths.length > MAX_INTAKE_PHOTOS
+    ) {
+      setRequestMessage(
+        `Select between ${MIN_INTAKE_PHOTOS} and ${MAX_INTAKE_PHOTOS} photos before submitting.`
+      );
       return;
     }
     setIsSubmittingRequest(true);
@@ -197,17 +203,17 @@ export default function UploadClient({ userId }: UploadClientProps) {
   function toggleSamplePath(path: string) {
     setSelectedSamplePaths((prev) => {
       if (prev.includes(path)) return prev.filter((p) => p !== path);
-      if (prev.length >= 10) return prev;
+      if (prev.length >= MAX_INTAKE_PHOTOS) return prev;
       return [...prev, path];
     });
   }
 
-  function selectNewestTen() {
-    const newestTen = [...posts]
+  function selectNewestBatch() {
+    const newest = [...posts]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 10)
+      .slice(0, MAX_INTAKE_PHOTOS)
       .map((p) => p.storage_path);
-    setSelectedSamplePaths(newestTen);
+    setSelectedSamplePaths(newest);
   }
 
   const postsNewestFirst = [...posts].sort(
@@ -218,9 +224,9 @@ export default function UploadClient({ userId }: UploadClientProps) {
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>1) Upload samples</h2>
+        <h2 style={{ marginTop: 0 }}>1) {INTAKE_COPY.title}</h2>
         <p className="muted" style={{ marginTop: 6 }}>
-          Upload at least 10 images. These are private samples for approval and training.
+          {INTAKE_COPY.subtitle} {INTAKE_COPY.guidance}
         </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <input
@@ -240,18 +246,22 @@ export default function UploadClient({ userId }: UploadClientProps) {
       </section>
 
       <section className="card">
-        <h2 style={{ marginTop: 0 }}>2) Select 10 samples</h2>
+        <h2 style={{ marginTop: 0 }}>2) Select {INTAKE_COPY.rangeLabel} samples</h2>
         <p className="muted" style={{ marginTop: 6 }}>
-          Pick exactly 10 images for this request.
+          Pick {INTAKE_COPY.rangeLabel} photos for this request. We will automatically reject
+          no-face, too-small-face, blurry, wrong-person, and near-duplicate images during
+          preprocessing, so include variety rather than duplicates.
         </p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <button className="btn btn-ghost" onClick={selectNewestTen} type="button">
-            Use newest 10
+          <button className="btn btn-ghost" onClick={selectNewestBatch} type="button">
+            Use newest {MAX_INTAKE_PHOTOS}
           </button>
           <button className="btn btn-ghost" onClick={() => setSelectedSamplePaths([])} type="button">
             Clear selection
           </button>
-          <span className="badge">Selected: {selectedSamplePaths.length}/10</span>
+          <span className="badge">
+            Selected: {selectedSamplePaths.length}/{MAX_INTAKE_PHOTOS}
+          </span>
           <span className="muted" style={{ fontSize: 12 }}>
             Uploaded: {postsNewestFirst.length}
           </span>
@@ -272,7 +282,7 @@ export default function UploadClient({ userId }: UploadClientProps) {
           >
             {postsNewestFirst.map((post) => {
               const checked = selectedSamplePaths.includes(post.storage_path);
-              const disabled = !checked && selectedSamplePaths.length >= 10;
+              const disabled = !checked && selectedSamplePaths.length >= MAX_INTAKE_PHOTOS;
               return (
                 <div key={post.id} className="card" style={{ padding: 8 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -398,13 +408,17 @@ export default function UploadClient({ userId }: UploadClientProps) {
           <button
             className="btn btn-primary"
             onClick={submitGenerationRequest}
-            disabled={selectedSamplePaths.length !== 10 || isSubmittingRequest}
+            disabled={
+              selectedSamplePaths.length < MIN_INTAKE_PHOTOS ||
+              selectedSamplePaths.length > MAX_INTAKE_PHOTOS ||
+              isSubmittingRequest
+            }
             type="button"
           >
             {isSubmittingRequest ? "Submitting..." : "Submit request"}
           </button>
           <span className="muted" style={{ fontSize: 12 }}>
-            Selected samples must be exactly 10.
+            Select {INTAKE_COPY.rangeLabel} photos to submit.
           </span>
         </div>
 

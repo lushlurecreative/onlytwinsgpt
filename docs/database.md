@@ -45,8 +45,10 @@ Columns added by migrations:
 - `mix_snapshot_json` jsonb — array of MixLine objects
 - `autofill_snapshot_json` jsonb
 - `sample_paths` text[]
+- `identity_model_id` uuid → `identity_models.id` (added in 202604050002) — which model version was used
 - `started_at`, `completed_at`, `failed_at` timestamptz
 - `admin_notes` text — set on failure for diagnostics
+- `failure_reason` text — structured failure reason (added in 202604060001)
 
 ### `generation_request_lines` — `202603090001`
 - `id` uuid PK
@@ -73,17 +75,32 @@ Columns added by migrations:
 - `subject_id` uuid
 - `preset_id` uuid
 - `runpod_job_id` text
-- `status` text
+- `status` enum ��� `pending`, `running`, `upscaling`, `watermarking`, `completed`, `failed`, `cancelled`
+- `failure_reason` text — structured failure reason (added in 202604060001)
 - `prompt_override` text
 - `dispatch_retry_count` integer
 - `lease_owner` text
 - `lease_until` timestamptz
 
-### `posts` — `202602150001`, `202602150002`, `202602150003`
+### `generation_outputs` — `202604050001`
+- `id` uuid PK
+- `generation_request_id` uuid → `generation_requests.id`
+- `generation_job_id` uuid → `generation_jobs.id`
+- `user_id` uuid → `auth.users.id`
+- `output_type` text — `image`, `video`, `thumbnail`
+- `storage_path` text (unique per user)
+- `width` integer, `height` integer, `duration_seconds` numeric, `file_size` integer
+- `is_watermarked` boolean
+- RLS: users read own; service_role full access
+
+**Written by:** `app/api/webhooks/runpod/route.ts` (via `lib/generation-outputs.ts`)
+
+### `posts` — `202602150001`, `202602150002`, `202602150003`, `202604050002`
 - `id` uuid PK
 - `creator_id` uuid → `profiles.id`
 - `visibility` — enum added in 202602150003
 - `storage_path` text
+- `generation_job_id` uuid → `generation_jobs.id` (added in 202604050002)
 
 ### `leads` — `202602160002`, `202602160008`, `202603040001`, `202603100003`, `202603110001`
 - `id` uuid PK
@@ -113,6 +130,30 @@ Columns added by migrations:
 - `full_name` text
 - `admin_notes` text
 
+### `presets` (scenes catalog) — `202602170000`, enriched in `202604050002`
+- `id` uuid PK
+- `name` text — scene display name
+- `type` text — `image` or `video` (added in 202604050002)
+- `status` text — `active`, `draft`, `archived` (added in 202604050002)
+- `prompt` text, `negative_prompt` text
+- `thumbnail_path` text (added in 202604050002)
+- `camera_instructions` text, `pose_instructions` text (added in 202604050002)
+- `wardrobe_tags` text[], `environment_tags` text[] (added in 202604050002)
+- `sort_order` integer (added in 202604050002)
+- `parameter_json` jsonb, `provider_defaults_json` jsonb
+
+9 presets seeded: Beach, Camping, Coffee shop, Swimsuit try-on, Gym, Casual home, Street style, Nightlife, City
+
+### `job_events` — `202604060001` (System 4)
+- `id` uuid PK
+- `job_type` text — `training`, `generation`, `generation_request`, `identity_model`, `photo_validation`
+- `job_id` text — references various job tables
+- `event` text — `created`, `dispatched`, `running`, `completed`, `failed`, `cancelled`, `retried`, `reaped`, `refunded`, `callback_received`, `callback_duplicate`, `status_change`
+- `message` text — human-readable detail or error
+- `meta_json` jsonb — structured metadata
+- Indexes: `(job_type, job_id, created_at)`, `(event, created_at)`, `(created_at)`, dedup `(job_id, event)`
+- Used for RunPod callback dedup and lifecycle audit trail
+
 ### Other tables (see migrations for full columns)
 - `watermark_logs` — `202602170004`
 - `outreach_logs` — `202602170007`
@@ -121,7 +162,7 @@ Columns added by migrations:
 - `gpu_usage` — `202602170010`
 - `system_events` — `202602170012`
 - `audit_log` — `202602260001`
-- `usage_ledger` — `202602260002`
+- `usage_ledger` — `202602260002` (source: `generation_request` or `refund` for credit returns)
 - `reply_inbox` — `202603040002`
 - `app_settings` — key/value store; `request_mix:{userId}` keys store generation preferences
 
