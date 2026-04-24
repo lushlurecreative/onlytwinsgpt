@@ -7,7 +7,7 @@ import { logError, logWarn, sendAlert } from "@/lib/observability";
 import { RATE_LIMITS } from "@/lib/security-config";
 import { getServiceCreatorId } from "@/lib/service-creator";
 import { PACKAGE_PLANS } from "@/lib/package-plans";
-import { getPlanKeyForStripePriceId } from "@/lib/plan-entitlements";
+import { loadPriceIdPlanMap } from "@/lib/plan-entitlements";
 
 export const runtime = "nodejs";
 
@@ -501,7 +501,8 @@ export async function POST(request: Request) {
         return failAfterLock(400, { error: error.message });
       }
 
-      const planKey = getPlanKeyForStripePriceId(priceId);
+      const priceMap = await loadPriceIdPlanMap();
+      const planKey = priceId ? priceMap.get(priceId) : null;
       const amountCents = planKey ? Math.round(PACKAGE_PLANS[planKey].amountUsd * 100) : 0;
       if (amountCents > 0) {
         const { error: revenueInsertError } = await supabaseAdmin.from("revenue_events").insert({
